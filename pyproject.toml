@@ -7,7 +7,7 @@ name = "aibom-inspector"
 version = "0.1.0"
 description = "Security and risk analysis tool for AI projects (AI-BOM)."
 authors = [
-    { name = "Crypto", email = "you@example.com" }
+    { name = "Jordan Desjarlais", email = "jordandesjarlais.2022@gmail.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,9 +15,27 @@ dependencies = [
     "click>=8.1.0",
     "jinja2>=3.1.0",
 ]
+keywords = ["ai", "security", "supply-chain", "bom", "risk"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Build Tools",
+]
+[project.urls]
+Homepage = "https://github.com/MellyFinnese/"
+Repository = "https://github.com/MellyFinnese/AI-BOM-Inspector"
+"Bug Tracker" = "https://github.com/aibom-inspector/AI-BOM-Inspector/issues"
 
 [project.optional-dependencies]
 huggingface = ["huggingface_hub>=0.26.0"]
+dev = ["pytest>=8.0.0"]
 
 [project.scripts]
 aibom = "aibom_inspector.cli:main"

@@ -10,11 +10,15 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
 - Stub AI summary output you can replace with your own LLM integration
 
 ## Getting started
-1. Install the package locally:
+1. Install the package locally (editable install for development):
    ```bash
-   pip install -e .
+   pip install -e .[dev]
    ```
-2. Create a `models.json` file if you want to include model metadata:
+   For reproducible CI or audits, install the pinned dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Create a `models.json` file if you want to include model metadata. A ready-to-use sample lives in `examples/models.sample.json`:
    ```json
    [
      {"id": "gpt2", "source": "huggingface", "license": "mit", "last_updated": "2024-01-01"},
@@ -25,5 +29,22 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
    ```bash
    aibom scan --models-file models.json --format html --output report.html
    ```
+   Run `aibom scan --help` for the full list of options and supported formats.
 
-Use `aibom scan --help` for the full list of options.
+## Examples
+- **Sample models file:** `examples/models.sample.json`
+- **Sample Markdown report:** `examples/report.sample.md`
+- **Example commands:**
+  - Only dependency scan with autodetection: `aibom scan --format json`
+  - Include models from a file: `aibom scan --models-file examples/models.sample.json --format markdown --output report.md`
+  - Specify models inline: `aibom scan --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
+
+## Testing and CI
+- Run unit tests: `pytest`
+- GitHub Actions runs formatting-free CI on pushes and pull requests via `.github/workflows/ci.yml`.
+
+## Security, governance, and contributions
+- See `SECURITY.md` for how to report vulnerabilities.
+- See `CODE_OF_CONDUCT.md` for community standards.
+- See `CONTRIBUTING.md` for development conventions and how to propose changes.
+- `CHANGELOG.md` tracks notable updates.
