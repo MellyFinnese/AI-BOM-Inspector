@@ -48,6 +48,10 @@ def render_json(report: Report) -> str:
 
 def render_markdown(report: Report) -> str:
     lines = ["# AI-BOM Report", "", f"Generated at: {report.generated_at.isoformat()}"]
+    lines.append(f"Total risk score: {report.total_risk}")
+    lines.append(
+        f"Dependencies analyzed: {len(report.dependencies)} | Models analyzed: {len(report.models)}"
+    )
     if report.ai_summary:
         lines.append("\n## AI Summary\n")
         lines.append(report.ai_summary)
@@ -93,6 +97,8 @@ def render_html(report: Report) -> str:
 <body>
   <h1>AI-BOM Report</h1>
   <p>Generated at: {{ generated_at }}</p>
+  <p>Total risk score: {{ total_risk }}</p>
+  <p>Dependencies analyzed: {{ dependency_count }} | Models analyzed: {{ model_count }}</p>
   {% if ai_summary %}
   <section>
     <h2>AI Summary</h2>
@@ -141,6 +147,9 @@ def render_html(report: Report) -> str:
 
     return template.render(
         generated_at=report.generated_at.isoformat(),
+        total_risk=report.total_risk,
+        dependency_count=len(report.dependencies),
+        model_count=len(report.models),
         ai_summary=report.ai_summary,
         dependencies=list(_dependency_rows(report)),
         models=list(_model_rows(report)),
