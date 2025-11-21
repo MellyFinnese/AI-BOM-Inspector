@@ -1,20 +1,12 @@
 from pathlib import Path
 
-from pathlib import Path
-
-from aibom_inspector.dependency_scanner import (
-    enrich_with_osv,
-    parse_requirement_line,
-    parse_sbom_file,
-    scan_pyproject,
-    scan_requirements,
-)
+from aibom_inspector.dependency_scanner import parse_requirement_line, scan_pyproject, scan_requirements
 
 
 def test_parse_requirement_flags_unpinned_and_pre_release():
     info = parse_requirement_line("sample")
     assert info
-    assert any("MISSING_PIN" in issue.message for issue in info.issues)
+    assert any(issue.message == "Unpinned dependency" for issue in info.issues)
 
     pre = parse_requirement_line("experimental==0.3.0")
     assert pre

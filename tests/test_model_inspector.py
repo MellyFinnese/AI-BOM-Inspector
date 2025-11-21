@@ -8,8 +8,8 @@ def test_parse_model_entry_flags_missing_license_and_stale_metadata():
     stale_date = (datetime.utcnow() - timedelta(days=STALE_DAYS + 1)).date().isoformat()
     info = parse_model_entry({"id": "old-model", "source": "huggingface", "last_updated": stale_date})
     descriptions = {issue.message for issue in info.issues}
-    assert any("UNKNOWN_LICENSE" in desc for desc in descriptions)
-    assert any("STALE_MODEL" in desc for desc in descriptions)
+    assert "Missing license information" in descriptions
+    assert "Model metadata is stale" in descriptions
 
 
 def test_scan_models_from_file_reads_list(tmp_path: Path):

@@ -30,8 +30,8 @@ classifiers = [
     "Topic :: Software Development :: Build Tools",
 ]
 [project.urls]
-Homepage = "https://github.com/aibom-inspector/AI-BOM-Inspector"
-Repository = "https://github.com/aibom-inspector/AI-BOM-Inspector"
+Homepage = "https://github.com/MellyFinnese/"
+Repository = "https://github.com/MellyFinnese/AI-BOM-Inspector"
 "Bug Tracker" = "https://github.com/aibom-inspector/AI-BOM-Inspector/issues"
 
 [project.optional-dependencies]

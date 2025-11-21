@@ -40,8 +40,6 @@ def render_json(report: Report) -> str:
         "generated_at": report.generated_at.isoformat(),
         "ai_summary": report.ai_summary,
         "total_risk": report.total_risk,
-        "stack_risk_score": report.stack_risk_score,
-        "risk_breakdown": report.risk_breakdown,
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
@@ -49,12 +47,11 @@ def render_json(report: Report) -> str:
 
 
 def render_markdown(report: Report) -> str:
-    lines = [
-        "# AI-BOM Report",
-        "",
-        f"Generated at: {report.generated_at.isoformat()}",
-        f"Stack Risk Score: {report.stack_risk_score}/100",
-    ]
+    lines = ["# AI-BOM Report", "", f"Generated at: {report.generated_at.isoformat()}"]
+    lines.append(f"Total risk score: {report.total_risk}")
+    lines.append(
+        f"Dependencies analyzed: {len(report.dependencies)} | Models analyzed: {len(report.models)}"
+    )
     if report.ai_summary:
         lines.append("\n## AI Summary\n")
         lines.append(report.ai_summary)
@@ -153,44 +150,13 @@ def render_html(report: Report) -> str:
 
     return template.render(
         generated_at=report.generated_at.isoformat(),
+        total_risk=report.total_risk,
+        dependency_count=len(report.dependencies),
+        model_count=len(report.models),
         ai_summary=report.ai_summary,
-        stack_risk_score=report.stack_risk_score,
-        badge_class="good" if report.stack_risk_score >= 80 else ("warn" if report.stack_risk_score >= 50 else "bad"),
         dependencies=list(_dependency_rows(report)),
         models=list(_model_rows(report)),
     )
-
-
-def render_cyclonedx(report: Report) -> str:
-    components = []
-    for dep in _dependency_rows(report):
-        components.append({"type": "library", "name": dep["name"], "version": dep["version"], "properties": {"issues": dep["issues"]}})
-
-    payload = {
-        "bomFormat": "CycloneDX",
-        "specVersion": "1.5",
-        "metadata": {"timestamp": report.generated_at.isoformat(), "tools": [{"vendor": "aibom", "name": "AI-BOM Inspector"}]},
-        "components": components,
-        "extensions": {"aibom": {"models": list(_model_rows(report)), "risk_breakdown": report.risk_breakdown}},
-    }
-    return json.dumps(payload, indent=2)
-
-
-def render_spdx(report: Report) -> str:
-    packages = []
-    for dep in _dependency_rows(report):
-        packages.append({"name": dep["name"], "versionInfo": dep["version"], "summary": "; ".join(dep["issues"])})
-
-    payload = {
-        "spdxVersion": "SPDX-2.3",
-        "name": "AI-BOM Inspector SBOM",
-        "creationInfo": {"created": report.generated_at.isoformat()},
-        "packages": packages,
-        "hasExtractedLicensingInfos": [],
-        "externalRefs": [],
-        "annotations": [{"comment": json.dumps({"models": list(_model_rows(report)), "risk_breakdown": report.risk_breakdown})}],
-    }
-    return json.dumps(payload, indent=2)
 
 
 def render_report(report: Report, fmt: str) -> str:
@@ -201,10 +167,6 @@ def render_report(report: Report, fmt: str) -> str:
         return render_markdown(report)
     if fmt == "html":
         return render_html(report)
-    if fmt == "cyclonedx":
-        return render_cyclonedx(report)
-    if fmt == "spdx":
-        return render_spdx(report)
     raise ValueError(f"Unknown report format: {fmt}")
 
 
