@@ -1,0 +1,118 @@
+{
+  "generated_at": "2025-11-21T02:40:07.142029",
+  "ai_summary": null,
+  "total_risk": 20,
+  "stack_risk_score": 38,
+  "risk_breakdown": {
+    "unpinned_deps": 5,
+    "unverified_sources": 0,
+    "unknown_licenses": 1,
+    "stale_models": 1
+  },
+  "dependencies": [
+    {
+      "name": "click",
+      "version": "==8.1.7",
+      "source": "requirements.txt",
+      "issues": [],
+      "risk": 0
+    },
+    {
+      "name": "jinja2",
+      "version": "==3.1.4",
+      "source": "requirements.txt",
+      "issues": [],
+      "risk": 0
+    },
+    {
+      "name": "requests",
+      "version": "==2.32.3",
+      "source": "requirements.txt",
+      "issues": [],
+      "risk": 0
+    },
+    {
+      "name": "click",
+      "version": ">=8.1.0",
+      "source": "pyproject.toml",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "risk": 2
+    },
+    {
+      "name": "jinja2",
+      "version": ">=3.1.0",
+      "source": "pyproject.toml",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "risk": 2
+    },
+    {
+      "name": "requests",
+      "version": ">=2.31.0",
+      "source": "pyproject.toml",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "risk": 2
+    },
+    {
+      "name": "huggingface_hub",
+      "version": ">=0.26.0",
+      "source": "pyproject.toml",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned",
+        "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
+      ],
+      "risk": 4
+    },
+    {
+      "name": "pytest",
+      "version": ">=8.0.0",
+      "source": "pyproject.toml",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "risk": 2
+    },
+    {
+      "name": "node_modules/lodash",
+      "version": "4.17.21",
+      "source": "package-lock.json",
+      "issues": [],
+      "risk": 0
+    },
+    {
+      "name": "github.com/pkg/errors",
+      "version": "v0.9.1",
+      "source": "go.mod",
+      "issues": [],
+      "risk": 0
+    }
+  ],
+  "models": [
+    {
+      "id": "gpt2",
+      "source": "huggingface",
+      "license": "mit",
+      "last_updated": "2023-05-01T00:00:00",
+      "issues": [
+        "[STALE_MODEL] Model metadata is stale",
+        "[MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)"
+      ],
+      "risk": 5
+    },
+    {
+      "id": "research-embedder",
+      "source": "private",
+      "license": "unknown",
+      "last_updated": "unknown",
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "risk": 3
+    }
+  ]
+}

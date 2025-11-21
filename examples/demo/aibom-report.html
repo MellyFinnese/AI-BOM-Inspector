@@ -1,0 +1,142 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AI-BOM Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    h1, h2 { color: #1f2937; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; }
+    th, td { border: 1px solid #d1d5db; padding: 0.5rem; }
+    th { background: #f3f4f6; text-align: left; }
+    .risk { font-weight: bold; }
+    .badge { display: inline-block; padding: 0.35rem 0.6rem; border-radius: 0.4rem; font-weight: 600; color: #111827; }
+    .badge.good { background: #d1fae5; }
+    .badge.warn { background: #fef3c7; }
+    .badge.bad { background: #fee2e2; }
+  </style>
+</head>
+<body>
+  <h1>AI-BOM Report</h1>
+  <p>Generated at: 2025-11-21T02:40:08.354274</p>
+  <p>Stack Risk Score: <span class="badge bad">38 / 100</span></p>
+  
+  <section>
+    <h2>Dependencies</h2>
+    <table>
+      <thead><tr><th>Name</th><th>Version</th><th>Source</th><th>Risk</th><th>Issues</th></tr></thead>
+      <tbody>
+        
+        <tr>
+          <td>click</td>
+          <td>==8.1.7</td>
+          <td>requirements.txt</td>
+          <td class="risk">0</td>
+          <td>None</td>
+        </tr>
+        
+        <tr>
+          <td>jinja2</td>
+          <td>==3.1.4</td>
+          <td>requirements.txt</td>
+          <td class="risk">0</td>
+          <td>None</td>
+        </tr>
+        
+        <tr>
+          <td>requests</td>
+          <td>==2.32.3</td>
+          <td>requirements.txt</td>
+          <td class="risk">0</td>
+          <td>None</td>
+        </tr>
+        
+        <tr>
+          <td>click</td>
+          <td>&gt;=8.1.0</td>
+          <td>pyproject.toml</td>
+          <td class="risk">2</td>
+          <td>[LOOSE_PIN] Version is not strictly pinned</td>
+        </tr>
+        
+        <tr>
+          <td>jinja2</td>
+          <td>&gt;=3.1.0</td>
+          <td>pyproject.toml</td>
+          <td class="risk">2</td>
+          <td>[LOOSE_PIN] Version is not strictly pinned</td>
+        </tr>
+        
+        <tr>
+          <td>requests</td>
+          <td>&gt;=2.31.0</td>
+          <td>pyproject.toml</td>
+          <td class="risk">2</td>
+          <td>[LOOSE_PIN] Version is not strictly pinned</td>
+        </tr>
+        
+        <tr>
+          <td>huggingface_hub</td>
+          <td>&gt;=0.26.0</td>
+          <td>pyproject.toml</td>
+          <td class="risk">4</td>
+          <td>[LOOSE_PIN] Version is not strictly pinned; [UNSTABLE_VERSION] Pre-1.0 release may be unstable</td>
+        </tr>
+        
+        <tr>
+          <td>pytest</td>
+          <td>&gt;=8.0.0</td>
+          <td>pyproject.toml</td>
+          <td class="risk">2</td>
+          <td>[LOOSE_PIN] Version is not strictly pinned</td>
+        </tr>
+        
+        <tr>
+          <td>node_modules/lodash</td>
+          <td>4.17.21</td>
+          <td>package-lock.json</td>
+          <td class="risk">0</td>
+          <td>None</td>
+        </tr>
+        
+        <tr>
+          <td>github.com/pkg/errors</td>
+          <td>v0.9.1</td>
+          <td>go.mod</td>
+          <td class="risk">0</td>
+          <td>None</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </section>
+  <section>
+    <h2>Models</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Source</th><th>License</th><th>Last Updated</th><th>Risk</th><th>Issues</th></tr></thead>
+      <tbody>
+        
+        <tr>
+          <td>gpt2</td>
+          <td>huggingface</td>
+          <td>mit</td>
+          <td>2023-05-01T00:00:00</td>
+          <td class="risk">5</td>
+          <td>[STALE_MODEL] Model metadata is stale; [MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)</td>
+        </tr>
+        
+        <tr>
+          <td>research-embedder</td>
+          <td>private</td>
+          <td>unknown</td>
+          <td>unknown</td>
+          <td class="risk">3</td>
+          <td>[UNKNOWN_LICENSE] Missing license information</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>
