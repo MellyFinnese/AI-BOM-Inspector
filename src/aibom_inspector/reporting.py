@@ -92,13 +92,16 @@ def render_html(report: Report) -> str:
     th, td { border: 1px solid #d1d5db; padding: 0.5rem; }
     th { background: #f3f4f6; text-align: left; }
     .risk { font-weight: bold; }
+    .badge { display: inline-block; padding: 0.35rem 0.6rem; border-radius: 0.4rem; font-weight: 600; color: #111827; }
+    .badge.good { background: #d1fae5; }
+    .badge.warn { background: #fef3c7; }
+    .badge.bad { background: #fee2e2; }
   </style>
 </head>
 <body>
   <h1>AI-BOM Report</h1>
   <p>Generated at: {{ generated_at }}</p>
-  <p>Total risk score: {{ total_risk }}</p>
-  <p>Dependencies analyzed: {{ dependency_count }} | Models analyzed: {{ model_count }}</p>
+  <p>Stack Risk Score: <span class=\"badge {{ badge_class }}\">{{ stack_risk_score }} / 100</span></p>
   {% if ai_summary %}
   <section>
     <h2>AI Summary</h2>

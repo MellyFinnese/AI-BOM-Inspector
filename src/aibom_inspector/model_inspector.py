@@ -3,12 +3,60 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from .types import ModelInfo, ModelIssue
 
 
-STALE_DAYS = 365
+STALE_DAYS = 270
+
+
+KNOWN_MODEL_ADVISORIES = {
+    "gpt2": "Known prompt-stealing leakage advisory (demo feed)",
+    "meta-llama/Llama-2-7b": "Community advisory: check downstream license terms",
+}
+
+
+def _cache_path(cache_dir: Path, identifier: str) -> Path:
+    sanitized = identifier.replace("/", "__")
+    return cache_dir / f"{sanitized}.json"
+
+
+def fetch_model_metadata(identifier: str, cache_dir: Path | None = None) -> dict:
+    cache = cache_dir or Path(".aibom_cache")
+    cache.mkdir(parents=True, exist_ok=True)
+    cache_file = _cache_path(cache, identifier)
+    if cache_file.exists():
+        try:
+            return json.loads(cache_file.read_text())
+        except Exception:
+            pass
+
+    data: Dict[str, str] = {"id": identifier, "source": "huggingface"}
+
+    try:
+        try:
+            from huggingface_hub import HfApi
+
+            api = HfApi()
+            info = api.model_info(identifier)
+            data["license"] = getattr(info, "license", None)
+            if getattr(info, "lastModified", None):
+                data["last_updated"] = info.lastModified.isoformat()
+        except ImportError:
+            import requests
+
+            response = requests.get(f"https://huggingface.co/api/models/{identifier}", timeout=10)
+            if response.status_code == 200:
+                payload = response.json()
+                data["license"] = payload.get("license")
+                if payload.get("lastModified"):
+                    data["last_updated"] = payload["lastModified"]
+    except Exception:
+        data["error"] = "metadata lookup failed"
+
+    cache_file.write_text(json.dumps(data))
+    return data
 
 
 def parse_model_entry(entry: dict) -> ModelInfo:
@@ -21,13 +69,17 @@ def parse_model_entry(entry: dict) -> ModelInfo:
     issues: List[ModelIssue] = []
 
     if not license_name:
-        issues.append(ModelIssue("Missing license information", severity="high"))
+        issues.append(ModelIssue("[UNKNOWN_LICENSE] Missing license information", severity="high"))
 
     if last_updated and last_updated < datetime.utcnow() - timedelta(days=STALE_DAYS):
-        issues.append(ModelIssue("Model metadata is stale", severity="medium"))
+        issues.append(ModelIssue("[STALE_MODEL] Model metadata is stale", severity="medium"))
 
-    if source not in {"huggingface", "local", "private"}:
-        issues.append(ModelIssue(f"Unrecognized source '{source}'", severity="medium"))
+    if source not in {"huggingface", "local", "private", "openai"}:
+        issues.append(ModelIssue(f"[UNVERIFIED_SOURCE] Unrecognized source '{source}'", severity="medium"))
+
+    advisory = KNOWN_MODEL_ADVISORIES.get(identifier)
+    if advisory:
+        issues.append(ModelIssue(f"[MODEL_ADVISORY] {advisory}", severity="high"))
 
     return ModelInfo(
         identifier=identifier,
@@ -55,13 +107,6 @@ def scan_models_from_file(path: Path) -> List[ModelInfo]:
 def summarize_models(model_ids: List[str]) -> List[ModelInfo]:
     models: List[ModelInfo] = []
     for identifier in model_ids:
-        models.append(
-            ModelInfo(
-                identifier=identifier,
-                source="huggingface",
-                license=None,
-                last_updated=None,
-                issues=[ModelIssue("Metadata lookup not provided", severity="medium")],
-            )
-        )
+        metadata = fetch_model_metadata(identifier)
+        models.append(parse_model_entry(metadata))
     return models
