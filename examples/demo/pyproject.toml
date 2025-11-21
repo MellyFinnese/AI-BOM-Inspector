@@ -1,0 +1,9 @@
+[project]
+name = "demo-app"
+version = "0.0.1"
+dependencies = [
+  "rich~=13.7",
+]
+
+[project.optional-dependencies]
+monitoring = ["prometheus-client>=0.20"]

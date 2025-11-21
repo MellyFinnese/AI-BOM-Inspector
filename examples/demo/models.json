@@ -1,0 +1,4 @@
+[
+  {"id": "gpt2", "source": "huggingface", "license": "mit", "last_updated": "2023-05-01"},
+  {"id": "research-embedder", "source": "private"}
+]

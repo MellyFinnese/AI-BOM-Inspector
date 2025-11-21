@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>AI-BOM Before vs After</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d1d5db; padding: 0.75rem; }
+    th { background: #f3f4f6; }
+    .messy { background: #fee2e2; }
+    .clean { background: #d1fae5; }
+  </style>
+</head>
+<body>
+  <h1>Before vs. After: AI-BOM Hardening</h1>
+  <table>
+    <thead>
+      <tr><th>Scenario</th><th>Risk Score</th><th>Signals</th></tr>
+    </thead>
+    <tbody>
+      <tr class="messy">
+        <td>Messy AI stack</td>
+        <td>48 / 100</td>
+        <td>Unpinned package-lock.json, unknown model license, stale model metadata</td>
+      </tr>
+      <tr class="clean">
+        <td>Hardened AI stack</td>
+        <td>88 / 100</td>
+        <td>Pinned deps, permissive licenses, fresh model metadata, advisories cleared</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
