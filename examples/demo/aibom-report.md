@@ -1,22 +1,18 @@
 # AI-BOM Report
 
-Generated at: 2025-11-21T02:40:07.772030
-Stack Risk Score: 38/100
+Generated at: 2025-11-20T14:16:54.878054
+Stack Risk Score: 30/100
 
 ## Dependencies
 
 | Name | Version | Source | Risk | Issues |
 | --- | --- | --- | --- | --- |
-| click | ==8.1.7 | requirements.txt | 0 | None |
-| jinja2 | ==3.1.4 | requirements.txt | 0 | None |
-| requests | ==2.32.3 | requirements.txt | 0 | None |
-| click | >=8.1.0 | pyproject.toml | 2 | [LOOSE_PIN] Version is not strictly pinned |
-| jinja2 | >=3.1.0 | pyproject.toml | 2 | [LOOSE_PIN] Version is not strictly pinned |
-| requests | >=2.31.0 | pyproject.toml | 2 | [LOOSE_PIN] Version is not strictly pinned |
-| huggingface_hub | >=0.26.0 | pyproject.toml | 4 | [LOOSE_PIN] Version is not strictly pinned; [UNSTABLE_VERSION] Pre-1.0 release may be unstable |
-| pytest | >=8.0.0 | pyproject.toml | 2 | [LOOSE_PIN] Version is not strictly pinned |
-| node_modules/lodash | 4.17.21 | package-lock.json | 0 | None |
-| github.com/pkg/errors | v0.9.1 | go.mod | 0 | None |
+| fastapi | ==0.110.0 | requirements.txt | 2 | [UNSTABLE_VERSION] Pre-1.0 release may be unstable |
+| requests | >=2.31.0 | requirements.txt | 2 | [LOOSE_PIN] Version is not strictly pinned |
+| urllib3 | ==1.25.8 | requirements.txt | 3 | [KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers |
+| falcon | unversioned | requirements.txt | 3 | [MISSING_PIN] Dependency is not pinned |
+| rich | ~=13.7 | pyproject.toml | 0 | None |
+| prometheus-client | >=0.20 | pyproject.toml | 4 | [LOOSE_PIN] Version is not strictly pinned; [UNSTABLE_VERSION] Pre-1.0 release may be unstable |
 
 ## Models
 

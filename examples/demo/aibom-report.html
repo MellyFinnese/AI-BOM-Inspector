@@ -19,8 +19,8 @@
 </head>
 <body>
   <h1>AI-BOM Report</h1>
-  <p>Generated at: 2025-11-21T02:40:08.354274</p>
-  <p>Stack Risk Score: <span class="badge bad">38 / 100</span></p>
+  <p>Generated at: 2025-11-20T14:16:55.410822</p>
+  <p>Stack Risk Score: <span class="badge bad">30 / 100</span></p>
   
   <section>
     <h2>Dependencies</h2>
@@ -29,83 +29,51 @@
       <tbody>
         
         <tr>
-          <td>click</td>
-          <td>==8.1.7</td>
+          <td>fastapi</td>
+          <td>==0.110.0</td>
           <td>requirements.txt</td>
-          <td class="risk">0</td>
-          <td>None</td>
-        </tr>
-        
-        <tr>
-          <td>jinja2</td>
-          <td>==3.1.4</td>
-          <td>requirements.txt</td>
-          <td class="risk">0</td>
-          <td>None</td>
-        </tr>
-        
-        <tr>
-          <td>requests</td>
-          <td>==2.32.3</td>
-          <td>requirements.txt</td>
-          <td class="risk">0</td>
-          <td>None</td>
-        </tr>
-        
-        <tr>
-          <td>click</td>
-          <td>&gt;=8.1.0</td>
-          <td>pyproject.toml</td>
           <td class="risk">2</td>
-          <td>[LOOSE_PIN] Version is not strictly pinned</td>
-        </tr>
-        
-        <tr>
-          <td>jinja2</td>
-          <td>&gt;=3.1.0</td>
-          <td>pyproject.toml</td>
-          <td class="risk">2</td>
-          <td>[LOOSE_PIN] Version is not strictly pinned</td>
+          <td>[UNSTABLE_VERSION] Pre-1.0 release may be unstable</td>
         </tr>
         
         <tr>
           <td>requests</td>
           <td>&gt;=2.31.0</td>
-          <td>pyproject.toml</td>
+          <td>requirements.txt</td>
           <td class="risk">2</td>
           <td>[LOOSE_PIN] Version is not strictly pinned</td>
         </tr>
         
         <tr>
-          <td>huggingface_hub</td>
-          <td>&gt;=0.26.0</td>
+          <td>urllib3</td>
+          <td>==1.25.8</td>
+          <td>requirements.txt</td>
+          <td class="risk">3</td>
+          <td>[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers</td>
+        </tr>
+        
+        <tr>
+          <td>falcon</td>
+          <td>unversioned</td>
+          <td>requirements.txt</td>
+          <td class="risk">3</td>
+          <td>[MISSING_PIN] Dependency is not pinned</td>
+        </tr>
+        
+        <tr>
+          <td>rich</td>
+          <td>~=13.7</td>
+          <td>pyproject.toml</td>
+          <td class="risk">0</td>
+          <td>None</td>
+        </tr>
+        
+        <tr>
+          <td>prometheus-client</td>
+          <td>&gt;=0.20</td>
           <td>pyproject.toml</td>
           <td class="risk">4</td>
           <td>[LOOSE_PIN] Version is not strictly pinned; [UNSTABLE_VERSION] Pre-1.0 release may be unstable</td>
-        </tr>
-        
-        <tr>
-          <td>pytest</td>
-          <td>&gt;=8.0.0</td>
-          <td>pyproject.toml</td>
-          <td class="risk">2</td>
-          <td>[LOOSE_PIN] Version is not strictly pinned</td>
-        </tr>
-        
-        <tr>
-          <td>node_modules/lodash</td>
-          <td>4.17.21</td>
-          <td>package-lock.json</td>
-          <td class="risk">0</td>
-          <td>None</td>
-        </tr>
-        
-        <tr>
-          <td>github.com/pkg/errors</td>
-          <td>v0.9.1</td>
-          <td>go.mod</td>
-          <td class="risk">0</td>
-          <td>None</td>
         </tr>
         
       </tbody>

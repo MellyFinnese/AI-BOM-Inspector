@@ -1,95 +1,61 @@
 {
-  "generated_at": "2025-11-21T02:40:07.142029",
+  "generated_at": "2025-11-20T14:16:51.004099",
   "ai_summary": null,
-  "total_risk": 20,
-  "stack_risk_score": 38,
-  "risk_breakdown": {
-    "unpinned_deps": 5,
-    "unverified_sources": 0,
-    "unknown_licenses": 1,
-    "stale_models": 1
-  },
+  "total_risk": 22,
+  "stack_risk_score": 30,
   "dependencies": [
     {
-      "name": "click",
-      "version": "==8.1.7",
+      "name": "fastapi",
+      "version": "==0.110.0",
       "source": "requirements.txt",
-      "issues": [],
-      "risk": 0
-    },
-    {
-      "name": "jinja2",
-      "version": "==3.1.4",
-      "source": "requirements.txt",
-      "issues": [],
-      "risk": 0
-    },
-    {
-      "name": "requests",
-      "version": "==2.32.3",
-      "source": "requirements.txt",
-      "issues": [],
-      "risk": 0
-    },
-    {
-      "name": "click",
-      "version": ">=8.1.0",
-      "source": "pyproject.toml",
       "issues": [
-        "[LOOSE_PIN] Version is not strictly pinned"
-      ],
-      "risk": 2
-    },
-    {
-      "name": "jinja2",
-      "version": ">=3.1.0",
-      "source": "pyproject.toml",
-      "issues": [
-        "[LOOSE_PIN] Version is not strictly pinned"
+        "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
       ],
       "risk": 2
     },
     {
       "name": "requests",
       "version": ">=2.31.0",
-      "source": "pyproject.toml",
+      "source": "requirements.txt",
       "issues": [
         "[LOOSE_PIN] Version is not strictly pinned"
       ],
       "risk": 2
     },
     {
-      "name": "huggingface_hub",
-      "version": ">=0.26.0",
+      "name": "urllib3",
+      "version": "==1.25.8",
+      "source": "requirements.txt",
+      "issues": [
+        "[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"
+      ],
+      "risk": 3
+    },
+    {
+      "name": "falcon",
+      "version": "unversioned",
+      "source": "requirements.txt",
+      "issues": [
+        "[MISSING_PIN] Dependency is not pinned"
+      ],
+      "risk": 3
+    },
+    {
+      "name": "rich",
+      "version": "~=13.7",
+      "source": "pyproject.toml",
+      "issues": [],
+      "risk": 0
+    },
+    {
+      "name": "prometheus-client",
+      "version": ">=0.20",
       "source": "pyproject.toml",
       "issues": [
         "[LOOSE_PIN] Version is not strictly pinned",
         "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
       ],
       "risk": 4
-    },
-    {
-      "name": "pytest",
-      "version": ">=8.0.0",
-      "source": "pyproject.toml",
-      "issues": [
-        "[LOOSE_PIN] Version is not strictly pinned"
-      ],
-      "risk": 2
-    },
-    {
-      "name": "node_modules/lodash",
-      "version": "4.17.21",
-      "source": "package-lock.json",
-      "issues": [],
-      "risk": 0
-    },
-    {
-      "name": "github.com/pkg/errors",
-      "version": "v0.9.1",
-      "source": "go.mod",
-      "issues": [],
-      "risk": 0
     }
   ],
   "models": [
