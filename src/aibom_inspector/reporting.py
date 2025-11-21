@@ -40,6 +40,8 @@ def render_json(report: Report) -> str:
         "generated_at": report.generated_at.isoformat(),
         "ai_summary": report.ai_summary,
         "total_risk": report.total_risk,
+        "stack_risk_score": report.stack_risk_score,
+        "risk_breakdown": report.risk_breakdown,
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
@@ -47,11 +49,12 @@ def render_json(report: Report) -> str:
 
 
 def render_markdown(report: Report) -> str:
-    lines = ["# AI-BOM Report", "", f"Generated at: {report.generated_at.isoformat()}"]
-    lines.append(f"Total risk score: {report.total_risk}")
-    lines.append(
-        f"Dependencies analyzed: {len(report.dependencies)} | Models analyzed: {len(report.models)}"
-    )
+    lines = [
+        "# AI-BOM Report",
+        "",
+        f"Generated at: {report.generated_at.isoformat()}",
+        f"Stack Risk Score: {report.stack_risk_score}/100",
+    ]
     if report.ai_summary:
         lines.append("\n## AI Summary\n")
         lines.append(report.ai_summary)
@@ -150,10 +153,9 @@ def render_html(report: Report) -> str:
 
     return template.render(
         generated_at=report.generated_at.isoformat(),
-        total_risk=report.total_risk,
-        dependency_count=len(report.dependencies),
-        model_count=len(report.models),
         ai_summary=report.ai_summary,
+        stack_risk_score=report.stack_risk_score,
+        badge_class="good" if report.stack_risk_score >= 80 else ("warn" if report.stack_risk_score >= 50 else "bad"),
         dependencies=list(_dependency_rows(report)),
         models=list(_model_rows(report)),
     )

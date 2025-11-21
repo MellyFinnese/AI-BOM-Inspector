@@ -8,24 +8,57 @@ from typing import Optional
 import click
 
 from .dependency_scanner import (
-    enrich_with_osv,
-    parse_sbom_file,
-    run_pip_audit,
+    scan_go_mod,
+    scan_package_json,
+    scan_package_lock,
+    scan_pom,
     scan_pyproject,
     scan_requirements,
 )
 from .model_inspector import scan_models_from_file, summarize_models
 from .reporting import write_report
-from .types import DependencyInfo, Report
+from .types import Report
 
 
-def _collect_dependencies(requirements: Optional[str], pyproject: Optional[str]):
+def _collect_dependencies(
+    requirements: Optional[str],
+    pyproject: Optional[str],
+    extra_manifests: tuple[str, ...],
+):
     deps = []
     if requirements:
         deps.extend(scan_requirements(Path(requirements)))
     if pyproject:
         deps.extend(scan_pyproject(Path(pyproject)))
+
+    for candidate, scanner in [
+        ("package-lock.json", scan_package_lock),
+        ("package.json", scan_package_json),
+        ("go.mod", scan_go_mod),
+        ("pom.xml", scan_pom),
+    ]:
+        path = Path(candidate)
+        if path.exists():
+            deps.extend(scanner(path))
+
+    for manifest in extra_manifests:
+        path = Path(manifest)
+        if path.exists():
+            deps.extend(scanner(path) if (scanner := _select_scanner(path)) else [])
+
     return deps
+
+
+def _select_scanner(path: Path):
+    mapping = {
+        "requirements.txt": scan_requirements,
+        "pyproject.toml": scan_pyproject,
+        "package.json": scan_package_json,
+        "package-lock.json": scan_package_lock,
+        "go.mod": scan_go_mod,
+        "pom.xml": scan_pom,
+    }
+    return mapping.get(path.name)
 
 
 def _collect_models(models_file: Optional[str], model_ids: tuple[str, ...]):
@@ -54,11 +87,6 @@ def main() -> None:
     help="Path to pyproject file (auto-detected if omitted).",
 )
 @click.option(
-    "--sbom-file",
-    type=click.Path(exists=True, dir_okay=False, path_type=str),
-    help="Existing SBOM (CycloneDX or SPDX JSON) to ingest instead of source files.",
-)
-@click.option(
     "--models-file",
     type=click.Path(exists=True, dir_okay=False, path_type=str),
     help="JSON file describing models to inspect.",
@@ -69,9 +97,15 @@ def main() -> None:
     help="HuggingFace model identifiers to include when no file is available.",
 )
 @click.option(
+    "--manifest",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Additional manifest files (package-lock.json, go.mod, pom.xml, etc.).",
+)
+@click.option(
     "--format",
     "fmt",
-    type=click.Choice(["json", "markdown", "md", "html", "cyclonedx", "spdx"], case_sensitive=False),
+    type=click.Choice(["json", "markdown", "md", "html"], case_sensitive=False),
     default="markdown",
     show_default=True,
     help="Output format for the report.",
@@ -94,9 +128,9 @@ def main() -> None:
 def scan(
     requirements: Optional[str],
     pyproject: Optional[str],
-    sbom_file: Optional[str],
     models_file: Optional[str],
     model_id: tuple[str, ...],
+    manifest: tuple[str, ...],
     fmt: str,
     output: Optional[str],
     ai_summary: bool,
@@ -110,21 +144,7 @@ def scan(
         str(Path("pyproject.toml")) if Path("pyproject.toml").exists() else None
     )
 
-    dependencies = _collect_dependencies(requirements_path, pyproject_path)
-    if sbom_file:
-        dependencies.extend(parse_sbom_file(Path(sbom_file)))
-
-    dependencies = enrich_with_osv(dependencies)
-    audit_issues = run_pip_audit(Path(requirements_path) if requirements_path else None)
-    if audit_issues:
-        for issue in audit_issues:
-            target = next((d for d in dependencies if d.name in issue.message), None)
-            if target:
-                target.issues.append(issue)
-            else:
-                dependencies.append(
-                    DependencyInfo(name="pip-audit", version=None, source="pip-audit", issues=[issue])
-                )
+    dependencies = _collect_dependencies(requirements_path, pyproject_path, manifest)
 
     models = _collect_models(models_file, model_id)
 

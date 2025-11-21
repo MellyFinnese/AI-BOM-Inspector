@@ -9,6 +9,7 @@ from typing import List, Optional
 class DependencyIssue:
     message: str
     severity: str = "medium"
+    code: str | None = None
 
 
 @dataclass
@@ -35,6 +36,7 @@ class DependencyInfo:
 class ModelIssue:
     message: str
     severity: str = "medium"
+    code: str | None = None
 
 
 @dataclass
@@ -70,3 +72,42 @@ class Report:
         return sum(dep.risk_score for dep in self.dependencies) + sum(
             model.risk_score for model in self.models
         )
+
+    @property
+    def stack_risk_score(self) -> int:
+        """Return an easy-to-share 0–100 risk score (100 = healthiest)."""
+
+        severity_penalty = {"high": 10, "medium": 6, "low": 3}
+
+        penalties = 0
+        for dep in self.dependencies:
+            for issue in dep.issues:
+                penalties += severity_penalty.get(issue.severity, 5)
+
+        for model in self.models:
+            for issue in model.issues:
+                penalties += severity_penalty.get(issue.severity, 5)
+
+        return max(0, min(100, 100 - penalties))
+
+    @property
+    def risk_breakdown(self) -> dict[str, int]:
+        """Summarize core AI-BOM risk categories for dashboards/CI."""
+
+        buckets = {"unpinned_deps": 0, "unverified_sources": 0, "unknown_licenses": 0, "stale_models": 0}
+
+        for dep in self.dependencies:
+            for issue in dep.issues:
+                if "MISSING_PIN" in issue.message or "LOOSE_PIN" in issue.message:
+                    buckets["unpinned_deps"] += 1
+
+        for model in self.models:
+            for issue in model.issues:
+                if "UNVERIFIED_SOURCE" in issue.message:
+                    buckets["unverified_sources"] += 1
+                if "UNKNOWN_LICENSE" in issue.message:
+                    buckets["unknown_licenses"] += 1
+                if "STALE_MODEL" in issue.message:
+                    buckets["stale_models"] += 1
+
+        return buckets

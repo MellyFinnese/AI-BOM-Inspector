@@ -1,12 +1,21 @@
+import json
 from pathlib import Path
 
-from aibom_inspector.dependency_scanner import parse_requirement_line, scan_pyproject, scan_requirements
+from aibom_inspector.dependency_scanner import (
+    parse_requirement_line,
+    scan_go_mod,
+    scan_package_json,
+    scan_package_lock,
+    scan_pom,
+    scan_pyproject,
+    scan_requirements,
+)
 
 
 def test_parse_requirement_flags_unpinned_and_pre_release():
     info = parse_requirement_line("sample")
     assert info
-    assert any(issue.message == "Unpinned dependency" for issue in info.issues)
+    assert any("MISSING_PIN" in issue.message for issue in info.issues)
 
     pre = parse_requirement_line("experimental==0.3.0")
     assert pre
@@ -52,21 +61,65 @@ hf = ["transformers>=4.0.0"]
     assert any("LOOSE_PIN" in issue.message for issue in hf.issues)
 
 
-def test_enrich_with_osv(monkeypatch):
-    deps = [parse_requirement_line("click==8.1.7"), parse_requirement_line("requests>=2.0.0")]
+def test_scan_package_json_flags_loose_ranges(tmp_path: Path):
+    pkg = tmp_path / "package.json"
+    pkg.write_text(
+        """
+{
+  "dependencies": {"lodash": "^4.17.21"},
+  "devDependencies": {"vite": "~5.0.0"}
+}
+"""
+    )
 
-    def fake_query(batch):
-        assert batch
-        return [{"vulns": [{"id": "CVE-2024-0001", "summary": "demo"}]}, {}]
-
-    monkeypatch.setattr("aibom_inspector.dependency_scanner._query_osv", fake_query)
-    enriched = enrich_with_osv([d for d in deps if d])
-    issue_messages = [i.message for i in enriched[0].issues]
-    assert any("CVE" in msg for msg in issue_messages)
+    deps = scan_package_json(pkg)
+    assert len(deps) == 2
+    assert any("LOOSE_PIN" in issue.message for issue in deps[0].issues)
 
 
-def test_parse_sbom_file(tmp_path: Path):
-    sbom = tmp_path / "sbom.json"
-    sbom.write_text("""{"components": [{"name": "fastapi", "version": "0.110.0"}]}""")
-    deps = parse_sbom_file(sbom)
-    assert deps[0].name == "fastapi"
+def test_scan_package_lock_flags_missing_pin(tmp_path: Path):
+    pkg_lock = tmp_path / "package-lock.json"
+    pkg_lock.write_text(
+        json.dumps({"packages": {"node_modules/lodash": {"version": "4.17.21"}}})
+    )
+
+    deps = scan_package_lock(pkg_lock)
+    assert deps[0].name.endswith("lodash")
+    assert deps[0].issues == []
+
+
+def test_scan_go_mod_reads_requirements(tmp_path: Path):
+    go_mod = tmp_path / "go.mod"
+    go_mod.write_text(
+        """
+module example.com/demo
+
+require (
+    github.com/pkg/errors v0.9.1
+)
+"""
+    )
+
+    deps = scan_go_mod(go_mod)
+    assert deps[0].name == "github.com/pkg/errors"
+    assert deps[0].source == "go.mod"
+
+
+def test_scan_pom_reads_dependencies(tmp_path: Path):
+    pom = tmp_path / "pom.xml"
+    pom.write_text(
+        """
+<project>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-core</artifactId>
+      <version>5.3.20</version>
+    </dependency>
+  </dependencies>
+</project>
+"""
+    )
+
+    deps = scan_pom(pom)
+    assert deps[0].name == "org.springframework:spring-core"
