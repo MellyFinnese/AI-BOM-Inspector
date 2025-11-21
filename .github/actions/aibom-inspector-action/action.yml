@@ -1,0 +1,78 @@
+name: "AI-BOM Inspector Action"
+description: "Run AI-BOM Inspector and post a risk summary on pull requests"
+author: "AI-BOM Inspector Maintainers"
+inputs:
+  manifest:
+    description: "Optional manifest paths to scan (comma-separated)"
+    required: false
+  models:
+    description: "Optional path to models.json"
+    required: false
+  fail-on-score:
+    description: "Fail when risk score exceeds this threshold"
+    required: false
+  github-token:
+    description: "GitHub token for commenting"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - name: Install AI-BOM Inspector
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+    - name: Run AI-BOM Inspector
+      shell: bash
+      run: |
+        MANIFEST_ARGS=""
+        if [ -n "${{ inputs.manifest }}" ]; then
+          IFS=',' read -ra FILES <<< "${{ inputs.manifest }}"
+          for f in "${FILES[@]}"; do
+            MANIFEST_ARGS+=" --manifest $f"
+          done
+        fi
+        python -m aibom_inspector.cli scan --format json --output aibom-report.json \
+          --fail-on-score "${{ inputs.fail-on-score }}" \
+          ${MANIFEST_ARGS} \
+          $( [ -n "${{ inputs.models }}" ] && echo "--models-file ${{ inputs.models }}" )
+    - name: Comment risk summary
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('fs');
+          const path = 'aibom-report.json';
+          if (!fs.existsSync(path)) {
+            core.setFailed('Report not found');
+          }
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const risk = report.stack_risk_score;
+          const breakdown = report.risk_breakdown || {};
+          const body = [
+            `AI-BOM Inspector risk score: **${risk}/100**`,
+            '',
+            `- Unpinned deps: ${breakdown.unpinned_deps || 0}`,
+            `- Unknown licenses: ${breakdown.unknown_licenses || 0}`,
+            `- Stale models: ${breakdown.stale_models || 0}`,
+            '',
+            'Full report attached as `aibom-report.json`'
+          ].join('\n');
+          const issue_number = context.issue.number;
+          if (issue_number) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body,
+            });
+          }
+    - name: Upload report artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: aibom-report
+        path: aibom-report.json

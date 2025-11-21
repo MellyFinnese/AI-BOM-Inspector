@@ -1,8 +1,11 @@
 import json
+import sys
 from pathlib import Path
 
 from aibom_inspector.dependency_scanner import (
+    enrich_with_osv,
     parse_requirement_line,
+    parse_sbom,
     scan_go_mod,
     scan_package_json,
     scan_package_lock,
@@ -10,6 +13,7 @@ from aibom_inspector.dependency_scanner import (
     scan_pyproject,
     scan_requirements,
 )
+from aibom_inspector.types import DependencyInfo
 
 
 def test_parse_requirement_flags_unpinned_and_pre_release():
@@ -123,3 +127,33 @@ def test_scan_pom_reads_dependencies(tmp_path: Path):
 
     deps = scan_pom(pom)
     assert deps[0].name == "org.springframework:spring-core"
+
+
+def test_parse_sbom_and_enrich_with_osv(monkeypatch, tmp_path: Path):
+    cyclonedx = {
+        "bomFormat": "CycloneDX",
+        "components": [
+            {"name": "demo", "version": "1.0.0", "licenses": [{"license": {"id": "MIT"}}]}
+        ],
+    }
+    sbom_path = tmp_path / "bom.json"
+    sbom_path.write_text(json.dumps(cyclonedx))
+
+    deps = parse_sbom(sbom_path)
+    assert deps[0].license == "MIT"
+
+    class DummyResponse:
+        status_code = 200
+
+        def json(self):
+            return {"vulns": [{"id": "CVE-TEST", "summary": "demo vuln"}]}
+
+    class DummyRequests:
+        @staticmethod
+        def post(*args, **kwargs):
+            return DummyResponse()
+
+    monkeypatch.setitem(sys.modules, "requests", DummyRequests)
+
+    enriched = enrich_with_osv([DependencyInfo(name="demo", version="1.0.0", source="requirements.txt", issues=[])])
+    assert any("CVE" in issue.message for issue in enriched[0].issues)

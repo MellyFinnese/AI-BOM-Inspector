@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Iterable
+from uuid import uuid4
 
 from jinja2 import Environment, select_autoescape
 
@@ -18,6 +19,8 @@ def _dependency_rows(report: Report) -> Iterable[dict]:
             "name": dep.name,
             "version": dep.version or "unversioned",
             "source": dep.source,
+            "license": dep.license or "unknown",
+            "license_category": dep.license_category or "unknown",
             "issues": [issue.message for issue in dep.issues],
             "risk": dep.risk_score,
         }
@@ -29,6 +32,7 @@ def _model_rows(report: Report) -> Iterable[dict]:
             "id": model.identifier,
             "source": model.source,
             "license": model.license or "unknown",
+            "license_category": model.license_category or "unknown",
             "last_updated": model.last_updated.isoformat() if model.last_updated else "unknown",
             "issues": [issue.message for issue in model.issues],
             "risk": model.risk_score,
@@ -60,12 +64,12 @@ def render_markdown(report: Report) -> str:
         lines.append(report.ai_summary)
 
     lines.append("\n## Dependencies\n")
-    lines.append("| Name | Version | Source | Risk | Issues |")
-    lines.append("| --- | --- | --- | --- | --- |")
+    lines.append("| Name | Version | Source | License | Risk | Issues |")
+    lines.append("| --- | --- | --- | --- | --- | --- |")
     for row in _dependency_rows(report):
         issues = "; ".join(row["issues"]) or "None"
         lines.append(
-            f"| {row['name']} | {row['version']} | {row['source']} | {row['risk']} | {issues} |"
+            f"| {row['name']} | {row['version']} | {row['source']} | {row['license']} ({row['license_category']}) | {row['risk']} | {issues} |"
         )
 
     lines.append("\n## Models\n")
@@ -114,13 +118,14 @@ def render_html(report: Report) -> str:
   <section>
     <h2>Dependencies</h2>
     <table>
-      <thead><tr><th>Name</th><th>Version</th><th>Source</th><th>Risk</th><th>Issues</th></tr></thead>
+      <thead><tr><th>Name</th><th>Version</th><th>Source</th><th>License</th><th>Risk</th><th>Issues</th></tr></thead>
       <tbody>
         {% for row in dependencies %}
         <tr>
           <td>{{ row.name }}</td>
           <td>{{ row.version }}</td>
           <td>{{ row.source }}</td>
+          <td>{{ row.license }} ({{ row.license_category }})</td>
           <td class=\"risk\">{{ row.risk }}</td>
           <td>{{ row.issues | join('; ') if row.issues else 'None' }}</td>
         </tr>
@@ -161,6 +166,86 @@ def render_html(report: Report) -> str:
     )
 
 
+def render_cyclonedx(report: Report) -> str:
+    components = []
+    for row in _dependency_rows(report):
+        components.append(
+            {
+                "type": "library",
+                "name": row["name"],
+                "version": row["version"],
+                "licenses": [{"license": {"id": row["license"].upper()}}],
+                "properties": [
+                    {"name": "aibom:source", "value": row["source"]},
+                    {"name": "aibom:license_category", "value": row["license_category"]},
+                    {"name": "aibom:risk", "value": row["risk"]},
+                    {"name": "aibom:issues", "value": "; ".join(row["issues"])},
+                ],
+            }
+        )
+
+    for model in _model_rows(report):
+        components.append(
+            {
+                "type": "application",
+                "name": model["id"],
+                "version": model["last_updated"],
+                "licenses": [{"license": {"id": model["license"].upper()}}],
+                "properties": [
+                    {"name": "aibom:source", "value": model["source"]},
+                    {"name": "aibom:license_category", "value": model["license_category"]},
+                    {"name": "aibom:risk", "value": model["risk"]},
+                    {"name": "aibom:issues", "value": "; ".join(model["issues"])},
+                ],
+            }
+        )
+
+    sbom = {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.6",
+        "version": 1,
+        "metadata": {"tools": [{"vendor": "aibom", "name": "AI-BOM Inspector"}]},
+        "components": components,
+    }
+    return json.dumps(sbom, indent=2)
+
+
+def render_spdx(report: Report) -> str:
+    packages = []
+    for row in _dependency_rows(report):
+        packages.append(
+            {
+                "name": row["name"],
+                "SPDXID": f"SPDXRef-{uuid4().hex[:8]}",
+                "versionInfo": row["version"],
+                "licenseDeclared": row["license"],
+                "licenseConcluded": row["license"],
+                "summary": "; ".join(row["issues"]),
+            }
+        )
+
+    for model in _model_rows(report):
+        packages.append(
+            {
+                "name": f"model:{model['id']}",
+                "SPDXID": f"SPDXRef-{uuid4().hex[:8]}",
+                "versionInfo": model["last_updated"],
+                "licenseDeclared": model["license"],
+                "licenseConcluded": model["license"],
+                "summary": "; ".join(model["issues"]),
+            }
+        )
+
+    spdx = {
+        "spdxVersion": "SPDX-2.3",
+        "dataLicense": "CC0-1.0",
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "name": "AI-BOM Inspector SBOM",
+        "packages": packages,
+    }
+    return json.dumps(spdx, indent=2)
+
+
 def render_report(report: Report, fmt: str) -> str:
     fmt = fmt.lower()
     if fmt == "json":
@@ -169,6 +254,10 @@ def render_report(report: Report, fmt: str) -> str:
         return render_markdown(report)
     if fmt == "html":
         return render_html(report)
+    if fmt == "cyclonedx":
+        return render_cyclonedx(report)
+    if fmt == "spdx":
+        return render_spdx(report)
     raise ValueError(f"Unknown report format: {fmt}")
 
 

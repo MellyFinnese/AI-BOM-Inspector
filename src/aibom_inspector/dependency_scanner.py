@@ -7,7 +7,11 @@ from typing import Iterable, List
 
 import tomllib
 
-from .types import DependencyInfo, DependencyIssue
+from .types import (
+    DependencyInfo,
+    DependencyIssue,
+    apply_license_category_dependency,
+)
 
 
 PINNED_PATTERN = re.compile(r"(?P<name>[A-Za-z0-9_.-]+)(?P<specifier>==|>=|<=|~=|!=|>|<)?(?P<version>.+)?")
@@ -63,7 +67,11 @@ def parse_requirement_line(line: str) -> DependencyInfo | None:
 
     resolved_version = f"{specifier}{version}" if specifier else version
 
-    return DependencyInfo(name=name, version=resolved_version, source="requirements.txt", issues=issues)
+    dep = DependencyInfo(
+        name=name, version=resolved_version, source="requirements.txt", issues=issues
+    )
+    apply_license_category_dependency(dep)
+    return dep
 
 
 def scan_requirements(path: Path) -> List[DependencyInfo]:
@@ -120,14 +128,14 @@ def scan_package_json(path: Path) -> List[DependencyInfo]:
             else:
                 version_clean = version_value
             issues = _issue_for_specifier(specifier if specifier else "==", version_clean)
-            dependencies.append(
-                DependencyInfo(
-                    name=name,
-                    version=version_value,
-                    source="package.json",
-                    issues=issues,
-                )
+            dep = DependencyInfo(
+                name=name,
+                version=version_value,
+                source="package.json",
+                issues=issues,
             )
+            apply_license_category_dependency(dep)
+            dependencies.append(dep)
 
     _parse_block(data.get("dependencies"))
     _parse_block(data.get("devDependencies"))
@@ -146,7 +154,14 @@ def scan_package_lock(path: Path) -> List[DependencyInfo]:
             continue
         version = details.get("version")
         issues = _issue_for_specifier("==", version)
-        deps.append(DependencyInfo(name=name.lstrip("./"), version=version, source="package-lock.json", issues=issues))
+        dep = DependencyInfo(
+            name=name.lstrip("./"),
+            version=version,
+            source="package-lock.json",
+            issues=issues,
+        )
+        apply_license_category_dependency(dep)
+        deps.append(dep)
     return deps
 
 
@@ -168,7 +183,9 @@ def scan_go_mod(path: Path) -> List[DependencyInfo]:
         if " " in stripped:
             name, version = stripped.split(None, 1)
             issues = _issue_for_specifier("==", version)
-            dependencies.append(DependencyInfo(name=name, version=version, source="go.mod", issues=issues))
+            dep = DependencyInfo(name=name, version=version, source="go.mod", issues=issues)
+            apply_license_category_dependency(dep)
+            dependencies.append(dep)
     return dependencies
 
 
@@ -188,7 +205,11 @@ def scan_pom(path: Path) -> List[DependencyInfo]:
         name = f"{group_id.group(1)}:{artifact_id.group(1)}"
         version_value = version.group(1).strip() if version else None
         issues = _issue_for_specifier("==" if version_value else None, version_value)
-        deps.append(DependencyInfo(name=name, version=version_value, source="pom.xml", issues=issues))
+        dep = DependencyInfo(
+            name=name, version=version_value, source="pom.xml", issues=issues
+        )
+        apply_license_category_dependency(dep)
+        deps.append(dep)
     return deps
 
 
@@ -208,3 +229,113 @@ def summarize_dependencies(paths: Iterable[Path]) -> List[DependencyInfo]:
         elif path.name == "pom.xml":
             dependencies.extend(scan_pom(path))
     return dependencies
+
+
+def normalize_version(version: str | None) -> str:
+    if not version:
+        return ""
+    cleaned = version.lstrip("=<>~^!").strip()
+    # For Maven style versions, just return raw
+    return cleaned
+
+
+def enrich_with_osv(dependencies: List[DependencyInfo]) -> List[DependencyInfo]:
+    """Optionally enrich dependencies with OSV CVE lookups."""
+
+    ecosystem_map = {
+        "requirements.txt": "PyPI",
+        "pyproject.toml": "PyPI",
+        "package.json": "npm",
+        "package-lock.json": "npm",
+        "go.mod": "Go",
+        "pom.xml": "Maven",
+        "cyclonedx": "PyPI",
+        "spdx": "PyPI",
+    }
+
+    for dep in dependencies:
+        version = normalize_version(dep.version)
+        ecosystem = ecosystem_map.get(dep.source, "PyPI")
+        if not version:
+            continue
+        payload = {"package": {"name": dep.name, "ecosystem": ecosystem}, "version": version}
+        try:
+            import requests  # type: ignore
+
+            response = requests.post("https://api.osv.dev/v1/query", json=payload, timeout=8)
+            if response.status_code != 200:
+                dep.issues.append(
+                    DependencyIssue(
+                        "[CVE_LOOKUP_FAILED] OSV request did not return results",
+                        severity="low",
+                    )
+                )
+                continue
+            data = response.json()
+            for vuln in data.get("vulns", []) or []:
+                vuln_id = vuln.get("id") or (vuln.get("aliases") or [None])[0] or "CVE"
+                summary = vuln.get("summary") or "Vulnerability detected"
+                dep.issues.append(
+                    DependencyIssue(
+                        f"[CVE] {vuln_id}: {summary}",
+                        severity="high",
+                        code=vuln_id,
+                    )
+                )
+        except ImportError:
+            dep.issues.append(
+                DependencyIssue(
+                    "[CVE_LOOKUP_SKIPPED] requests not installed; skipping OSV",
+                    severity="low",
+                )
+            )
+        except Exception:
+            dep.issues.append(
+                DependencyIssue(
+                    "[CVE_LOOKUP_FAILED] Unable to reach OSV", severity="low"
+                )
+            )
+
+    return dependencies
+
+
+def parse_sbom(path: Path) -> List[DependencyInfo]:
+    if not path.exists():
+        return []
+
+    data = json.loads(path.read_text())
+    if str(data.get("bomFormat", "")).lower() == "cyclonedx":
+        deps: list[DependencyInfo] = []
+        for comp in data.get("components", []) or []:
+            license_value = None
+            licenses = comp.get("licenses") or []
+            if licenses:
+                license_data = licenses[0].get("license", {}) or {}
+                license_value = license_data.get("id") or license_data.get("name")
+            dep = DependencyInfo(
+                name=comp.get("name", "unknown"),
+                version=comp.get("version"),
+                source="cyclonedx",
+                license=license_value,
+                issues=_issue_for_specifier("==", comp.get("version")),
+            )
+            apply_license_category_dependency(dep)
+            deps.append(dep)
+        return deps
+
+    if data.get("spdxVersion"):
+        deps = []
+        for pkg in data.get("packages", []) or []:
+            license_value = pkg.get("licenseDeclared") or pkg.get("licenseConcluded")
+            dep = DependencyInfo(
+                name=pkg.get("name", "unknown"),
+                version=pkg.get("versionInfo"),
+                source="spdx",
+                license=license_value,
+                issues=_issue_for_specifier("==", pkg.get("versionInfo")),
+            )
+            apply_license_category_dependency(dep)
+            deps.append(dep)
+        return deps
+
+    return []

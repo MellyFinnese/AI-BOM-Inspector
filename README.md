@@ -1,13 +1,15 @@
 # AI-BOM Inspector
 
-Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and highlights real supply-chain risk.
+![AI-BOM Inspector CI](https://img.shields.io/badge/AI--BOM%20Inspector-Scan%20your%20AI%20stack%20in%20CI-blue)
+
+Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and highlights sloppy supply-chain practices across multiple languages.
 
 ## What it does
-- Parse Python dependencies from `requirements.txt`, `pyproject.toml`, or an existing SBOM (CycloneDX/SPDX)
-- Gather AI model metadata from JSON, Hugging Face, or other registries with caching
-- Pull real CVEs via OSV/pip-audit and tag missing pins, unstable versions, stale models, and unknown licenses
-- Emit JSON, Markdown, HTML, CycloneDX, and SPDX with an AI-BOM extension for model metadata
-- Stub AI summary output you can replace with your own LLM integration
+- Parse dependency manifests across Python (`requirements.txt`, `pyproject.toml`), JavaScript (`package.json` / `package-lock.json`), Go (`go.mod`), and Java (`pom.xml`)
+- Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
+- Gather AI model metadata from JSON or explicit Hugging Face IDs (bring your own JSON or HF IDs; no automatic pipeline discovery)
+- Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
+- Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns plus a stub AI summary you can replace with your own LLM integration
 
 ## Getting started
 1. Install the package locally (editable install for development):
@@ -39,29 +41,37 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
 ### Why this vs. Snyk & friends?
 - **Small, OSS, local-first**: zero data leaves your laptop or CI box.
 - **AI-stack aware**: treats models as first-class assets instead of opaque blobs.
-- **Customizable rules**: heuristics and CVE hooks are readable Python, not black-box policies.
+- **Customizable rules**: heuristics are readable Python, not black-box policies.
 
 ## Examples
-- **End-to-end demo** (`examples/demo/`): tiny app with `requirements.txt`, `pyproject.toml`, `models.json`, and generated `aibom-report.json/md/html` plus a screenshot of the HTML view:
-
-  ![HTML report screenshot](examples/demo/aibom-report.png)
+- **End-to-end demo** (`examples/demo/`): tiny app with `requirements.txt`, `pyproject.toml`, `package-lock.json`, `go.mod`, `models.json`, and generated `aibom-report.json/md/html`.
+  - HTML report snapshot: open `examples/demo/aibom-report.html`
+  - Markdown rendering snapshot: see `examples/demo/aibom-report.md`
+  - Before/after hygiene comparison: `screenshots/before-after.html`
 
   Small JSON excerpt (full file in `examples/demo/aibom-report.json`):
   ```json
   {
-    "stack_risk_score": 52,
-    "risk_breakdown": {"unpinned_deps": 2, "unverified_sources": 1, "unknown_licenses": 1, "stale_models": 0},
-    "dependencies": [{"name": "urllib3", "issues": ["[CVE] CVE-2019-11324: CRLF injection when retrieving HTTP headers"]}],
-    "models": [{"id": "gpt2", "issues": ["[MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)"]}]
+    "stack_risk_score": 30,
+    "risk_breakdown": {"unpinned_deps": 3, "unverified_sources": 0, "unknown_licenses": 1, "stale_models": 1},
+    "dependencies": [{"name": "urllib3", "issues": ["[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"]}],
+    "models": [{"id": "gpt2", "issues": ["[STALE_MODEL] Model metadata is stale", "[MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)"]}]
   }
   ```
+- **Screenshots:**
+  - HTML report: open `examples/demo/aibom-report.html`
+  - Markdown rendering: view `examples/demo/aibom-report.md`
+  - Before vs. after: open `screenshots/before-after.html`
 - **Sample models file:** `examples/models.sample.json`
 - **Sample Markdown report:** `examples/report.sample.md`
 - **Example commands:**
   - Only dependency scan with autodetection: `aibom scan --format json`
   - Include models from a file: `aibom scan --models-file examples/models.sample.json --format markdown --output report.md`
   - Specify models inline: `aibom scan --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
-  - Import an existing SBOM and fail CI if risk > 70: `aibom scan --sbom-file bom.json --fail-on-score 70 --format cyclonedx`
+  - Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
+  - Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html`
+  - Export CycloneDX: `aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json`
+  - Fail CI if risk > 70: `aibom scan --fail-on-score 70 --format html`
 
 ## Heuristics & Risk Signals
 AI-BOM Inspector ships with lightweight, explainable checks that map to common AI supply-chain issues:
@@ -71,14 +81,21 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `MISSING_PIN` | Dependency version not pinned with `==`/`~=` | High |
 | `LOOSE_PIN` | Dependency uses a range (`>=`, `<=`, etc.) | Medium |
 | `UNSTABLE_VERSION` | Pre-1.0 releases that may churn | Medium |
-| `CVE` | OSV/pip-audit surfaced a known vulnerability | High |
-| `KNOWN_VULN` | Matches a known-bad version (e.g., urllib3 1.25.8) | High |
-| `UNKNOWN_LICENSE` | Model lacks license metadata | High |
+| `KNOWN_VULN` / `CVE` | Known vulnerable versions (built-in heuristics + optional OSV lookup) | High |
+| `LICENSE_RISK` | Copyleft / reciprocal terms detected for a model | Medium |
+| `UNKNOWN_LICENSE` | Model or SBOM component lacks license metadata | High |
 | `STALE_MODEL` | Model metadata older than ~9 months | Medium |
 | `UNVERIFIED_SOURCE` | Non-standard model source value | Medium |
 | `MODEL_ADVISORY` | Model flagged by a published advisory | High |
 
 The report shows a `stack_risk_score` (0–100, higher is safer) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, and stale models.
+
+### Before vs. after hardening
+
+| Scenario | Risk score | Signals |
+| --- | --- | --- |
+| **Messy AI stack** | 48/100 | Unpinned `package-lock.json`, unknown model license, stale model metadata |
+| **Hardened AI stack** | 88/100 | All deps pinned, permissive licenses, fresh model metadata, no advisories |
 
 ### Example: scanning a real project
 ```bash
@@ -87,33 +104,14 @@ aibom scan --requirements requirements.txt --models-file models.json --format ht
 Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift, or run in CI with `--fail-on-score 70`.
 
 ### Planned killer feature
-Cross-check models and dependencies against public CVE feeds with a customizable 0–100 AI risk score and HTML visualization (table + severity badges).
+Cross-check models and dependencies against public CVE feeds with a customizable 0–100 AI risk score and HTML visualization (table + severity badges). (Planned, not implemented.)
 
-The report shows a `stack_risk_score` (0–100, higher is safer) derived from the number and severity of these findings. A red badge highlights when high-risk flags dominate (e.g., missing pins + known CVEs). Sample Markdown and HTML outputs in `examples/demo/` show how the signals render alongside dependency and model tables.
+The report shows a `stack_risk_score` (0–100, higher is safer) derived from the number and severity of these findings. A red badge highlights when high-risk flags dominate (e.g., missing pins + unverified sources). Sample Markdown and HTML outputs in `examples/demo/` show how the signals render alongside dependency and model tables.
 
 ## Testing and CI
 - Run unit tests: `pytest`
-- GitHub Actions runs formatting-free CI on pushes and pull requests via `.github/workflows/ci.yml`.
-
-### GitHub Action example
-```yaml
-name: ai-bom
-on: [pull_request]
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install ai-bom-inspector
-      - run: aibom scan --format html --output aibom-report.html --fail-on-score 70
-      - uses: actions/upload-artifact@v4
-        with:
-          name: aibom-report
-          path: aibom-report.html
-```
+- GitHub Action: `.github/workflows/aibom-inspector-action.yml` uses the bundled composite action to scan PRs and post a risk comment.
+- CI guardrails: use `--fail-on-score <threshold>` to block merges when the AI risk score drops below your bar.
 
 ## Security, governance, and contributions
 - See `SECURITY.md` for how to report vulnerabilities.

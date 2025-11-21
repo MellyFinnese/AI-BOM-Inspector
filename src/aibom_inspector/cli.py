@@ -8,6 +8,8 @@ from typing import Optional
 import click
 
 from .dependency_scanner import (
+    enrich_with_osv,
+    parse_sbom,
     scan_go_mod,
     scan_package_json,
     scan_package_lock,
@@ -16,7 +18,7 @@ from .dependency_scanner import (
     scan_requirements,
 )
 from .model_inspector import scan_models_from_file, summarize_models
-from .reporting import write_report
+from .reporting import render_report, write_report
 from .types import Report
 
 
@@ -103,9 +105,15 @@ def main() -> None:
     help="Additional manifest files (package-lock.json, go.mod, pom.xml, etc.).",
 )
 @click.option(
+    "--sbom-file",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Existing CycloneDX/SPDX SBOMs to include in the scan context.",
+)
+@click.option(
     "--format",
     "fmt",
-    type=click.Choice(["json", "markdown", "md", "html"], case_sensitive=False),
+    type=click.Choice(["json", "markdown", "md", "html", "cyclonedx", "spdx"], case_sensitive=False),
     default="markdown",
     show_default=True,
     help="Output format for the report.",
@@ -114,6 +122,11 @@ def main() -> None:
     "--output",
     type=click.Path(dir_okay=False, writable=True, path_type=str),
     help="Write the report to a file instead of stdout.",
+)
+@click.option(
+    "--sbom-output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Optional destination path for CycloneDX/SPDX output (if format is SBOM).",
 )
 @click.option(
     "--ai-summary",
@@ -125,16 +138,24 @@ def main() -> None:
     type=int,
     help="Exit non-zero when calculated risk exceeds the threshold (0-100, higher = riskier).",
 )
+@click.option(
+    "--with-cves",
+    is_flag=True,
+    help="Enrich dependencies with OSV vulnerability lookups (best-effort).",
+)
 def scan(
     requirements: Optional[str],
     pyproject: Optional[str],
     models_file: Optional[str],
     model_id: tuple[str, ...],
     manifest: tuple[str, ...],
+    sbom_file: tuple[str, ...],
     fmt: str,
     output: Optional[str],
+    sbom_output: Optional[str],
     ai_summary: bool,
     fail_on_score: Optional[int],
+    with_cves: bool,
 ) -> None:
     """Scan dependencies, models, and produce a report."""
     requirements_path = requirements or (
@@ -145,8 +166,13 @@ def scan(
     )
 
     dependencies = _collect_dependencies(requirements_path, pyproject_path, manifest)
+    for sbom in sbom_file:
+        dependencies.extend(parse_sbom(Path(sbom)))
 
     models = _collect_models(models_file, model_id)
+
+    if with_cves:
+        dependencies = enrich_with_osv(dependencies)
 
     summary = None
     if ai_summary:
@@ -160,9 +186,14 @@ def scan(
     )
 
     destination = Path(output) if output else None
-    rendered = write_report(report, fmt, destination)
-    if not destination:
-        click.echo(rendered)
+    if fmt in {"cyclonedx", "spdx"} and sbom_output:
+        rendered = render_report(report, fmt)
+        Path(sbom_output).parent.mkdir(parents=True, exist_ok=True)
+        Path(sbom_output).write_text(rendered)
+    else:
+        rendered = write_report(report, fmt, destination)
+        if not destination:
+            click.echo(rendered)
 
     if fail_on_score is not None:
         risk_value = 100 - report.stack_risk_score

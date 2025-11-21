@@ -1,13 +1,21 @@
 {
-  "generated_at": "2025-11-20T14:16:51.004099",
+  "generated_at": "2025-11-21T03:04:36.855290",
   "ai_summary": null,
   "total_risk": 22,
   "stack_risk_score": 30,
+  "risk_breakdown": {
+    "unpinned_deps": 3,
+    "unverified_sources": 0,
+    "unknown_licenses": 1,
+    "stale_models": 1
+  },
   "dependencies": [
     {
       "name": "fastapi",
       "version": "==0.110.0",
       "source": "requirements.txt",
+      "license": "unknown",
+      "license_category": "unknown",
       "issues": [
         "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
       ],
@@ -17,6 +25,8 @@
       "name": "requests",
       "version": ">=2.31.0",
       "source": "requirements.txt",
+      "license": "unknown",
+      "license_category": "unknown",
       "issues": [
         "[LOOSE_PIN] Version is not strictly pinned"
       ],
@@ -26,6 +36,8 @@
       "name": "urllib3",
       "version": "==1.25.8",
       "source": "requirements.txt",
+      "license": "unknown",
+      "license_category": "unknown",
       "issues": [
         "[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"
       ],
@@ -35,6 +47,8 @@
       "name": "falcon",
       "version": "unversioned",
       "source": "requirements.txt",
+      "license": "unknown",
+      "license_category": "unknown",
       "issues": [
         "[MISSING_PIN] Dependency is not pinned"
       ],
@@ -44,6 +58,8 @@
       "name": "rich",
       "version": "~=13.7",
       "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
       "issues": [],
       "risk": 0
     },
@@ -51,11 +67,31 @@
       "name": "prometheus-client",
       "version": ">=0.20",
       "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
       "issues": [
         "[LOOSE_PIN] Version is not strictly pinned",
         "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
       ],
       "risk": 4
+    },
+    {
+      "name": "node_modules/lodash",
+      "version": "4.17.21",
+      "source": "package-lock.json",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [],
+      "risk": 0
+    },
+    {
+      "name": "github.com/pkg/errors",
+      "version": "v0.9.1",
+      "source": "go.mod",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [],
+      "risk": 0
     }
   ],
   "models": [
@@ -63,6 +99,7 @@
       "id": "gpt2",
       "source": "huggingface",
       "license": "mit",
+      "license_category": "permissive",
       "last_updated": "2023-05-01T00:00:00",
       "issues": [
         "[STALE_MODEL] Model metadata is stale",
@@ -74,6 +111,7 @@
       "id": "research-embedder",
       "source": "private",
       "license": "unknown",
+      "license_category": "unknown",
       "last_updated": "unknown",
       "issues": [
         "[UNKNOWN_LICENSE] Missing license information"

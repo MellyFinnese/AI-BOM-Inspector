@@ -1,0 +1,315 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "tools": [
+      {
+        "vendor": "aibom",
+        "name": "AI-BOM Inspector"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "fastapi",
+      "version": "==0.110.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "requirements.txt"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 2
+        },
+        {
+          "name": "aibom:issues",
+          "value": "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "requests",
+      "version": ">=2.31.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "requirements.txt"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 2
+        },
+        {
+          "name": "aibom:issues",
+          "value": "[LOOSE_PIN] Version is not strictly pinned"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "urllib3",
+      "version": "==1.25.8",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "requirements.txt"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 3
+        },
+        {
+          "name": "aibom:issues",
+          "value": "[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "falcon",
+      "version": "unversioned",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "requirements.txt"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 3
+        },
+        {
+          "name": "aibom:issues",
+          "value": "[MISSING_PIN] Dependency is not pinned"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "rich",
+      "version": "~=13.7",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "pyproject.toml"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 0
+        },
+        {
+          "name": "aibom:issues",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "prometheus-client",
+      "version": ">=0.20",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "pyproject.toml"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 4
+        },
+        {
+          "name": "aibom:issues",
+          "value": "[LOOSE_PIN] Version is not strictly pinned; [UNSTABLE_VERSION] Pre-1.0 release may be unstable"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "node_modules/lodash",
+      "version": "4.17.21",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "package-lock.json"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 0
+        },
+        {
+          "name": "aibom:issues",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "github.com/pkg/errors",
+      "version": "v0.9.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "go.mod"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 0
+        },
+        {
+          "name": "aibom:issues",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "name": "gpt2",
+      "version": "2023-05-01T00:00:00",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "huggingface"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "permissive"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 5
+        },
+        {
+          "name": "aibom:issues",
+          "value": "[STALE_MODEL] Model metadata is stale; [MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "name": "research-embedder",
+      "version": "unknown",
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "aibom:source",
+          "value": "private"
+        },
+        {
+          "name": "aibom:license_category",
+          "value": "unknown"
+        },
+        {
+          "name": "aibom:risk",
+          "value": 3
+        },
+        {
+          "name": "aibom:issues",
+          "value": "[UNKNOWN_LICENSE] Missing license information"
+        }
+      ]
+    }
+  ]
+}

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .types import ModelInfo, ModelIssue
+from .types import ModelInfo, ModelIssue, apply_license_category_model, categorize_license
 
 
 STALE_DAYS = 270
@@ -70,6 +70,21 @@ def parse_model_entry(entry: dict) -> ModelInfo:
 
     if not license_name:
         issues.append(ModelIssue("[UNKNOWN_LICENSE] Missing license information", severity="high"))
+    else:
+        category = categorize_license(license_name)
+        if category in {"copyleft", "weak_copyleft"}:
+            issues.append(
+                ModelIssue(
+                    "[LICENSE_RISK] Copyleft/reciprocal terms may apply",
+                    severity="medium",
+                )
+            )
+        elif category == "unknown":
+            issues.append(
+                ModelIssue(
+                    "[UNKNOWN_LICENSE] License could not be classified", severity="medium"
+                )
+            )
 
     if last_updated and last_updated < datetime.utcnow() - timedelta(days=STALE_DAYS):
         issues.append(ModelIssue("[STALE_MODEL] Model metadata is stale", severity="medium"))
@@ -81,13 +96,15 @@ def parse_model_entry(entry: dict) -> ModelInfo:
     if advisory:
         issues.append(ModelIssue(f"[MODEL_ADVISORY] {advisory}", severity="high"))
 
-    return ModelInfo(
+    model = ModelInfo(
         identifier=identifier,
         source=source,
         license=license_name,
         last_updated=last_updated,
         issues=issues,
     )
+    apply_license_category_model(model)
+    return model
 
 
 def scan_models_from_file(path: Path) -> List[ModelInfo]:

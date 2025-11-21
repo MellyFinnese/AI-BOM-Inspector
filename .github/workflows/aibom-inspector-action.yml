@@ -1,0 +1,16 @@
+name: ai-bom-inspector-action
+
+on:
+  pull_request:
+    branches: ["main", "work"]
+
+jobs:
+  scan-ai-stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run AI-BOM Inspector and comment
+        uses: ./.github/actions/aibom-inspector-action
+        with:
+          manifest: "requirements.txt,pyproject.toml"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
