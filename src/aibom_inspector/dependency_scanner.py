@@ -5,7 +5,12 @@ import re
 from pathlib import Path
 from typing import Iterable, List
 
-import tomllib
+try:  # Python < 3.11 compatibility
+    import tomllib  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - exercised in older runtimes
+    import tomli as tomllib  # type: ignore
+
+from packaging.requirements import Requirement
 
 from .types import (
     DependencyInfo,
@@ -14,16 +19,22 @@ from .types import (
 )
 
 
-PINNED_PATTERN = re.compile(r"(?P<name>[A-Za-z0-9_.-]+)(?P<specifier>==|>=|<=|~=|!=|>|<)?(?P<version>.+)?")
-
-
 KNOWN_BAD_VERSIONS = {
     "urllib3": {
-        "1.25.8": "CVE-2019-11324: CRLF injection when retrieving HTTP headers",
-        "1.26.0": "CVE-2020-26137: CRLF injection via HTTP request headers",
+        "1.25.8": {
+            "issue": "CVE-2019-11324: CRLF injection when retrieving HTTP headers",
+            "upgrade_to": ">=1.25.9",
+        },
+        "1.26.0": {
+            "issue": "CVE-2020-26137: CRLF injection via HTTP request headers",
+            "upgrade_to": ">=1.26.2",
+        },
     },
     "transformers": {
-        "4.37.0": "Known unsafe deserialization issue in pipeline loading",
+        "4.37.0": {
+            "issue": "Known unsafe deserialization issue in pipeline loading",
+            "upgrade_to": ">=4.37.1",
+        },
     },
 }
 
@@ -39,37 +50,46 @@ def _issue_for_specifier(specifier: str | None, version: str | None) -> list[Dep
         issues.append(DependencyIssue("[UNSTABLE_VERSION] Pre-1.0 release may be unstable", severity="medium"))
 
     return issues
-
-
-def parse_requirement_line(line: str) -> DependencyInfo | None:
+def parse_requirement_line(line: str, source: str = "requirements.txt") -> DependencyInfo | None:
     cleaned = line.strip()
     if not cleaned or cleaned.startswith("#"):
         return None
 
-    match = PINNED_PATTERN.match(cleaned)
-    if not match:
-        return DependencyInfo(name=cleaned, version=None, source="requirements.txt", issues=[])
+    try:
+        req = Requirement(cleaned)
+    except Exception:
+        return DependencyInfo(name=cleaned, version=None, source=source, issues=[])
 
-    name = match.group("name")
-    specifier = match.group("specifier") or ""
-    version = match.group("version").strip() if match.group("version") else None
+    specifier = None
+    version = None
+    if req.specifier:
+        first_spec = next(iter(req.specifier))
+        specifier = first_spec.operator
+        version = first_spec.version
 
     issues = _issue_for_specifier(specifier, version)
 
-    vuln_versions = KNOWN_BAD_VERSIONS.get(name.lower()) or KNOWN_BAD_VERSIONS.get(name)
-    if specifier == "==" and version and vuln_versions and version in vuln_versions:
+    if req.url:
         issues.append(
             DependencyIssue(
-                f"[KNOWN_VULN] {vuln_versions[version]}",
+                "[UNVERIFIED_SOURCE] Direct URL requirement; verify integrity", severity="medium"
+            )
+        )
+
+    vuln_versions = KNOWN_BAD_VERSIONS.get(req.name.lower()) or KNOWN_BAD_VERSIONS.get(req.name)
+    if specifier == "==" and version and vuln_versions and version in vuln_versions:
+        details = vuln_versions[version]
+        suggestion = f"; upgrade to {details['upgrade_to']}" if details.get("upgrade_to") else ""
+        issues.append(
+            DependencyIssue(
+                f"[KNOWN_VULN] {details['issue']}{suggestion}",
                 severity="high",
             )
         )
 
-    resolved_version = f"{specifier}{version}" if specifier else version
+    resolved_version = str(req.specifier) if req.specifier else version
 
-    dep = DependencyInfo(
-        name=name, version=resolved_version, source="requirements.txt", issues=issues
-    )
+    dep = DependencyInfo(name=req.name, version=resolved_version, source=source, issues=issues)
     apply_license_category_dependency(dep)
     return dep
 
@@ -80,7 +100,7 @@ def scan_requirements(path: Path) -> List[DependencyInfo]:
 
     dependencies: List[DependencyInfo] = []
     for line in path.read_text().splitlines():
-        info = parse_requirement_line(line)
+        info = parse_requirement_line(line, source="requirements.txt")
         if info:
             dependencies.append(info)
     return dependencies
@@ -96,9 +116,8 @@ def scan_pyproject(path: Path) -> List[DependencyInfo]:
 
     def _from_iterable(values: Iterable[str]) -> None:
         for raw in values:
-            info = parse_requirement_line(raw)
+            info = parse_requirement_line(raw, source="pyproject.toml")
             if info:
-                info.source = "pyproject.toml"
                 dependencies.append(info)
 
     _from_iterable(project.get("dependencies", []))
@@ -239,7 +258,7 @@ def normalize_version(version: str | None) -> str:
     return cleaned
 
 
-def enrich_with_osv(dependencies: List[DependencyInfo]) -> List[DependencyInfo]:
+def enrich_with_osv(dependencies: List[DependencyInfo], offline: bool = False) -> List[DependencyInfo]:
     """Optionally enrich dependencies with OSV CVE lookups."""
 
     ecosystem_map = {
@@ -254,6 +273,14 @@ def enrich_with_osv(dependencies: List[DependencyInfo]) -> List[DependencyInfo]:
     }
 
     for dep in dependencies:
+        if offline:
+            dep.issues.append(
+                DependencyIssue(
+                    "[CVE_LOOKUP_SKIPPED] Offline mode enabled; skipping OSV",
+                    severity="low",
+                )
+            )
+            continue
         version = normalize_version(dep.version)
         ecosystem = ecosystem_map.get(dep.source, "PyPI")
         if not version:

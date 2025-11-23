@@ -63,12 +63,12 @@ def _select_scanner(path: Path):
     return mapping.get(path.name)
 
 
-def _collect_models(models_file: Optional[str], model_ids: tuple[str, ...]):
+def _collect_models(models_file: Optional[str], model_ids: tuple[str, ...], offline: bool):
     models = []
     if models_file:
         models.extend(scan_models_from_file(Path(models_file)))
     if model_ids:
-        models.extend(summarize_models(list(model_ids)))
+        models.extend(summarize_models(list(model_ids), offline=offline))
     return models
 
 
@@ -136,7 +136,7 @@ def main() -> None:
 @click.option(
     "--fail-on-score",
     type=int,
-    help="Exit non-zero when calculated risk exceeds the threshold (0-100, higher = riskier).",
+    help="Exit non-zero when the stack risk score falls below the threshold (0-100, higher = healthier).",
 )
 @click.option(
     "--with-cves",
@@ -175,6 +175,11 @@ def main() -> None:
     type=int,
     help="Penalty applied per CVE or advisory hit during CVE feed cross-checks.",
 )
+@click.option(
+    "--offline",
+    is_flag=True,
+    help="Disable remote lookups (OSV, HuggingFace) for strictly offline scans.",
+)
 def scan(
     requirements: Optional[str],
     pyproject: Optional[str],
@@ -194,6 +199,7 @@ def scan(
     risk_penalty_low: Optional[int],
     risk_penalty_governance: Optional[int],
     risk_penalty_cve: Optional[int],
+    offline: bool,
 ) -> None:
     """Scan dependencies, models, and produce a report."""
     requirements_path = requirements or (
@@ -207,10 +213,10 @@ def scan(
     for sbom in sbom_file:
         dependencies.extend(parse_sbom(Path(sbom)))
 
-    models = _collect_models(models_file, model_id)
+    models = _collect_models(models_file, model_id, offline)
 
     if with_cves:
-        dependencies = enrich_with_osv(dependencies)
+        dependencies = enrich_with_osv(dependencies, offline=offline)
 
     models = enrich_models_with_cves(models)
 
@@ -255,8 +261,7 @@ def scan(
             click.echo(rendered)
 
     if fail_on_score is not None:
-        risk_value = risk_settings.max_score - report.stack_risk_score
-        if risk_value > fail_on_score:
+        if report.stack_risk_score < fail_on_score:
             raise SystemExit(1)
 
 

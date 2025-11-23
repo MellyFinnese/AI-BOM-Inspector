@@ -68,10 +68,13 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
   - Only dependency scan with autodetection: `aibom scan --format json`
   - Include models from a file: `aibom scan --models-file examples/models.sample.json --format markdown --output report.md`
   - Specify models inline: `aibom scan --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
+  - Enrich CVEs during the scan: `aibom scan --with-cves --format json`
   - Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
-  - Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html`
+  - Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html --output merged-report.html`
+  - Run fully offline (no OSV/HF calls): `aibom scan --offline --format markdown`
   - Export CycloneDX: `aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json`
   - Fail CI if risk > 70: `aibom scan --fail-on-score 70 --format html`
+  - Quick comparison of two runs: `aibom diff aibom-report-old.json aibom-report-new.json`
 
 ## Heuristics & Risk Signals
 AI-BOM Inspector ships with lightweight, explainable checks that map to common AI supply-chain issues:
@@ -81,7 +84,7 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `MISSING_PIN` | Dependency version not pinned with `==`/`~=` | High |
 | `LOOSE_PIN` | Dependency uses a range (`>=`, `<=`, etc.) | Medium |
 | `UNSTABLE_VERSION` | Pre-1.0 releases that may churn | Medium |
-| `KNOWN_VULN` / `CVE` | Known vulnerable versions (built-in heuristics + optional OSV lookup) | High |
+| `KNOWN_VULN` / `CVE` | Known vulnerable versions (built-in heuristics + optional OSV lookup; recommends safer versions when known) | High |
 | `LICENSE_RISK` | Copyleft / reciprocal terms detected for a model | Medium |
 | `UNKNOWN_LICENSE` | Model or SBOM component lacks license metadata | High |
 | `STALE_MODEL` | Model metadata older than ~9 months | Medium |

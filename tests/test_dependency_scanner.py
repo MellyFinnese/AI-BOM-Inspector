@@ -13,7 +13,7 @@ from aibom_inspector.dependency_scanner import (
     scan_pyproject,
     scan_requirements,
 )
-from aibom_inspector.types import DependencyInfo
+from aibom_inspector.types import DependencyInfo, apply_license_category_dependency
 
 
 def test_parse_requirement_flags_unpinned_and_pre_release():
@@ -44,6 +44,15 @@ def test_known_vulnerability_is_flagged(tmp_path: Path):
     deps = scan_requirements(req_file)
     vuln_issue = deps[0].issues[0].message
     assert "KNOWN_VULN" in vuln_issue
+
+
+def test_known_vulnerability_suggests_upgrade(tmp_path: Path):
+    req_file = tmp_path / "requirements.txt"
+    req_file.write_text("transformers==4.37.0\n")
+
+    deps = scan_requirements(req_file)
+    messages = [issue.message for issue in deps[0].issues]
+    assert any("upgrade to" in message for message in messages)
 
 
 def test_scan_pyproject_reads_optional_dependencies(tmp_path: Path):
@@ -157,3 +166,13 @@ def test_parse_sbom_and_enrich_with_osv(monkeypatch, tmp_path: Path):
 
     enriched = enrich_with_osv([DependencyInfo(name="demo", version="1.0.0", source="requirements.txt", issues=[])])
     assert any("CVE" in issue.message for issue in enriched[0].issues)
+
+
+def test_cc_by_license_classification():
+    dep = DependencyInfo(name="demo", version="1.0.0", source="cyclonedx", issues=[], license="CC-BY-SA-4.0")
+    apply_license_category_dependency(dep)
+    assert dep.license_category == "copyleft"
+
+    dep_nc = DependencyInfo(name="demo-nc", version="1.0.0", source="cyclonedx", issues=[], license="CC-BY-NC-4.0")
+    apply_license_category_dependency(dep_nc)
+    assert dep_nc.license_category == "proprietary"
