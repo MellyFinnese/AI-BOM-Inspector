@@ -103,10 +103,6 @@ aibom scan --requirements requirements.txt --models-file models.json --format ht
 ```
 Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift, or run in CI with `--fail-on-score 70`.
 
-### Planned killer feature
-Cross-check models and dependencies against public CVE feeds with a customizable 0–100 AI risk score and HTML visualization (table + severity badges). (Planned, not implemented.)
-
-The report shows a `stack_risk_score` (0–100, higher is safer) derived from the number and severity of these findings. A red badge highlights when high-risk flags dominate (e.g., missing pins + unverified sources). Sample Markdown and HTML outputs in `examples/demo/` show how the signals render alongside dependency and model tables.
 
 ## Testing and CI
 - Run unit tests: `pytest`
