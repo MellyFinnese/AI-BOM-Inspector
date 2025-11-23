@@ -104,8 +104,6 @@ aibom scan --requirements requirements.txt --models-file models.json --with-cves
 ```
 Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift, or run in CI with `--fail-on-score 70`.
 
-### CVE feeds + HTML risk badges
-Cross-check models and dependencies against public CVE/advisory feeds (OSV for dependencies when `--with-cves` is set, plus a built-in model CVE feed). The `stack_risk_score` is derived from the number and severity of these findings, and the HTML report uses severity badges in the tables. A red score badge highlights when CVEs or high-risk flags dominate (e.g., missing pins + unverified sources). Sample Markdown and HTML outputs in `examples/demo/` show how the signals render alongside dependency and model tables.
 
 ## Testing and CI
 - Run unit tests: `pytest`
