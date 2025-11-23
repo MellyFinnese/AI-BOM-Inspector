@@ -12,15 +12,19 @@
     th { background: #f3f4f6; text-align: left; }
     .risk { font-weight: bold; }
     .badge { display: inline-block; padding: 0.35rem 0.6rem; border-radius: 0.4rem; font-weight: 600; color: #111827; }
-    .badge.good { background: #d1fae5; }
-    .badge.warn { background: #fef3c7; }
-    .badge.bad { background: #fee2e2; }
+    .badge.good { background: #d1fae5; color: #065f46; }
+    .badge.warn { background: #fef3c7; color: #92400e; }
+    .badge.bad { background: #fee2e2; color: #991b1b; }
+    .badge.sev-high { background: #fee2e2; color: #991b1b; }
+    .badge.sev-medium { background: #fef3c7; color: #92400e; }
+    .badge.sev-low { background: #e0f2fe; color: #0369a1; }
+    .issue-text { margin-left: 0.35rem; }
   </style>
 </head>
 <body>
   <h1>AI-BOM Report</h1>
-  <p>Generated at: 2025-11-21T03:04:41.935563</p>
-  <p>Stack Risk Score: <span class="badge bad">30 / 100</span></p>
+  <p>Generated at: 2025-11-23T01:15:36.602871</p>
+  <p>Stack Risk Score: <span class="badge bad">32 / 100</span></p>
   
   <section>
     <h2>Dependencies</h2>
@@ -34,7 +38,14 @@
           <td>requirements.txt</td>
           <td>unknown (unknown)</td>
           <td class="risk">2</td>
-          <td>[UNSTABLE_VERSION] Pre-1.0 release may be unstable</td>
+          <td>
+            
+              
+                <span class="badge sev-medium">Medium</span>
+                <span class="issue-text">[UNSTABLE_VERSION] Pre-1.0 release may be unstable</span>
+              
+            
+          </td>
         </tr>
         
         <tr>
@@ -43,16 +54,27 @@
           <td>requirements.txt</td>
           <td>unknown (unknown)</td>
           <td class="risk">2</td>
-          <td>[LOOSE_PIN] Version is not strictly pinned</td>
+          <td>
+            
+              
+                <span class="badge sev-medium">Medium</span>
+                <span class="issue-text">[LOOSE_PIN] Version is not strictly pinned</span>
+              
+            
+          </td>
         </tr>
         
         <tr>
           <td>urllib3</td>
-          <td>==1.25.8</td>
+          <td>==2.5.0</td>
           <td>requirements.txt</td>
           <td>unknown (unknown)</td>
-          <td class="risk">3</td>
-          <td>[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers</td>
+          <td class="risk">0</td>
+          <td>
+            
+              None
+            
+          </td>
         </tr>
         
         <tr>
@@ -61,7 +83,14 @@
           <td>requirements.txt</td>
           <td>unknown (unknown)</td>
           <td class="risk">3</td>
-          <td>[MISSING_PIN] Dependency is not pinned</td>
+          <td>
+            
+              
+                <span class="badge sev-high">High</span>
+                <span class="issue-text">[MISSING_PIN] Dependency is not pinned</span>
+              
+            
+          </td>
         </tr>
         
         <tr>
@@ -70,7 +99,11 @@
           <td>pyproject.toml</td>
           <td>unknown (unknown)</td>
           <td class="risk">0</td>
-          <td>None</td>
+          <td>
+            
+              None
+            
+          </td>
         </tr>
         
         <tr>
@@ -79,7 +112,17 @@
           <td>pyproject.toml</td>
           <td>unknown (unknown)</td>
           <td class="risk">4</td>
-          <td>[LOOSE_PIN] Version is not strictly pinned; [UNSTABLE_VERSION] Pre-1.0 release may be unstable</td>
+          <td>
+            
+              
+                <span class="badge sev-medium">Medium</span>
+                <span class="issue-text">[LOOSE_PIN] Version is not strictly pinned</span><br />
+              
+                <span class="badge sev-medium">Medium</span>
+                <span class="issue-text">[UNSTABLE_VERSION] Pre-1.0 release may be unstable</span>
+              
+            
+          </td>
         </tr>
         
         <tr>
@@ -88,7 +131,11 @@
           <td>package-lock.json</td>
           <td>unknown (unknown)</td>
           <td class="risk">0</td>
-          <td>None</td>
+          <td>
+            
+              None
+            
+          </td>
         </tr>
         
         <tr>
@@ -97,7 +144,11 @@
           <td>go.mod</td>
           <td>unknown (unknown)</td>
           <td class="risk">0</td>
-          <td>None</td>
+          <td>
+            
+              None
+            
+          </td>
         </tr>
         
       </tbody>
@@ -114,8 +165,21 @@
           <td>huggingface</td>
           <td>mit</td>
           <td>2023-05-01T00:00:00</td>
-          <td class="risk">5</td>
-          <td>[STALE_MODEL] Model metadata is stale; [MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)</td>
+          <td class="risk">8</td>
+          <td>
+            
+              
+                <span class="badge sev-medium">Medium</span>
+                <span class="issue-text">[STALE_MODEL] Model metadata is stale</span><br />
+              
+                <span class="badge sev-high">High</span>
+                <span class="issue-text">[MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)</span><br />
+              
+                <span class="badge sev-high">High</span>
+                <span class="issue-text">[CVE] CVE-2024-0001: Public advisory: legacy tokenizer path exposed inference prompt leakage</span>
+              
+            
+          </td>
         </tr>
         
         <tr>
@@ -124,7 +188,14 @@
           <td>unknown</td>
           <td>unknown</td>
           <td class="risk">3</td>
-          <td>[UNKNOWN_LICENSE] Missing license information</td>
+          <td>
+            
+              
+                <span class="badge sev-high">High</span>
+                <span class="issue-text">[UNKNOWN_LICENSE] Missing license information</span>
+              
+            
+          </td>
         </tr>
         
       </tbody>

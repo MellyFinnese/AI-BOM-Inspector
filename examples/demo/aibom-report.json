@@ -1,13 +1,24 @@
 {
-  "generated_at": "2025-11-21T03:04:36.855290",
+  "generated_at": "2025-11-23T01:15:36.602871",
   "ai_summary": null,
   "total_risk": 22,
-  "stack_risk_score": 30,
+  "stack_risk_score": 32,
   "risk_breakdown": {
     "unpinned_deps": 3,
     "unverified_sources": 0,
     "unknown_licenses": 1,
-    "stale_models": 1
+    "stale_models": 1,
+    "cves": 1
+  },
+  "risk_settings": {
+    "max_score": 100,
+    "severity_penalties": {
+      "high": 8,
+      "medium": 4,
+      "low": 2
+    },
+    "governance_penalty": 3,
+    "cve_penalty": 7
   },
   "dependencies": [
     {
@@ -18,6 +29,13 @@
       "license_category": "unknown",
       "issues": [
         "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNSTABLE_VERSION] Pre-1.0 release may be unstable",
+          "severity": "medium",
+          "code": null
+        }
       ],
       "risk": 2
     },
@@ -30,18 +48,24 @@
       "issues": [
         "[LOOSE_PIN] Version is not strictly pinned"
       ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": null
+        }
+      ],
       "risk": 2
     },
     {
       "name": "urllib3",
-      "version": "==1.25.8",
+      "version": "==2.5.0",
       "source": "requirements.txt",
       "license": "unknown",
       "license_category": "unknown",
-      "issues": [
-        "[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"
-      ],
-      "risk": 3
+      "issues": [],
+      "issue_details": [],
+      "risk": 0
     },
     {
       "name": "falcon",
@@ -52,6 +76,13 @@
       "issues": [
         "[MISSING_PIN] Dependency is not pinned"
       ],
+      "issue_details": [
+        {
+          "message": "[MISSING_PIN] Dependency is not pinned",
+          "severity": "high",
+          "code": null
+        }
+      ],
       "risk": 3
     },
     {
@@ -61,6 +92,7 @@
       "license": "unknown",
       "license_category": "unknown",
       "issues": [],
+      "issue_details": [],
       "risk": 0
     },
     {
@@ -73,6 +105,18 @@
         "[LOOSE_PIN] Version is not strictly pinned",
         "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
       ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": null
+        },
+        {
+          "message": "[UNSTABLE_VERSION] Pre-1.0 release may be unstable",
+          "severity": "medium",
+          "code": null
+        }
+      ],
       "risk": 4
     },
     {
@@ -82,6 +126,7 @@
       "license": "unknown",
       "license_category": "unknown",
       "issues": [],
+      "issue_details": [],
       "risk": 0
     },
     {
@@ -91,6 +136,7 @@
       "license": "unknown",
       "license_category": "unknown",
       "issues": [],
+      "issue_details": [],
       "risk": 0
     }
   ],
@@ -103,9 +149,27 @@
       "last_updated": "2023-05-01T00:00:00",
       "issues": [
         "[STALE_MODEL] Model metadata is stale",
-        "[MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)"
+        "[MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)",
+        "[CVE] CVE-2024-0001: Public advisory: legacy tokenizer path exposed inference prompt leakage"
       ],
-      "risk": 5
+      "issue_details": [
+        {
+          "message": "[STALE_MODEL] Model metadata is stale",
+          "severity": "medium",
+          "code": null
+        },
+        {
+          "message": "[MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)",
+          "severity": "high",
+          "code": null
+        },
+        {
+          "message": "[CVE] CVE-2024-0001: Public advisory: legacy tokenizer path exposed inference prompt leakage",
+          "severity": "high",
+          "code": "CVE-2024-0001"
+        }
+      ],
+      "risk": 8
     },
     {
       "id": "research-embedder",
@@ -115,6 +179,13 @@
       "last_updated": "unknown",
       "issues": [
         "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": null
+        }
       ],
       "risk": 3
     }

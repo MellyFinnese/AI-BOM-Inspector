@@ -29,9 +29,11 @@ def test_render_json_contains_risk_score_and_flags():
 
     payload = json.loads(render_json(report))
     assert payload["stack_risk_score"] < 100
+    assert payload["risk_settings"]["max_score"] == 100
     flat_issues = "".join(json.dumps(payload["dependencies"]) + json.dumps(payload["models"]))
     assert "MISSING_PIN" in flat_issues
     assert "UNKNOWN_LICENSE" in flat_issues
+    assert payload["dependencies"][0]["issue_details"][0]["severity"] == "high"
 
 
 def test_markdown_renders_risk_score_header():

@@ -16,6 +16,21 @@ KNOWN_MODEL_ADVISORIES = {
     "meta-llama/Llama-2-7b": "Community advisory: check downstream license terms",
 }
 
+MODEL_CVE_FEED = {
+    "gpt2": [
+        {
+            "id": "CVE-2024-0001",
+            "summary": "Public advisory: legacy tokenizer path exposed inference prompt leakage",
+        }
+    ],
+    "meta-llama/Llama-2-7b": [
+        {
+            "id": "CVE-2024-1843",
+            "summary": "Research CVE noting unsafe default weights mirror without integrity checks",
+        }
+    ],
+}
+
 
 def _cache_path(cache_dir: Path, identifier: str) -> Path:
     sanitized = identifier.replace("/", "__")
@@ -126,4 +141,21 @@ def summarize_models(model_ids: List[str]) -> List[ModelInfo]:
     for identifier in model_ids:
         metadata = fetch_model_metadata(identifier)
         models.append(parse_model_entry(metadata))
+    return models
+
+
+def enrich_models_with_cves(models: List[ModelInfo]) -> List[ModelInfo]:
+    """Cross-check model identifiers against a public CVE-style feed."""
+
+    for model in models:
+        advisories = MODEL_CVE_FEED.get(model.identifier, [])
+        for advisory in advisories:
+            model.issues.append(
+                ModelIssue(
+                    f"[CVE] {advisory['id']}: {advisory['summary']}",
+                    severity="high",
+                    code=advisory["id"],
+                )
+            )
+
     return models

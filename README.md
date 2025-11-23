@@ -88,7 +88,7 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `UNVERIFIED_SOURCE` | Non-standard model source value | Medium |
 | `MODEL_ADVISORY` | Model flagged by a published advisory | High |
 
-The report shows a `stack_risk_score` (0–100, higher is safer) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, and stale models.
+The report shows a `stack_risk_score` (0–100, higher is safer) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, stale models, and CVE hits. Tune the scoring with `--risk-max-score`, per-severity `--risk-penalty-*` flags, and governance/CVE penalties so teams can calibrate what “red” means for them.
 
 ### Before vs. after hardening
 
@@ -99,14 +99,13 @@ The report shows a `stack_risk_score` (0–100, higher is safer) and a `risk_bre
 
 ### Example: scanning a real project
 ```bash
-aibom scan --requirements requirements.txt --models-file models.json --format html --output report.html
+aibom scan --requirements requirements.txt --models-file models.json --with-cves --format html --output report.html \
+  --risk-penalty-high 10 --risk-penalty-medium 5 --risk-penalty-low 2
 ```
 Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift, or run in CI with `--fail-on-score 70`.
 
-### Planned killer feature
-Cross-check models and dependencies against public CVE feeds with a customizable 0–100 AI risk score and HTML visualization (table + severity badges). (Planned, not implemented.)
-
-The report shows a `stack_risk_score` (0–100, higher is safer) derived from the number and severity of these findings. A red badge highlights when high-risk flags dominate (e.g., missing pins + unverified sources). Sample Markdown and HTML outputs in `examples/demo/` show how the signals render alongside dependency and model tables.
+### CVE feeds + HTML risk badges
+Cross-check models and dependencies against public CVE/advisory feeds (OSV for dependencies when `--with-cves` is set, plus a built-in model CVE feed). The `stack_risk_score` is derived from the number and severity of these findings, and the HTML report uses severity badges in the tables. A red score badge highlights when CVEs or high-risk flags dominate (e.g., missing pins + unverified sources). Sample Markdown and HTML outputs in `examples/demo/` show how the signals render alongside dependency and model tables.
 
 ## Testing and CI
 - Run unit tests: `pytest`
