@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Iterable, List
@@ -42,12 +43,28 @@ KNOWN_BAD_VERSIONS = {
 def _issue_for_specifier(specifier: str | None, version: str | None) -> list[DependencyIssue]:
     issues: list[DependencyIssue] = []
     if not version:
-        issues.append(DependencyIssue("[MISSING_PIN] Dependency is not pinned", severity="high"))
+        issues.append(
+            DependencyIssue(
+                "[MISSING_PIN] Dependency is not pinned", severity="high", code="MISSING_PIN"
+            )
+        )
     elif specifier not in {"==", "~="}:
-        issues.append(DependencyIssue("[LOOSE_PIN] Version is not strictly pinned", severity="medium"))
+        issues.append(
+            DependencyIssue(
+                "[LOOSE_PIN] Version is not strictly pinned",
+                severity="medium",
+                code="LOOSE_PIN",
+            )
+        )
 
     if version and version.startswith("0."):
-        issues.append(DependencyIssue("[UNSTABLE_VERSION] Pre-1.0 release may be unstable", severity="medium"))
+        issues.append(
+            DependencyIssue(
+                "[UNSTABLE_VERSION] Pre-1.0 release may be unstable",
+                severity="medium",
+                code="UNSTABLE_VERSION",
+            )
+        )
 
     return issues
 def parse_requirement_line(line: str, source: str = "requirements.txt") -> DependencyInfo | None:
@@ -72,7 +89,9 @@ def parse_requirement_line(line: str, source: str = "requirements.txt") -> Depen
     if req.url:
         issues.append(
             DependencyIssue(
-                "[UNVERIFIED_SOURCE] Direct URL requirement; verify integrity", severity="medium"
+                "[UNVERIFIED_SOURCE] Direct URL requirement; verify integrity",
+                severity="medium",
+                code="UNVERIFIED_SOURCE",
             )
         )
 
@@ -84,6 +103,7 @@ def parse_requirement_line(line: str, source: str = "requirements.txt") -> Depen
             DependencyIssue(
                 f"[KNOWN_VULN] {details['issue']}{suggestion}",
                 severity="high",
+                code="KNOWN_VULN",
             )
         )
 
@@ -258,8 +278,21 @@ def normalize_version(version: str | None) -> str:
     return cleaned
 
 
-def enrich_with_osv(dependencies: List[DependencyInfo], offline: bool = False) -> List[DependencyInfo]:
+def enrich_with_osv(
+    dependencies: List[DependencyInfo],
+    offline: bool = False,
+    osv_url: str | None = None,
+    timeout: float | None = None,
+) -> List[DependencyInfo]:
     """Optionally enrich dependencies with OSV CVE lookups."""
+
+    target_url = osv_url or os.environ.get("OSV_API_URL") or "https://api.osv.dev/v1/query"
+    env_timeout = os.environ.get("OSV_API_TIMEOUT")
+    try:
+        default_timeout = float(env_timeout) if env_timeout is not None else 8.0
+    except ValueError:
+        default_timeout = 8.0
+    request_timeout = timeout or default_timeout
 
     ecosystem_map = {
         "requirements.txt": "PyPI",
@@ -278,6 +311,7 @@ def enrich_with_osv(dependencies: List[DependencyInfo], offline: bool = False) -
                 DependencyIssue(
                     "[CVE_LOOKUP_SKIPPED] Offline mode enabled; skipping OSV",
                     severity="low",
+                    code="CVE_LOOKUP_SKIPPED",
                 )
             )
             continue
@@ -289,12 +323,13 @@ def enrich_with_osv(dependencies: List[DependencyInfo], offline: bool = False) -
         try:
             import requests  # type: ignore
 
-            response = requests.post("https://api.osv.dev/v1/query", json=payload, timeout=8)
+            response = requests.post(target_url, json=payload, timeout=request_timeout)
             if response.status_code != 200:
                 dep.issues.append(
                     DependencyIssue(
                         "[CVE_LOOKUP_FAILED] OSV request did not return results",
                         severity="low",
+                        code="CVE_LOOKUP_FAILED",
                     )
                 )
                 continue
@@ -314,12 +349,15 @@ def enrich_with_osv(dependencies: List[DependencyInfo], offline: bool = False) -
                 DependencyIssue(
                     "[CVE_LOOKUP_SKIPPED] requests not installed; skipping OSV",
                     severity="low",
+                    code="CVE_LOOKUP_SKIPPED",
                 )
             )
         except Exception:
             dep.issues.append(
                 DependencyIssue(
-                    "[CVE_LOOKUP_FAILED] Unable to reach OSV", severity="low"
+                    "[CVE_LOOKUP_FAILED] Unable to reach OSV",
+                    severity="low",
+                    code="CVE_LOOKUP_FAILED",
                 )
             )
 
