@@ -9,7 +9,7 @@ inputs:
     description: "Optional path to models.json"
     required: false
   fail-on-score:
-    description: "Fail when risk score exceeds this threshold"
+    description: "Fail when health score falls below this threshold"
     required: false
   github-token:
     description: "GitHub token for commenting"
@@ -54,7 +54,7 @@ runs:
           const risk = report.stack_risk_score;
           const breakdown = report.risk_breakdown || {};
           const body = [
-            `AI-BOM Inspector risk score: **${risk}/100**`,
+            `AI-BOM Inspector health score: **${risk}/100**`,
             '',
             `- Unpinned deps: ${breakdown.unpinned_deps || 0}`,
             `- Unknown licenses: ${breakdown.unknown_licenses || 0}`,

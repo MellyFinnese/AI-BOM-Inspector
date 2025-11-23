@@ -72,9 +72,14 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
   - Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
   - Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html --output merged-report.html`
   - Run fully offline (no OSV/HF calls): `aibom scan --offline --format markdown`
+  - Require inputs or fail fast: `aibom scan --require-input --offline`
   - Export CycloneDX: `aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json`
-  - Fail CI if risk > 70: `aibom scan --fail-on-score 70 --format html`
+  - Fail CI if health score < 70: `aibom scan --fail-on-score 70 --format html`
   - Quick comparison of two runs: `aibom diff aibom-report-old.json aibom-report-new.json`
+
+Configuration tips:
+
+- OSV enrichment uses the public API by default; override with `--osv-url` or `OSV_API_URL` and adjust the HTTP timeout via `--osv-timeout` or `OSV_API_TIMEOUT`.
 
 ## Heuristics & Risk Signals
 AI-BOM Inspector ships with lightweight, explainable checks that map to common AI supply-chain issues:
@@ -91,7 +96,7 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `UNVERIFIED_SOURCE` | Non-standard model source value | Medium |
 | `MODEL_ADVISORY` | Model flagged by a published advisory | High |
 
-The report shows a `stack_risk_score` (0–100, higher is safer) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, stale models, and CVE hits. Tune the scoring with `--risk-max-score`, per-severity `--risk-penalty-*` flags, and governance/CVE penalties so teams can calibrate what “red” means for them.
+The report shows a `stack_risk_score` (0–100, higher is healthier) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, stale models, and CVE hits. Tune the scoring with `--risk-max-score`, per-severity `--risk-penalty-*` flags, and governance/CVE penalties so teams can calibrate what “red” means for them. Conceptually, this is a health score: penalties are subtracted from the maximum, so `--fail-on-score 70` means “fail if health drops below 70/100.”
 
 ### Before vs. after hardening
 
@@ -111,7 +116,7 @@ Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift,
 ## Testing and CI
 - Run unit tests: `pytest`
 - GitHub Action: `.github/workflows/aibom-inspector-action.yml` uses the bundled composite action to scan PRs and post a risk comment.
-- CI guardrails: use `--fail-on-score <threshold>` to block merges when the AI risk score drops below your bar.
+- CI guardrails: use `--fail-on-score <threshold>` to block merges when the AI stack health score drops below your bar.
 
 ## Security, governance, and contributions
 - See `SECURITY.md` for how to report vulnerabilities.

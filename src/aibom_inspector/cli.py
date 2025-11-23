@@ -180,6 +180,21 @@ def main() -> None:
     is_flag=True,
     help="Disable remote lookups (OSV, HuggingFace) for strictly offline scans.",
 )
+@click.option(
+    "--osv-url",
+    type=str,
+    help="Override the OSV endpoint (defaults to OSV_API_URL env var or the public API).",
+)
+@click.option(
+    "--osv-timeout",
+    type=float,
+    help="HTTP timeout (seconds) for OSV lookups; defaults to OSV_API_TIMEOUT or 8s.",
+)
+@click.option(
+    "--require-input",
+    is_flag=True,
+    help="Fail the scan if no dependencies or models are discovered.",
+)
 def scan(
     requirements: Optional[str],
     pyproject: Optional[str],
@@ -200,6 +215,9 @@ def scan(
     risk_penalty_governance: Optional[int],
     risk_penalty_cve: Optional[int],
     offline: bool,
+    osv_url: Optional[str],
+    osv_timeout: Optional[float],
+    require_input: bool,
 ) -> None:
     """Scan dependencies, models, and produce a report."""
     requirements_path = requirements or (
@@ -215,8 +233,15 @@ def scan(
 
     models = _collect_models(models_file, model_id, offline)
 
+    if not dependencies and not models:
+        click.echo("No dependencies or models detected; nothing to scan.", err=True)
+        if require_input:
+            raise SystemExit(1)
+
     if with_cves:
-        dependencies = enrich_with_osv(dependencies, offline=offline)
+        dependencies = enrich_with_osv(
+            dependencies, offline=offline, osv_url=osv_url, timeout=osv_timeout
+        )
 
     models = enrich_models_with_cves(models)
 

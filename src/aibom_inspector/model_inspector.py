@@ -90,11 +90,21 @@ def parse_model_entry(entry: dict) -> ModelInfo:
 
     if entry.get("offline"):
         issues.append(
-            ModelIssue("[OFFLINE_MODE] Remote metadata lookup skipped", severity="low")
+            ModelIssue(
+                "[OFFLINE_MODE] Remote metadata lookup skipped",
+                severity="low",
+                code="OFFLINE_MODE",
+            )
         )
 
     if not license_name:
-        issues.append(ModelIssue("[UNKNOWN_LICENSE] Missing license information", severity="high"))
+        issues.append(
+            ModelIssue(
+                "[UNKNOWN_LICENSE] Missing license information",
+                severity="high",
+                code="UNKNOWN_LICENSE",
+            )
+        )
     else:
         category = categorize_license(license_name)
         if category in {"copyleft", "weak_copyleft"}:
@@ -102,24 +112,45 @@ def parse_model_entry(entry: dict) -> ModelInfo:
                 ModelIssue(
                     "[LICENSE_RISK] Copyleft/reciprocal terms may apply",
                     severity="medium",
+                    code="LICENSE_RISK",
                 )
             )
         elif category == "unknown":
             issues.append(
                 ModelIssue(
-                    "[UNKNOWN_LICENSE] License could not be classified", severity="medium"
+                    "[UNKNOWN_LICENSE] License could not be classified",
+                    severity="medium",
+                    code="UNKNOWN_LICENSE",
                 )
             )
 
     if last_updated and last_updated < datetime.utcnow() - timedelta(days=STALE_DAYS):
-        issues.append(ModelIssue("[STALE_MODEL] Model metadata is stale", severity="medium"))
+        issues.append(
+            ModelIssue(
+                "[STALE_MODEL] Model metadata is stale",
+                severity="medium",
+                code="STALE_MODEL",
+            )
+        )
 
     if source not in {"huggingface", "local", "private", "openai"}:
-        issues.append(ModelIssue(f"[UNVERIFIED_SOURCE] Unrecognized source '{source}'", severity="medium"))
+        issues.append(
+            ModelIssue(
+                f"[UNVERIFIED_SOURCE] Unrecognized source '{source}'",
+                severity="medium",
+                code="UNVERIFIED_SOURCE",
+            )
+        )
 
     advisory = KNOWN_MODEL_ADVISORIES.get(identifier)
     if advisory:
-        issues.append(ModelIssue(f"[MODEL_ADVISORY] {advisory}", severity="high"))
+        issues.append(
+            ModelIssue(
+                f"[MODEL_ADVISORY] {advisory}",
+                severity="high",
+                code="MODEL_ADVISORY",
+            )
+        )
 
     model = ModelInfo(
         identifier=identifier,

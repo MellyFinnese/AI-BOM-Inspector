@@ -177,30 +177,28 @@ class Report:
 
         for dep in self.dependencies:
             for issue in dep.issues:
-                if "MISSING_PIN" in issue.message or "LOOSE_PIN" in issue.message:
+                code = issue.code or issue.message
+                if code and any(token in str(code) for token in {"MISSING_PIN", "LOOSE_PIN"}):
                     buckets["unpinned_deps"] += 1
-                is_cve = False
-                if issue.code and str(issue.code).upper().startswith("CVE"):
+                if code and "CVE" in str(code).upper():
                     buckets["cves"] += 1
-                    is_cve = True
-                if ("[CVE]" in issue.message or "[KNOWN_VULN]" in issue.message) and not is_cve:
+                elif "[CVE]" in issue.message or "[KNOWN_VULN]" in issue.message:
                     buckets["cves"] += 1
             if dep.license_category == "unknown" and dep.license:
                 buckets["unknown_licenses"] += 1
 
         for model in self.models:
             for issue in model.issues:
-                if "UNVERIFIED_SOURCE" in issue.message:
+                code = issue.code or issue.message
+                if code and "UNVERIFIED_SOURCE" in str(code):
                     buckets["unverified_sources"] += 1
-                if "UNKNOWN_LICENSE" in issue.message:
+                if code and "UNKNOWN_LICENSE" in str(code):
                     buckets["unknown_licenses"] += 1
-                if "STALE_MODEL" in issue.message:
+                if code and "STALE_MODEL" in str(code):
                     buckets["stale_models"] += 1
-                is_cve = False
-                if issue.code and str(issue.code).upper().startswith("CVE"):
+                if code and "CVE" in str(code).upper():
                     buckets["cves"] += 1
-                    is_cve = True
-                if ("[CVE]" in issue.message or "[KNOWN_VULN]" in issue.message) and not is_cve:
+                elif "[CVE]" in issue.message or "[KNOWN_VULN]" in issue.message:
                     buckets["cves"] += 1
             if model.license_category == "unknown" and model.license:
                 buckets["unknown_licenses"] += 1
