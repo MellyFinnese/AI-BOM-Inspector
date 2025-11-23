@@ -15,26 +15,36 @@ env = Environment(autoescape=select_autoescape(["html", "xml"]))
 
 def _dependency_rows(report: Report) -> Iterable[dict]:
     for dep in report.dependencies:
+        issue_details = [
+            {"message": issue.message, "severity": issue.severity, "code": issue.code}
+            for issue in dep.issues
+        ]
         yield {
             "name": dep.name,
             "version": dep.version or "unversioned",
             "source": dep.source,
             "license": dep.license or "unknown",
             "license_category": dep.license_category or "unknown",
-            "issues": [issue.message for issue in dep.issues],
+            "issues": [issue["message"] for issue in issue_details],
+            "issue_details": issue_details,
             "risk": dep.risk_score,
         }
 
 
 def _model_rows(report: Report) -> Iterable[dict]:
     for model in report.models:
+        issue_details = [
+            {"message": issue.message, "severity": issue.severity, "code": issue.code}
+            for issue in model.issues
+        ]
         yield {
             "id": model.identifier,
             "source": model.source,
             "license": model.license or "unknown",
             "license_category": model.license_category or "unknown",
             "last_updated": model.last_updated.isoformat() if model.last_updated else "unknown",
-            "issues": [issue.message for issue in model.issues],
+            "issues": [issue["message"] for issue in issue_details],
+            "issue_details": issue_details,
             "risk": model.risk_score,
         }
 
@@ -46,6 +56,7 @@ def render_json(report: Report) -> str:
         "total_risk": report.total_risk,
         "stack_risk_score": report.stack_risk_score,
         "risk_breakdown": report.risk_breakdown,
+        "risk_settings": report.risk_settings.as_dict(),
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
@@ -57,7 +68,7 @@ def render_markdown(report: Report) -> str:
         "# AI-BOM Report",
         "",
         f"Generated at: {report.generated_at.isoformat()}",
-        f"Stack Risk Score: {report.stack_risk_score}/100",
+        f"Stack Risk Score: {report.stack_risk_score}/{report.risk_settings.max_score}",
     ]
     if report.ai_summary:
         lines.append("\n## AI Summary\n")
@@ -67,7 +78,10 @@ def render_markdown(report: Report) -> str:
     lines.append("| Name | Version | Source | License | Risk | Issues |")
     lines.append("| --- | --- | --- | --- | --- | --- |")
     for row in _dependency_rows(report):
-        issues = "; ".join(row["issues"]) or "None"
+        issues = "; ".join(
+            f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"]
+        )
+        issues = issues or "None"
         lines.append(
             f"| {row['name']} | {row['version']} | {row['source']} | {row['license']} ({row['license_category']}) | {row['risk']} | {issues} |"
         )
@@ -76,7 +90,10 @@ def render_markdown(report: Report) -> str:
     lines.append("| ID | Source | License | Last Updated | Risk | Issues |")
     lines.append("| --- | --- | --- | --- | --- | --- |")
     for row in _model_rows(report):
-        issues = "; ".join(row["issues"]) or "None"
+        issues = "; ".join(
+            f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"]
+        )
+        issues = issues or "None"
         lines.append(
             f"| {row['id']} | {row['source']} | {row['license']} | {row['last_updated']} | {row['risk']} | {issues} |"
         )
@@ -100,15 +117,19 @@ def render_html(report: Report) -> str:
     th { background: #f3f4f6; text-align: left; }
     .risk { font-weight: bold; }
     .badge { display: inline-block; padding: 0.35rem 0.6rem; border-radius: 0.4rem; font-weight: 600; color: #111827; }
-    .badge.good { background: #d1fae5; }
-    .badge.warn { background: #fef3c7; }
-    .badge.bad { background: #fee2e2; }
+    .badge.good { background: #d1fae5; color: #065f46; }
+    .badge.warn { background: #fef3c7; color: #92400e; }
+    .badge.bad { background: #fee2e2; color: #991b1b; }
+    .badge.sev-high { background: #fee2e2; color: #991b1b; }
+    .badge.sev-medium { background: #fef3c7; color: #92400e; }
+    .badge.sev-low { background: #e0f2fe; color: #0369a1; }
+    .issue-text { margin-left: 0.35rem; }
   </style>
 </head>
 <body>
   <h1>AI-BOM Report</h1>
   <p>Generated at: {{ generated_at }}</p>
-  <p>Stack Risk Score: <span class=\"badge {{ badge_class }}\">{{ stack_risk_score }} / 100</span></p>
+  <p>Stack Risk Score: <span class=\"badge {{ badge_class }}\">{{ stack_risk_score }} / {{ max_score }}</span></p>
   {% if ai_summary %}
   <section>
     <h2>AI Summary</h2>
@@ -127,7 +148,16 @@ def render_html(report: Report) -> str:
           <td>{{ row.source }}</td>
           <td>{{ row.license }} ({{ row.license_category }})</td>
           <td class=\"risk\">{{ row.risk }}</td>
-          <td>{{ row.issues | join('; ') if row.issues else 'None' }}</td>
+          <td>
+            {% if row.issue_details %}
+              {% for issue in row.issue_details %}
+                <span class=\"badge sev-{{ issue.severity }}\">{{ issue.severity.title() }}</span>
+                <span class=\"issue-text\">{{ issue.message }}</span>{% if not loop.last %}<br />{% endif %}
+              {% endfor %}
+            {% else %}
+              None
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -145,7 +175,16 @@ def render_html(report: Report) -> str:
           <td>{{ row.license }}</td>
           <td>{{ row.last_updated }}</td>
           <td class=\"risk\">{{ row.risk }}</td>
-          <td>{{ row.issues | join('; ') if row.issues else 'None' }}</td>
+          <td>
+            {% if row.issue_details %}
+              {% for issue in row.issue_details %}
+                <span class=\"badge sev-{{ issue.severity }}\">{{ issue.severity.title() }}</span>
+                <span class=\"issue-text\">{{ issue.message }}</span>{% if not loop.last %}<br />{% endif %}
+              {% endfor %}
+            {% else %}
+              None
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -160,7 +199,16 @@ def render_html(report: Report) -> str:
         generated_at=report.generated_at.isoformat(),
         ai_summary=report.ai_summary,
         stack_risk_score=report.stack_risk_score,
-        badge_class="good" if report.stack_risk_score >= 80 else ("warn" if report.stack_risk_score >= 50 else "bad"),
+        badge_class=(
+            "bad"
+            if (
+                report.risk_breakdown.get("cves", 0) > 0
+                or (report.risk_breakdown.get("unpinned_deps", 0) + report.risk_breakdown.get("unverified_sources", 0))
+                >= 2
+            )
+            else ("good" if report.stack_risk_score >= 80 else ("warn" if report.stack_risk_score >= 50 else "bad"))
+        ),
+        max_score=report.risk_settings.max_score,
         dependencies=list(_dependency_rows(report)),
         models=list(_model_rows(report)),
     )

@@ -6,7 +6,7 @@
   "packages": [
     {
       "name": "fastapi",
-      "SPDXID": "SPDXRef-edea2757",
+      "SPDXID": "SPDXRef-bc19b031",
       "versionInfo": "==0.110.0",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",
@@ -14,7 +14,7 @@
     },
     {
       "name": "requests",
-      "SPDXID": "SPDXRef-424d42f5",
+      "SPDXID": "SPDXRef-b7ee3aab",
       "versionInfo": ">=2.31.0",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",
@@ -22,15 +22,15 @@
     },
     {
       "name": "urllib3",
-      "SPDXID": "SPDXRef-f52ace1b",
-      "versionInfo": "==1.25.8",
+      "SPDXID": "SPDXRef-8594a308",
+      "versionInfo": "==2.5.0",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",
-      "summary": "[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"
+      "summary": ""
     },
     {
       "name": "falcon",
-      "SPDXID": "SPDXRef-d2faebd6",
+      "SPDXID": "SPDXRef-1a75c6ea",
       "versionInfo": "unversioned",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",
@@ -38,7 +38,7 @@
     },
     {
       "name": "rich",
-      "SPDXID": "SPDXRef-6dbe7b18",
+      "SPDXID": "SPDXRef-7342b1c4",
       "versionInfo": "~=13.7",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",
@@ -46,7 +46,7 @@
     },
     {
       "name": "prometheus-client",
-      "SPDXID": "SPDXRef-3679268d",
+      "SPDXID": "SPDXRef-839afeba",
       "versionInfo": ">=0.20",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",
@@ -54,7 +54,7 @@
     },
     {
       "name": "node_modules/lodash",
-      "SPDXID": "SPDXRef-28d79353",
+      "SPDXID": "SPDXRef-91242ea2",
       "versionInfo": "4.17.21",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",
@@ -62,7 +62,7 @@
     },
     {
       "name": "github.com/pkg/errors",
-      "SPDXID": "SPDXRef-8b4b645a",
+      "SPDXID": "SPDXRef-3742da9c",
       "versionInfo": "v0.9.1",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",
@@ -70,15 +70,15 @@
     },
     {
       "name": "model:gpt2",
-      "SPDXID": "SPDXRef-685b2a00",
+      "SPDXID": "SPDXRef-78c56b25",
       "versionInfo": "2023-05-01T00:00:00",
       "licenseDeclared": "mit",
       "licenseConcluded": "mit",
-      "summary": "[STALE_MODEL] Model metadata is stale; [MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)"
+      "summary": "[STALE_MODEL] Model metadata is stale; [MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed); [CVE] CVE-2024-0001: Public advisory: legacy tokenizer path exposed inference prompt leakage"
     },
     {
       "name": "model:research-embedder",
-      "SPDXID": "SPDXRef-545b4fc5",
+      "SPDXID": "SPDXRef-2f04c9c6",
       "versionInfo": "unknown",
       "licenseDeclared": "unknown",
       "licenseConcluded": "unknown",

@@ -88,7 +88,7 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `UNVERIFIED_SOURCE` | Non-standard model source value | Medium |
 | `MODEL_ADVISORY` | Model flagged by a published advisory | High |
 
-The report shows a `stack_risk_score` (0–100, higher is safer) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, and stale models.
+The report shows a `stack_risk_score` (0–100, higher is safer) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, stale models, and CVE hits. Tune the scoring with `--risk-max-score`, per-severity `--risk-penalty-*` flags, and governance/CVE penalties so teams can calibrate what “red” means for them.
 
 ### Before vs. after hardening
 
@@ -99,7 +99,8 @@ The report shows a `stack_risk_score` (0–100, higher is safer) and a `risk_bre
 
 ### Example: scanning a real project
 ```bash
-aibom scan --requirements requirements.txt --models-file models.json --format html --output report.html
+aibom scan --requirements requirements.txt --models-file models.json --with-cves --format html --output report.html \
+  --risk-penalty-high 10 --risk-penalty-medium 5 --risk-penalty-low 2
 ```
 Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift, or run in CI with `--fail-on-score 70`.
 

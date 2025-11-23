@@ -17,9 +17,9 @@ from .dependency_scanner import (
     scan_pyproject,
     scan_requirements,
 )
-from .model_inspector import scan_models_from_file, summarize_models
+from .model_inspector import enrich_models_with_cves, scan_models_from_file, summarize_models
 from .reporting import render_report, write_report
-from .types import Report
+from .types import Report, RiskSettings
 
 
 def _collect_dependencies(
@@ -143,6 +143,38 @@ def main() -> None:
     is_flag=True,
     help="Enrich dependencies with OSV vulnerability lookups (best-effort).",
 )
+@click.option(
+    "--risk-max-score",
+    type=int,
+    default=100,
+    show_default=True,
+    help="Upper bound for the AI stack risk score (0-100 by default).",
+)
+@click.option(
+    "--risk-penalty-high",
+    type=int,
+    help="Custom penalty for high-severity findings when computing the stack risk score.",
+)
+@click.option(
+    "--risk-penalty-medium",
+    type=int,
+    help="Custom penalty for medium-severity findings when computing the stack risk score.",
+)
+@click.option(
+    "--risk-penalty-low",
+    type=int,
+    help="Custom penalty for low-severity findings when computing the stack risk score.",
+)
+@click.option(
+    "--risk-penalty-governance",
+    type=int,
+    help="Penalty applied per high-risk governance flag (missing pins, unverified sources).",
+)
+@click.option(
+    "--risk-penalty-cve",
+    type=int,
+    help="Penalty applied per CVE or advisory hit during CVE feed cross-checks.",
+)
 def scan(
     requirements: Optional[str],
     pyproject: Optional[str],
@@ -156,6 +188,12 @@ def scan(
     ai_summary: bool,
     fail_on_score: Optional[int],
     with_cves: bool,
+    risk_max_score: int,
+    risk_penalty_high: Optional[int],
+    risk_penalty_medium: Optional[int],
+    risk_penalty_low: Optional[int],
+    risk_penalty_governance: Optional[int],
+    risk_penalty_cve: Optional[int],
 ) -> None:
     """Scan dependencies, models, and produce a report."""
     requirements_path = requirements or (
@@ -174,6 +212,26 @@ def scan(
     if with_cves:
         dependencies = enrich_with_osv(dependencies)
 
+    models = enrich_models_with_cves(models)
+
+    base_settings = RiskSettings()
+    severity_penalties = dict(base_settings.severity_penalties)
+    if risk_penalty_high is not None:
+        severity_penalties["high"] = risk_penalty_high
+    if risk_penalty_medium is not None:
+        severity_penalties["medium"] = risk_penalty_medium
+    if risk_penalty_low is not None:
+        severity_penalties["low"] = risk_penalty_low
+
+    risk_settings = RiskSettings(
+        max_score=risk_max_score,
+        severity_penalties=severity_penalties,
+        governance_penalty=risk_penalty_governance
+        if risk_penalty_governance is not None
+        else base_settings.governance_penalty,
+        cve_penalty=risk_penalty_cve if risk_penalty_cve is not None else base_settings.cve_penalty,
+    )
+
     summary = None
     if ai_summary:
         summary = "AI summarization is disabled by default. Provide an LLM backend to enable rich summaries."
@@ -183,6 +241,7 @@ def scan(
         models=models,
         generated_at=datetime.utcnow(),
         ai_summary=summary,
+        risk_settings=risk_settings,
     )
 
     destination = Path(output) if output else None
@@ -196,7 +255,7 @@ def scan(
             click.echo(rendered)
 
     if fail_on_score is not None:
-        risk_value = 100 - report.stack_risk_score
+        risk_value = risk_settings.max_score - report.stack_risk_score
         if risk_value > fail_on_score:
             raise SystemExit(1)
 

@@ -74,7 +74,7 @@
     {
       "type": "library",
       "name": "urllib3",
-      "version": "==1.25.8",
+      "version": "==2.5.0",
       "licenses": [
         {
           "license": {
@@ -93,11 +93,11 @@
         },
         {
           "name": "aibom:risk",
-          "value": 3
+          "value": 0
         },
         {
           "name": "aibom:issues",
-          "value": "[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"
+          "value": ""
         }
       ]
     },
@@ -273,11 +273,11 @@
         },
         {
           "name": "aibom:risk",
-          "value": 5
+          "value": 8
         },
         {
           "name": "aibom:issues",
-          "value": "[STALE_MODEL] Model metadata is stale; [MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)"
+          "value": "[STALE_MODEL] Model metadata is stale; [MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed); [CVE] CVE-2024-0001: Public advisory: legacy tokenizer path exposed inference prompt leakage"
         }
       ]
     },
