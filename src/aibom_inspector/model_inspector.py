@@ -37,7 +37,7 @@ def _cache_path(cache_dir: Path, identifier: str) -> Path:
     return cache_dir / f"{sanitized}.json"
 
 
-def fetch_model_metadata(identifier: str, cache_dir: Path | None = None) -> dict:
+def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline: bool = False) -> dict:
     cache = cache_dir or Path(".aibom_cache")
     cache.mkdir(parents=True, exist_ok=True)
     cache_file = _cache_path(cache, identifier)
@@ -48,6 +48,11 @@ def fetch_model_metadata(identifier: str, cache_dir: Path | None = None) -> dict
             pass
 
     data: Dict[str, str] = {"id": identifier, "source": "huggingface"}
+
+    if offline:
+        data["offline"] = True
+        cache_file.write_text(json.dumps(data))
+        return data
 
     try:
         try:
@@ -82,6 +87,11 @@ def parse_model_entry(entry: dict) -> ModelInfo:
     last_updated = datetime.fromisoformat(last_updated_raw) if last_updated_raw else None
 
     issues: List[ModelIssue] = []
+
+    if entry.get("offline"):
+        issues.append(
+            ModelIssue("[OFFLINE_MODE] Remote metadata lookup skipped", severity="low")
+        )
 
     if not license_name:
         issues.append(ModelIssue("[UNKNOWN_LICENSE] Missing license information", severity="high"))
@@ -136,10 +146,10 @@ def scan_models_from_file(path: Path) -> List[ModelInfo]:
     return models
 
 
-def summarize_models(model_ids: List[str]) -> List[ModelInfo]:
+def summarize_models(model_ids: List[str], offline: bool = False) -> List[ModelInfo]:
     models: List[ModelInfo] = []
     for identifier in model_ids:
-        metadata = fetch_model_metadata(identifier)
+        metadata = fetch_model_metadata(identifier, offline=offline)
         models.append(parse_model_entry(metadata))
     return models
 

@@ -28,16 +28,19 @@ class RiskSettings:
         }
 
 
-LICENSE_CATEGORIES = {
-    "gpl": "copyleft",
-    "agpl": "copyleft",
-    "lgpl": "weak_copyleft",
-    "mpl": "weak_copyleft",
-    "apache": "permissive",
-    "mit": "permissive",
-    "bsd": "permissive",
-    "cc-by": "permissive",
-}
+LICENSE_CATEGORIES = [
+    ("cc-by-sa", "copyleft"),
+    ("cc-by-nd", "proprietary"),
+    ("cc-by-nc", "proprietary"),
+    ("cc-by", "permissive"),
+    ("gpl", "copyleft"),
+    ("agpl", "copyleft"),
+    ("lgpl", "weak_copyleft"),
+    ("mpl", "weak_copyleft"),
+    ("apache", "permissive"),
+    ("mit", "permissive"),
+    ("bsd", "permissive"),
+]
 
 
 def categorize_license(license_name: Optional[str]) -> str:
@@ -45,7 +48,7 @@ def categorize_license(license_name: Optional[str]) -> str:
         return "unknown"
 
     normalized = license_name.lower()
-    for token, category in LICENSE_CATEGORIES.items():
+    for token, category in LICENSE_CATEGORIES:
         if token in normalized:
             return category
     if "proprietary" in normalized or "custom" in normalized:

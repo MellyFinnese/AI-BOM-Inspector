@@ -222,7 +222,9 @@ def render_cyclonedx(report: Report) -> str:
                 "type": "library",
                 "name": row["name"],
                 "version": row["version"],
-                "licenses": [{"license": {"id": row["license"].upper()}}],
+                "licenses": [
+                    {"license": {"id": row["license"] if row["license"] else "UNKNOWN"}}
+                ],
                 "properties": [
                     {"name": "aibom:source", "value": row["source"]},
                     {"name": "aibom:license_category", "value": row["license_category"]},
@@ -238,7 +240,9 @@ def render_cyclonedx(report: Report) -> str:
                 "type": "application",
                 "name": model["id"],
                 "version": model["last_updated"],
-                "licenses": [{"license": {"id": model["license"].upper()}}],
+                "licenses": [
+                    {"license": {"id": model["license"] if model["license"] else "UNKNOWN"}}
+                ],
                 "properties": [
                     {"name": "aibom:source", "value": model["source"]},
                     {"name": "aibom:license_category", "value": model["license_category"]},
