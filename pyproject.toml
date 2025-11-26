@@ -38,7 +38,7 @@ Repository = "https://github.com/aibom-inspector/AI-BOM-Inspector"
 
 [project.optional-dependencies]
 huggingface = ["huggingface_hub>=0.26.0"]
-dev = ["pytest>=8.0.0"]
+dev = ["pytest>=8.0.0", "ruff>=0.6.0", "mypy>=1.10.0", "types-requests>=2.32.0.20240622"]
 
 [project.scripts]
 aibom = "aibom_inspector.cli:main"
@@ -50,3 +50,18 @@ where = ["src"]
 rust_extensions = [
     { name = "aibom_inspector._tensor_fuzz", path = "rust/tensor_fuzz/Cargo.toml", binding = "pyo3" }
 ]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_configs = true
+check_untyped_defs = true
+mypy_path = "src"

@@ -12,7 +12,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised in older runtimes
     import tomli as tomllib  # type: ignore
 
 from packaging.requirements import Requirement
-import requests
+import requests  # type: ignore[import-untyped]
 
 from .types import (
     DependencyInfo,
@@ -435,10 +435,10 @@ def enrich_with_osv(
                     code="CVE_LOOKUP_SKIPPED",
                 )
             )
-        except Exception:
+        except Exception as exc:
             dep.issues.append(
                 DependencyIssue(
-                    "[CVE_LOOKUP_FAILED] Unable to reach OSV",
+                    f"[CVE_LOOKUP_FAILED] Unable to reach OSV: {exc}",
                     severity="low",
                     code="CVE_LOOKUP_FAILED",
                 )
@@ -451,7 +451,23 @@ def parse_sbom(path: Path) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
-    data = json.loads(path.read_text())
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        return [
+            DependencyInfo(
+                name=path.name,
+                version=None,
+                source="sbom",
+                issues=[
+                    DependencyIssue(
+                        f"[INVALID_SBOM] Unable to parse SBOM JSON: {exc}",
+                        severity="medium",
+                        code="INVALID_SBOM",
+                    )
+                ],
+            )
+        ]
     if str(data.get("bomFormat", "")).lower() == "cyclonedx":
         deps: list[DependencyInfo] = []
         for comp in data.get("components", []) or []:

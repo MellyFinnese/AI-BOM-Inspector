@@ -168,6 +168,29 @@ def test_parse_sbom_and_enrich_with_osv(monkeypatch, tmp_path: Path):
     assert any("CVE" in issue.message for issue in enriched[0].issues)
 
 
+def test_enrich_with_osv_handles_network_failures(monkeypatch):
+    class RaisingRequests:
+        @staticmethod
+        def post(*args, **kwargs):
+            raise TimeoutError("network down")
+
+    monkeypatch.setitem(sys.modules, "requests", RaisingRequests)
+
+    dep = DependencyInfo(name="demo", version="1.0.0", source="requirements.txt", issues=[])
+    result = enrich_with_osv([dep], osv_url="https://osv.dev")
+    assert any(issue.code == "CVE_LOOKUP_FAILED" for issue in result[0].issues)
+
+
+def test_parse_sbom_handles_invalid_json(tmp_path: Path):
+    sbom_path = tmp_path / "broken.json"
+    sbom_path.write_text("{not:json}")
+
+    deps = parse_sbom(sbom_path)
+    assert deps
+    assert deps[0].name == "broken.json"
+    assert any(issue.code == "INVALID_SBOM" for issue in deps[0].issues)
+
+
 def test_cc_by_license_classification():
     dep = DependencyInfo(name="demo", version="1.0.0", source="cyclonedx", issues=[], license="CC-BY-SA-4.0")
     apply_license_category_dependency(dep)

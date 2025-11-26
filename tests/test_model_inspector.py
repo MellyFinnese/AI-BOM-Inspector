@@ -1,7 +1,12 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from aibom_inspector.model_inspector import STALE_DAYS, parse_model_entry, scan_models_from_file
+from aibom_inspector.model_inspector import (
+    STALE_DAYS,
+    fetch_model_metadata,
+    parse_model_entry,
+    scan_models_from_file,
+)
 
 
 def test_parse_model_entry_flags_missing_license_and_stale_metadata():
@@ -25,3 +30,19 @@ def test_scan_models_from_file_reads_list(tmp_path: Path):
     assert models[0].identifier == "gpt2"
     assert models[1].source == "private"
     assert models[1].issues == []
+
+
+def test_fetch_model_metadata_handles_network_failure(monkeypatch, tmp_path: Path):
+    class RaisingRequests:
+        @staticmethod
+        def get(*args, **kwargs):
+            raise TimeoutError("hf api down")
+
+    monkeypatch.setitem(__import__("sys").modules, "huggingface_hub", None)
+    monkeypatch.setitem(__import__("sys").modules, "requests", RaisingRequests)
+
+    meta = fetch_model_metadata("demo/model", cache_dir=tmp_path)
+    info = parse_model_entry(meta)
+
+    codes = {issue.code for issue in info.issues}
+    assert "METADATA_UNAVAILABLE" in codes
