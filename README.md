@@ -23,8 +23,10 @@ The scanner keeps everything local: it ingests manifests/SBOMs, layers in option
 - Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
 - Gather AI model metadata from JSON or explicit Hugging Face IDs (bring your own JSON or HF IDs; no automatic pipeline discovery)
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
-- Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns plus a stub AI summary you can replace with your own LLM integration
+- Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics; include an optional AI-summary hook (disabled by default) you can swap in with your own LLM integration
 - Contact firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) by default to ground dependency analysis (disable with `--skip-shadow-uefi-intel`)
+
+The default reports only use the deterministic heuristics listed below; the "AI summary" field is a stubbed, human-readable placeholder so teams can wire in their own LLM if desired without expecting hosted inference out of the box.
 
 ## Installation
 - **From PyPI (once published):** `pip install aibom-inspector`
@@ -96,6 +98,10 @@ The scanner keeps everything local: it ingests manifests/SBOMs, layers in option
 - Inspect model weights directly (detect NaNs/LSB steganography): `aibom weights my_model.safetensors --json`
   - Quick comparison of two runs: `aibom diff aibom-report-old.json aibom-report-new.json`
 
+### AI-BOM extensions
+
+CycloneDX and SPDX exports include AI-BOM extension data (e.g., `aibom:source`, license category, risk score, and issues) alongside the standard SBOM fields. See `docs/ai-bom-extensions.md` for the JSON schema and how each extension maps into CycloneDX properties and SPDX summaries.
+
 Configuration tips:
 
 - OSV enrichment uses the public API by default; override with `--osv-url` or `OSV_API_URL` and adjust the HTTP timeout via `--osv-timeout` or `OSV_API_TIMEOUT`.
@@ -126,6 +132,16 @@ The report shows a `stack_risk_score` (0–100, higher is healthier) and a `risk
 - Governance penalties subtract an extra `governance_penalty` for each unpinned dependency and unverified model source; CVE hits subtract `cve_penalty` to emphasize known exploit paths.
 - The resulting value is clamped between 0–`max_score`, giving you a “health score” you can fail CI on via `--fail-on-score`.
 
+### Recommended scoring policy
+- **Start conservative**: gate on `--fail-on-score 70` while teams pilot the tool; after triage, ratchet up to **80** once noisy signals are addressed.
+- **Respond by signal type**:
+  - `MISSING_PIN` / `LOOSE_PIN`: add explicit `==` pins (or `~=` if you must) and commit lockfiles.
+  - `UNKNOWN_LICENSE` / `LICENSE_RISK`: annotate licenses in `models.json` and prefer permissive alternatives when available.
+  - `STALE_MODEL`: update to a fresher model release or document a waiver in `models.json`.
+  - `KNOWN_VULN` / `CVE`: upgrade to the suggested safe version; if blocked, add a comment in your SBOM or pin to a patched fork.
+  - `UNVERIFIED_SOURCE`: source models from trusted registries (Hugging Face, internal artifactory) and record provenance.
+  - `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED`: rerun with network access before shipping to ensure enrichment isn’t missing critical advisories.
+
 ### Assumptions and known limitations
 - **Offline mode trades fidelity for privacy:** metadata/CVE lookups are skipped; issues are marked with `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED` so reviewers know enrichment was suppressed.
 - **SBOM trust but verify:** malformed SBOMs are surfaced as `INVALID_SBOM` issues and ignored otherwise; well-formed CycloneDX/SPDX inputs are merged into the dependency set.
@@ -150,7 +166,31 @@ Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift,
 ## Testing and CI
 - Run unit tests: `pytest`
 - GitHub Action: `.github/workflows/aibom-inspector-action.yml` uses the bundled composite action to scan PRs and post a risk comment.
+- Minimal workflow example (uses PyPI once published; otherwise `pip install -e .[dev]`):
+  ```yaml
+  name: AI-BOM Inspector
+  on: [pull_request]
+  jobs:
+    scan:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - name: Install AI-BOM Inspector
+          run: pip install aibom-inspector
+        - name: Scan and comment
+          run: aibom scan --fail-on-score 70 --format markdown --output aibom-report.md
+        - name: Upload report
+          uses: actions/upload-artifact@v4
+          with:
+            name: aibom-report
+            path: aibom-report.md
+  ```
 - CI guardrails: use `--fail-on-score <threshold>` to block merges when the AI stack health score drops below your bar.
+
+## Releases and distribution
+- **Tagged releases**: we cut signed Git tags for CLI milestones; package metadata lives in `pyproject.toml` and tracks the changelog.
+- **PyPI**: publishing is planned under the `aibom-inspector` name; until then, install from source (`pip install -e .[dev]`) or lock to a tag tarball.
+- **Versioning**: semantic-ish—patch releases for heuristics/docs, minor bumps when report schemas or exit codes change.
 
 ## Security, governance, and contributions
 - See `SECURITY.md` for how to report vulnerabilities.
