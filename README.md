@@ -8,12 +8,12 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
 
 ```mermaid
 graph TD
-    A[CLI / API] --> B[Manifest & SBOM parsers]
-    A --> C[Model metadata loaders]
-    B --> D[Risk engine]
+    A["CLI / API"] --> B["Manifest & SBOM parsers"]
+    A --> C["Model metadata loaders"]
+    B --> D["Risk engine"]
     C --> D
-    D --> E[Report renderers<br/>(JSON, Markdown, HTML, CycloneDX, SPDX)]
-    E --> F[CI gates<br/>(fail-on-score, diff)]
+    D --> E["Report renderers<br/>(JSON, Markdown, HTML, CycloneDX, SPDX)"]
+    E --> F["CI gates<br/>(fail-on-score, diff)"]
 ```
 
 The scanner keeps everything local: it ingests manifests/SBOMs, layers in optional OSV/Hugging Face lookups, and emits reports that CI can enforce.
