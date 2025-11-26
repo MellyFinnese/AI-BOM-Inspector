@@ -4,6 +4,20 @@
 
 Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and highlights sloppy supply-chain practices across multiple languages.
 
+## Architecture at a glance
+
+```mermaid
+graph TD
+    A[CLI / API] --> B[Manifest & SBOM parsers]
+    A --> C[Model metadata loaders]
+    B --> D[Risk engine]
+    C --> D
+    D --> E["Report renderers (JSON, Markdown, HTML, CycloneDX, SPDX)"]
+    E --> F["CI gates (fail-on-score, diff)"]
+```
+
+The scanner keeps everything local: it ingests manifests/SBOMs, layers in optional OSV/Hugging Face lookups, and emits reports that CI can enforce.
+
 ## What it does
 - Parse dependency manifests across Python (`requirements.txt`, `pyproject.toml`), JavaScript (`package.json` / `package-lock.json`), Go (`go.mod`), and Java (`pom.xml`)
 - Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
@@ -12,23 +26,24 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
 - Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns plus a stub AI summary you can replace with your own LLM integration
 - Contact firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) by default to ground dependency analysis (disable with `--skip-shadow-uefi-intel`)
 
+## Installation
+- **From PyPI (once published):** `pip install aibom-inspector`
+- **From source for local development:**
+  ```bash
+  pip install -e .[dev]
+  # Or use the reproducible, pinned set for audits/CI:
+  pip install -r requirements.txt
+  ```
+
 ## Getting started
-1. Install the package locally (editable install for development):
-   ```bash
-   pip install -e .[dev]
-   ```
-   For reproducible CI or audits, install the pinned dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. Create a `models.json` file if you want to include model metadata. A ready-to-use sample lives in `examples/models.sample.json`:
+1. Create a `models.json` file if you want to include model metadata. A ready-to-use sample lives in `examples/models.sample.json`:
    ```json
    [
      {"id": "gpt2", "source": "huggingface", "license": "mit", "last_updated": "2024-01-01"},
      {"id": "custom-embedder", "source": "private"}
    ]
    ```
-3. Run the scanner (auto-detects dependency files when present):
+2. Run the scanner (auto-detects dependency files when present):
    ```bash
    aibom scan --models-file models.json --format html --output report.html
    ```
