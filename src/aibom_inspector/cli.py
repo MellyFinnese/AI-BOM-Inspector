@@ -19,6 +19,7 @@ from .dependency_scanner import (
 )
 from .model_inspector import enrich_models_with_cves, scan_models_from_file, summarize_models
 from .reporting import render_report, write_report
+from .tensor_fuzz import inspect_weight_files
 from .types import Report, RiskSettings
 
 
@@ -288,6 +289,46 @@ def scan(
     if fail_on_score is not None:
         if report.stack_risk_score < fail_on_score:
             raise SystemExit(1)
+
+
+@main.command()
+@click.argument("weights", nargs=-1, type=click.Path(exists=True, dir_okay=False, path_type=str))
+@click.option(
+    "--sample-limit",
+    type=int,
+    default=200_000,
+    show_default=True,
+    help="Maximum number of tensor values to sample when inspecting each file.",
+)
+@click.option("--json", "json_output", is_flag=True, help="Emit JSON instead of human text.")
+@click.option(
+    "--fail-on-suspect",
+    is_flag=True,
+    help="Exit non-zero if any tensor appears poisoned or carries steganography.",
+)
+def weights(weights: tuple[str, ...], sample_limit: int, json_output: bool, fail_on_suspect: bool) -> None:
+    """Inspect safetensors weight files for poisoned neurons or LSB steganography."""
+
+    if not weights:
+        click.echo("No safetensors files supplied; nothing to inspect.", err=True)
+        raise SystemExit(1)
+
+    results = inspect_weight_files(weights, sample_limit=sample_limit)
+
+    if json_output:
+        payload = [result.as_dict() for result in results]
+        click.echo(json.dumps(payload, indent=2))
+    else:
+        for result in results:
+            click.echo(f"[weights] {result.path} — suspected={result.suspected}")
+            for tensor in result.tensors:
+                click.echo(
+                    f"  tensor={tensor.name} dtype={tensor.dtype} lsb_bias={tensor.lsb_ones_ratio:.3f}"
+                    f" poison={tensor.suspected_poison} steg={tensor.suspected_steg}"
+                )
+
+    if fail_on_suspect and any(r.suspected for r in results):
+        raise SystemExit(1)
 
 
 @main.command()
