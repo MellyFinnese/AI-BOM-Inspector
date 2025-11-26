@@ -91,6 +91,7 @@ def test_warns_when_nothing_to_scan(tmp_path: Path):
                 "--output",
                 str(output_path),
                 "--offline",
+                "--skip-shadow-uefi-intel",
             ],
         )
 
@@ -104,8 +105,26 @@ def test_require_input_flag_exits_when_empty(tmp_path: Path):
     with runner.isolated_filesystem():
         result = runner.invoke(
             main,
-            ["scan", "--format", "json", "--offline", "--require-input"],
+            [
+                "scan",
+                "--format",
+                "json",
+                "--offline",
+                "--require-input",
+                "--skip-shadow-uefi-intel",
+            ],
         )
 
     assert result.exit_code == 1
     assert "No dependencies or models detected; nothing to scan." in result.output
+
+
+def test_includes_shadow_repo_by_default(tmp_path: Path):
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(main, ["scan", "--format", "json", "--offline"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    names = [dep["name"] for dep in payload["dependencies"]]
+    assert "Shadow-UEFI-Intel" in names

@@ -9,6 +9,7 @@ import click
 
 from .dependency_scanner import (
     enrich_with_osv,
+    fetch_shadow_uefi_intel_dependency,
     parse_sbom,
     scan_go_mod,
     scan_package_json,
@@ -27,6 +28,9 @@ def _collect_dependencies(
     requirements: Optional[str],
     pyproject: Optional[str],
     extra_manifests: tuple[str, ...],
+    include_shadow_repo: bool,
+    shadow_timeout: Optional[float],
+    offline: bool,
 ):
     deps = []
     if requirements:
@@ -48,6 +52,13 @@ def _collect_dependencies(
         path = Path(manifest)
         if path.exists():
             deps.extend(scanner(path) if (scanner := _select_scanner(path)) else [])
+
+    if include_shadow_repo:
+        deps.append(
+            fetch_shadow_uefi_intel_dependency(
+                offline=offline, timeout=shadow_timeout
+            )
+        )
 
     return deps
 
@@ -177,6 +188,12 @@ def main() -> None:
     help="Penalty applied per CVE or advisory hit during CVE feed cross-checks.",
 )
 @click.option(
+    "--include-shadow-uefi-intel/--skip-shadow-uefi-intel",
+    default=True,
+    show_default=True,
+    help="Include Shadow-UEFI-Intel repository metadata as a required dependency context.",
+)
+@click.option(
     "--offline",
     is_flag=True,
     help="Disable remote lookups (OSV, HuggingFace) for strictly offline scans.",
@@ -190,6 +207,11 @@ def main() -> None:
     "--osv-timeout",
     type=float,
     help="HTTP timeout (seconds) for OSV lookups; defaults to OSV_API_TIMEOUT or 8s.",
+)
+@click.option(
+    "--shadow-uefi-timeout",
+    type=float,
+    help="HTTP timeout (seconds) for fetching Shadow-UEFI-Intel metadata; defaults to SHADOW_UEFI_INTEL_TIMEOUT or 8s.",
 )
 @click.option(
     "--require-input",
@@ -215,9 +237,11 @@ def scan(
     risk_penalty_low: Optional[int],
     risk_penalty_governance: Optional[int],
     risk_penalty_cve: Optional[int],
+    include_shadow_uefi_intel: bool,
     offline: bool,
     osv_url: Optional[str],
     osv_timeout: Optional[float],
+    shadow_uefi_timeout: Optional[float],
     require_input: bool,
 ) -> None:
     """Scan dependencies, models, and produce a report."""
@@ -228,7 +252,14 @@ def scan(
         str(Path("pyproject.toml")) if Path("pyproject.toml").exists() else None
     )
 
-    dependencies = _collect_dependencies(requirements_path, pyproject_path, manifest)
+    dependencies = _collect_dependencies(
+        requirements_path,
+        pyproject_path,
+        manifest,
+        include_shadow_repo=include_shadow_uefi_intel,
+        shadow_timeout=shadow_uefi_timeout,
+        offline=offline,
+    )
     for sbom in sbom_file:
         dependencies.extend(parse_sbom(Path(sbom)))
 
