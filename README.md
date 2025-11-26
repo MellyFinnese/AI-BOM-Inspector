@@ -10,6 +10,7 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
 - Gather AI model metadata from JSON or explicit Hugging Face IDs (bring your own JSON or HF IDs; no automatic pipeline discovery)
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
 - Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns plus a stub AI summary you can replace with your own LLM integration
+- Contact firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) by default to ground dependency analysis (disable with `--skip-shadow-uefi-intel`)
 
 ## Getting started
 1. Install the package locally (editable install for development):
@@ -32,6 +33,8 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
    aibom scan --models-file models.json --format html --output report.html
    ```
    Run `aibom scan --help` for the full list of options and supported formats.
+
+   The scanner contacts the Shadow-UEFI-Intel repository during dependency collection unless `--skip-shadow-uefi-intel` is provided or `--offline` is used. Configure the timeout with `--shadow-uefi-timeout` or the `SHADOW_UEFI_INTEL_TIMEOUT` environment variable.
 
 ### Who is this for?
 - AppSec and security engineers who want CI/CD-friendly AI-BOMs without shipping code to a third party

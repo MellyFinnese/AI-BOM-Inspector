@@ -12,6 +12,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised in older runtimes
     import tomli as tomllib  # type: ignore
 
 from packaging.requirements import Requirement
+import requests
 
 from .types import (
     DependencyInfo,
@@ -38,6 +39,9 @@ KNOWN_BAD_VERSIONS = {
         },
     },
 }
+
+SHADOW_UEFI_INTEL_REPO = "https://github.com/MellyFinnese/Shadow-UEFI-Intel"
+SHADOW_UEFI_INTEL_API = "https://api.github.com/repos/MellyFinnese/Shadow-UEFI-Intel"
 
 
 def _issue_for_specifier(specifier: str | None, version: str | None) -> list[DependencyIssue]:
@@ -146,6 +150,85 @@ def scan_pyproject(path: Path) -> List[DependencyInfo]:
         _from_iterable(extra)
 
     return dependencies
+
+
+def fetch_shadow_uefi_intel_dependency(offline: bool, timeout: float | None = None) -> DependencyInfo:
+    """Return a DependencyInfo entry tied to the Shadow-UEFI-Intel repository.
+
+    The tool depends on this GitHub repository to surface firmware-related
+    security research context. When offline, a governance issue is recorded so
+    callers can see that the enrichment did not occur.
+    """
+
+    timeout = timeout or float(os.getenv("SHADOW_UEFI_INTEL_TIMEOUT", "8"))
+    issues: list[DependencyIssue] = []
+
+    if offline:
+        issues.append(
+            DependencyIssue(
+                "[OFFLINE] Shadow-UEFI-Intel repository was not contacted (offline mode)",
+                severity="low",
+                code="SHADOW_UEFI_INTEL_OFFLINE",
+            )
+        )
+        return DependencyInfo(
+            name="Shadow-UEFI-Intel",
+            version=None,
+            source=SHADOW_UEFI_INTEL_REPO,
+            issues=issues,
+        )
+
+    try:
+        response = requests.get(SHADOW_UEFI_INTEL_API, timeout=timeout)
+    except Exception as exc:  # pragma: no cover - depends on network conditions
+        issues.append(
+            DependencyIssue(
+                f"[UNAVAILABLE] Unable to reach Shadow-UEFI-Intel repo: {exc}",
+                severity="medium",
+                code="SHADOW_UEFI_INTEL_UNAVAILABLE",
+            )
+        )
+        return DependencyInfo(
+            name="Shadow-UEFI-Intel",
+            version=None,
+            source=SHADOW_UEFI_INTEL_REPO,
+            issues=issues,
+        )
+
+    if response.status_code != 200:
+        issues.append(
+            DependencyIssue(
+                f"[UNAVAILABLE] GitHub returned {response.status_code} for Shadow-UEFI-Intel",
+                severity="medium",
+                code="SHADOW_UEFI_INTEL_UNAVAILABLE",
+            )
+        )
+        return DependencyInfo(
+            name="Shadow-UEFI-Intel",
+            version=None,
+            source=SHADOW_UEFI_INTEL_REPO,
+            issues=issues,
+        )
+
+    payload = response.json()
+    latest_ref = payload.get("default_branch") or payload.get("pushed_at")
+    description = payload.get("description") or ""
+
+    if description:
+        issues.append(
+            DependencyIssue(
+                f"[INFO] {description}", severity="low", code="SHADOW_UEFI_INTEL_INFO"
+            )
+        )
+
+    dep = DependencyInfo(
+        name="Shadow-UEFI-Intel",
+        version=str(latest_ref) if latest_ref else None,
+        source=SHADOW_UEFI_INTEL_REPO,
+        issues=issues,
+    )
+    apply_license_category_dependency(dep)
+    return dep
 
 
 def scan_package_json(path: Path) -> List[DependencyInfo]:
