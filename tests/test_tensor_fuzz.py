@@ -2,7 +2,14 @@ import json
 import struct
 from pathlib import Path
 
-from aibom_inspector.tensor_fuzz import inspect_weight_file, inspect_weight_files
+import pytest
+
+from aibom_inspector.tensor_fuzz import (
+    SafetensorsDataError,
+    SafetensorsHeaderError,
+    inspect_weight_file,
+    inspect_weight_files,
+)
 
 
 def _write_safetensors(path: Path, tensors: dict[str, bytes]) -> None:
@@ -54,3 +61,24 @@ def test_batch_inspection_handles_multiple_files(tmp_path: Path):
     results = inspect_weight_files([one, str(two)], sample_limit=2)
     assert len(results) == 2
     assert all(not res.suspected for res in results)
+
+
+def test_inspect_weight_file_rejects_unsupported_dtype(tmp_path: Path):
+    target = tmp_path / "bad_dtype.safetensors"
+    header = {"bad": {"dtype": "I64", "shape": [1], "data_offsets": [0, 8]}}
+    header_bytes = json.dumps(header).encode("utf-8")
+    target.write_bytes(len(header_bytes).to_bytes(8, "little") + header_bytes + b"12345678")
+
+    with pytest.raises(SafetensorsHeaderError):
+        inspect_weight_file(target)
+
+
+def test_inspect_weight_file_detects_truncated_tensor(tmp_path: Path):
+    target = tmp_path / "truncated.safetensors"
+    header = {"tiny": {"dtype": "F32", "shape": [2], "data_offsets": [0, 8]}}
+    header_bytes = json.dumps(header).encode("utf-8")
+    # Only 4 bytes of data for a tensor that claims to have 8 bytes
+    target.write_bytes(len(header_bytes).to_bytes(8, "little") + header_bytes + b"\x00\x00\x80?")
+
+    with pytest.raises(SafetensorsDataError):
+        inspect_weight_file(target, sample_limit=10)

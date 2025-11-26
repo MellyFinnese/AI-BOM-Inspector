@@ -1,7 +1,5 @@
 import json
 from datetime import datetime
-from datetime import datetime
-import json
 
 from aibom_inspector.reporting import render_cyclonedx, render_json, render_markdown, render_spdx
 from aibom_inspector.types import DependencyInfo, DependencyIssue, ModelInfo, ModelIssue, Report

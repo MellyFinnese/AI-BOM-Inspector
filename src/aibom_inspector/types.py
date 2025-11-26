@@ -148,12 +148,12 @@ class Report:
 
         penalties = 0
         for dep in self.dependencies:
-            for issue in dep.issues:
-                penalties += self.risk_settings.penalty_for(issue.severity)
+            for dep_issue in dep.issues:
+                penalties += self.risk_settings.penalty_for(dep_issue.severity)
 
         for model in self.models:
-            for issue in model.issues:
-                penalties += self.risk_settings.penalty_for(issue.severity)
+            for model_issue in model.issues:
+                penalties += self.risk_settings.penalty_for(model_issue.severity)
 
         breakdown = self.risk_breakdown
         penalties += self.risk_settings.governance_penalty * (
@@ -176,20 +176,20 @@ class Report:
         }
 
         for dep in self.dependencies:
-            for issue in dep.issues:
-                code = issue.code or issue.message
+            for dep_issue in dep.issues:
+                code = dep_issue.code or dep_issue.message
                 if code and any(token in str(code) for token in {"MISSING_PIN", "LOOSE_PIN"}):
                     buckets["unpinned_deps"] += 1
                 if code and "CVE" in str(code).upper():
                     buckets["cves"] += 1
-                elif "[CVE]" in issue.message or "[KNOWN_VULN]" in issue.message:
+                elif "[CVE]" in dep_issue.message or "[KNOWN_VULN]" in dep_issue.message:
                     buckets["cves"] += 1
             if dep.license_category == "unknown" and dep.license:
                 buckets["unknown_licenses"] += 1
 
         for model in self.models:
-            for issue in model.issues:
-                code = issue.code or issue.message
+            for model_issue in model.issues:
+                code = model_issue.code or model_issue.message
                 if code and "UNVERIFIED_SOURCE" in str(code):
                     buckets["unverified_sources"] += 1
                 if code and "UNKNOWN_LICENSE" in str(code):
@@ -198,7 +198,7 @@ class Report:
                     buckets["stale_models"] += 1
                 if code and "CVE" in str(code).upper():
                     buckets["cves"] += 1
-                elif "[CVE]" in issue.message or "[KNOWN_VULN]" in issue.message:
+                elif "[CVE]" in model_issue.message or "[KNOWN_VULN]" in model_issue.message:
                     buckets["cves"] += 1
             if model.license_category == "unknown" and model.license:
                 buckets["unknown_licenses"] += 1

@@ -99,8 +99,23 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `STALE_MODEL` | Model metadata older than ~9 months | Medium |
 | `UNVERIFIED_SOURCE` | Non-standard model source value | Medium |
 | `MODEL_ADVISORY` | Model flagged by a published advisory | High |
+| `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED` | Scan ran offline or without network dependencies; no remote enrichment performed | Low |
+| `METADATA_UNAVAILABLE` | Model registry/API could not be reached; metadata reused from cache with a warning | Low |
+| `INVALID_SBOM` | SBOM could not be parsed; flagged as an issue instead of crashing the scan | Medium |
 
 The report shows a `stack_risk_score` (0–100, higher is healthier) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, stale models, and CVE hits. Tune the scoring with `--risk-max-score`, per-severity `--risk-penalty-*` flags, and governance/CVE penalties so teams can calibrate what “red” means for them. Conceptually, this is a health score: penalties are subtracted from the maximum, so `--fail-on-score 70` means “fail if health drops below 70/100.”
+
+### How the risk score is computed
+- Start from `risk_settings.max_score` (default 100) and subtract penalties instead of adding danger points.
+- Every dependency/model issue subtracts `risk_settings.penalty_for(severity)` (default high=8, medium=4, low=2).
+- Governance penalties subtract an extra `governance_penalty` for each unpinned dependency and unverified model source; CVE hits subtract `cve_penalty` to emphasize known exploit paths.
+- The resulting value is clamped between 0–`max_score`, giving you a “health score” you can fail CI on via `--fail-on-score`.
+
+### Assumptions and known limitations
+- **Offline mode trades fidelity for privacy:** metadata/CVE lookups are skipped; issues are marked with `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED` so reviewers know enrichment was suppressed.
+- **SBOM trust but verify:** malformed SBOMs are surfaced as `INVALID_SBOM` issues and ignored otherwise; well-formed CycloneDX/SPDX inputs are merged into the dependency set.
+- **Model metadata freshness depends on registries:** network failures are tolerated and recorded as `METADATA_UNAVAILABLE`, but license/freshness signals may be stale until the registry is reachable again.
+- **Weight inspection is heuristic:** the safetensors scanner samples bits and looks for NaNs/Inf/LSB bias; unusual dtypes or truncated files raise clear errors instead of silently passing.
 
 ### Before vs. after hardening
 

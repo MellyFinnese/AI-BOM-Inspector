@@ -47,7 +47,7 @@ def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline
         except Exception:
             pass
 
-    data: Dict[str, str] = {"id": identifier, "source": "huggingface"}
+    data: Dict[str, object] = {"id": identifier, "source": "huggingface"}
 
     if offline:
         data["offline"] = True
@@ -64,7 +64,7 @@ def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline
             if getattr(info, "lastModified", None):
                 data["last_updated"] = info.lastModified.isoformat()
         except ImportError:
-            import requests
+            import requests  # type: ignore[import-untyped]
 
             response = requests.get(f"https://huggingface.co/api/models/{identifier}", timeout=10)
             if response.status_code == 200:
@@ -72,8 +72,8 @@ def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline
                 data["license"] = payload.get("license")
                 if payload.get("lastModified"):
                     data["last_updated"] = payload["lastModified"]
-    except Exception:
-        data["error"] = "metadata lookup failed"
+    except Exception as exc:
+        data["error"] = f"metadata lookup failed: {exc}"
 
     cache_file.write_text(json.dumps(data))
     return data
@@ -94,6 +94,15 @@ def parse_model_entry(entry: dict) -> ModelInfo:
                 "[OFFLINE_MODE] Remote metadata lookup skipped",
                 severity="low",
                 code="OFFLINE_MODE",
+            )
+        )
+
+    if entry.get("error"):
+        issues.append(
+            ModelIssue(
+                f"[METADATA_UNAVAILABLE] {entry['error']}",
+                severity="low",
+                code="METADATA_UNAVAILABLE",
             )
         )
 
