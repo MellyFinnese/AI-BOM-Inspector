@@ -67,14 +67,15 @@ Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and hig
 - **Example commands:**
   - Only dependency scan with autodetection: `aibom scan --format json`
   - Include models from a file: `aibom scan --models-file examples/models.sample.json --format markdown --output report.md`
-  - Specify models inline: `aibom scan --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
-  - Enrich CVEs during the scan: `aibom scan --with-cves --format json`
-  - Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
-  - Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html --output merged-report.html`
-  - Run fully offline (no OSV/HF calls): `aibom scan --offline --format markdown`
-  - Require inputs or fail fast: `aibom scan --require-input --offline`
-  - Export CycloneDX: `aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json`
-  - Fail CI if health score < 70: `aibom scan --fail-on-score 70 --format html`
+- Specify models inline: `aibom scan --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
+- Enrich CVEs during the scan: `aibom scan --with-cves --format json`
+- Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
+- Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html --output merged-report.html`
+- Run fully offline (no OSV/HF calls): `aibom scan --offline --format markdown`
+- Require inputs or fail fast: `aibom scan --require-input --offline`
+- Export CycloneDX: `aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json`
+- Fail CI if health score < 70: `aibom scan --fail-on-score 70 --format html`
+- Inspect model weights directly (detect NaNs/LSB steganography): `aibom weights my_model.safetensors --json`
   - Quick comparison of two runs: `aibom diff aibom-report-old.json aibom-report-new.json`
 
 Configuration tips:
