@@ -363,7 +363,7 @@ def normalize_version(version: str | None) -> str:
 
 def enrich_with_osv(
     dependencies: List[DependencyInfo],
-    offline: bool = False,
+    offline: bool = True,
     osv_url: str | None = None,
     timeout: float | None = None,
 ) -> List[DependencyInfo]:

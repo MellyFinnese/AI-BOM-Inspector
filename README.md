@@ -2,7 +2,7 @@
 
 ![AI-BOM Inspector CI](https://img.shields.io/badge/AI--BOM%20Inspector-Scan%20your%20AI%20stack%20in%20CI-blue)
 
-Security-focused AI stack analyzer that builds an AI-BOM (models + deps) and highlights sloppy supply-chain practices across multiple languages.
+Offline-first SBOM + AI supply-chain risk and license scanner. Privacy posture: default is `--offline` (no network calls) unless you opt into `--online`. The "AI" is transparent rules + heuristics with an optional summarizer hook that is stubbed/disabled until you wire in your own LLM.
 
 ## Architecture at a glance
 
@@ -16,17 +16,30 @@ graph TD
     E --> F["CI gates<br/>(fail-on-score, diff)"]
 ```
 
-The scanner keeps everything local: it ingests manifests/SBOMs, layers in optional OSV/Hugging Face lookups, and emits reports that CI can enforce.
+The scanner keeps everything local: it ingests manifests/SBOMs, layers in optional OSV/Hugging Face lookups, and emits reports that CI can enforce. Network enrichment (OSV, Hugging Face, Shadow-UEFI-Intel metadata) only occurs when you deliberately pass `--online`.
 
 ## What it does
 - Parse dependency manifests across Python (`requirements.txt`, `pyproject.toml`), JavaScript (`package.json` / `package-lock.json`), Go (`go.mod`), and Java (`pom.xml`)
 - Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
 - Gather AI model metadata from JSON or explicit Hugging Face IDs (bring your own JSON or HF IDs; no automatic pipeline discovery)
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
-- Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics; include an optional AI-summary hook (disabled by default) you can swap in with your own LLM integration
-- Contact firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) by default to ground dependency analysis (disable with `--skip-shadow-uefi-intel`)
+- Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics; the optional AI-summary hook is disabled by default and ready for teams to wire up their own LLM if they choose
+- Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --include-shadow-uefi-intel` is used
 
 The default reports only use the deterministic heuristics listed below; the "AI summary" field is a stubbed, human-readable placeholder so teams can wire in their own LLM if desired without expecting hosted inference out of the box.
+
+## Network behavior (offline by default)
+- Default posture: `--offline` is the default and suppresses every remote call. Expect `[OFFLINE_MODE]` / `[CVE_LOOKUP_SKIPPED]` annotations in reports when enrichment is skipped.
+- Opt-in: add `--online` to allow outbound calls. Pair it with feature flags (e.g., `--with-cves`, `--model-id`, `--include-shadow-uefi-intel`) to choose what actually dials out.
+- Endpoints and payloads:
+
+| Endpoint | When it fires | Payload sent | How to disable |
+| --- | --- | --- | --- |
+| `https://api.osv.dev/v1/query` (or `OSV_API_URL`) | `--online --with-cves` | JSON body containing `package.name`, `package.ecosystem`, and `version` for each dependency | Default offline; omit `--with-cves`; set `--offline`; or point `OSV_API_URL` to an internal mirror |
+| `https://huggingface.co/api/models/<id>` (or `huggingface_hub` SDK) | `--online` with `--model-id` or models whose `source` is `huggingface` | Model identifier only; response cached locally | Default offline; avoid `--online`; or provide a fully populated `models.json` |
+| GitHub API for [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) | `--online --include-shadow-uefi-intel` (default is on, but still inert while offline) | Repository metadata fetch; no project data sent | Default offline; pass `--skip-shadow-uefi-intel`; or leave `--offline` in place |
+
+Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_API_TIMEOUT` / `SHADOW_UEFI_INTEL_TIMEOUT` environment variables.
 
 ## Installation
 - **From PyPI (once published):** `pip install aibom-inspector`
@@ -51,7 +64,7 @@ The default reports only use the deterministic heuristics listed below; the "AI 
    ```
    Run `aibom scan --help` for the full list of options and supported formats.
 
-   The scanner contacts the Shadow-UEFI-Intel repository during dependency collection unless `--skip-shadow-uefi-intel` is provided or `--offline` is used. Configure the timeout with `--shadow-uefi-timeout` or the `SHADOW_UEFI_INTEL_TIMEOUT` environment variable.
+   Network calls are off by default; add `--online` (plus flags like `--with-cves` or `--model-id`) if you want remote enrichment.
 
 ### Who is this for?
 - AppSec and security engineers who want CI/CD-friendly AI-BOMs without shipping code to a third party
@@ -87,16 +100,27 @@ The default reports only use the deterministic heuristics listed below; the "AI 
 - **Example commands:**
   - Only dependency scan with autodetection: `aibom scan --format json`
   - Include models from a file: `aibom scan --models-file examples/models.sample.json --format markdown --output report.md`
-- Specify models inline: `aibom scan --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
-- Enrich CVEs during the scan: `aibom scan --with-cves --format json`
+- Specify models inline: `aibom scan --online --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
+- Enrich CVEs during the scan: `aibom scan --online --with-cves --format json`
 - Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
 - Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html --output merged-report.html`
-- Run fully offline (no OSV/HF calls): `aibom scan --offline --format markdown`
-- Require inputs or fail fast: `aibom scan --require-input --offline`
+- Run fully offline (no OSV/HF calls): `aibom scan --format markdown`
+- Require inputs or fail fast: `aibom scan --require-input`
 - Export CycloneDX: `aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json`
 - Fail CI if health score < 70: `aibom scan --fail-on-score 70 --format html`
 - Inspect model weights directly (detect NaNs/LSB steganography): `aibom weights my_model.safetensors --json`
   - Quick comparison of two runs: `aibom diff aibom-report-old.json aibom-report-new.json`
+
+### 30-second sample report (before vs. after)
+- **Input SBOM**: lightweight CycloneDX with a few Python and npm components plus a Hugging Face model ID.
+- **Before (messy state)**:
+  - Command: `aibom scan --sbom-file examples/demo/aibom-report.json --format markdown --output before.md --fail-on-score 70`
+  - Top findings: `MISSING_PIN` for multiple deps, `UNKNOWN_LICENSE` on the model, `STALE_MODEL`, demo `KNOWN_VULN` entry, and `UNVERIFIED_SOURCE`.
+  - Outcome: `stack_risk_score` ≈ 50 and exit code **1** because it failed the `--fail-on-score 70` gate.
+- **After (hardened state)**:
+  - Command: `aibom scan --sbom-file examples/demo/aibom-report.json --models-file examples/models.sample.json --format markdown --output after.md --fail-on-score 70 --online --with-cves`
+  - Top findings: `CVE` hits (if any) plus minor governance nits; pins and licenses quiet down once manifests and model metadata are cleaned up.
+  - Outcome: `stack_risk_score` in the high 80s and exit code **0**, making it CI-safe.
 
 ### AI-BOM extensions
 
@@ -166,7 +190,7 @@ Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift,
 ## Testing and CI
 - Run unit tests: `pytest`
 - GitHub Action: `.github/workflows/aibom-inspector-action.yml` uses the bundled composite action to scan PRs and post a risk comment.
-- Minimal workflow example (uses PyPI once published; otherwise `pip install -e .[dev]`):
+- Copy/paste workflow example (offline by default; recommended `--fail-on-score` = 75, allowlist supported via `ALLOWED_ISSUE_CODES`):
   ```yaml
   name: AI-BOM Inspector
   on: [pull_request]
@@ -177,15 +201,27 @@ Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift,
         - uses: actions/checkout@v4
         - name: Install AI-BOM Inspector
           run: pip install aibom-inspector
-        - name: Scan and comment
-          run: aibom scan --fail-on-score 70 --format markdown --output aibom-report.md
-        - name: Upload report
+        - name: Scan AI stack (offline by default)
+          run: aibom scan --format json --output aibom-report.json --fail-on-score 75 --require-input
+        - name: Enforce allowlist (optional)
+          env:
+            ALLOWED_ISSUE_CODES: '["OFFLINE_MODE","CVE_LOOKUP_SKIPPED"]'
+          run: |
+            disallowed=$(jq --argjson allowed "$ALLOWED_ISSUE_CODES" '[.dependencies[]?.issues[]?.code, .models[]?.issues[]?.code] | map(select(. != null and ($allowed | index(.) | not))) | length' aibom-report.json)
+            if [ "$disallowed" -gt 0 ]; then
+              echo "Unapproved issues detected"; exit 1;
+            fi
+        - name: Upload human report
+          run: aibom scan --format markdown --output aibom-report.md
+        - name: Upload artifacts
           uses: actions/upload-artifact@v4
           with:
             name: aibom-report
-            path: aibom-report.md
+            path: |
+              aibom-report.json
+              aibom-report.md
   ```
-- CI guardrails: use `--fail-on-score <threshold>` to block merges when the AI stack health score drops below your bar.
+- CI guardrails: keep `--offline` unless you need enrichments; when allowed, add `--online --with-cves` to the scan step and adjust allowlists accordingly.
 
 ## Releases and distribution
 - **Tagged releases**: we cut signed Git tags for CLI milestones; package metadata lives in `pyproject.toml` and tracks the changelog.
