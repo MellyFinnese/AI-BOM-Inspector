@@ -188,10 +188,10 @@ def main() -> None:
     help="Penalty applied per CVE or advisory hit during CVE feed cross-checks.",
 )
 @click.option(
-    "--include-shadow-uefi-intel/--skip-shadow-uefi-intel",
-    default=True,
+    "--enable-shadow-uefi-intel/--disable-shadow-uefi-intel",
+    default=False,
     show_default=True,
-    help="Include Shadow-UEFI-Intel repository metadata as a required dependency context.",
+    help="Opt-in: fetch Shadow-UEFI-Intel repository metadata as dependency context.",
 )
 @click.option(
     "--offline/--online",
@@ -199,7 +199,7 @@ def main() -> None:
     show_default=True,
     help=(
         "Run without remote lookups by default; pass --online to allow OSV, "
-        "HuggingFace, and Shadow-UEFI-Intel network calls."
+        "HuggingFace, and explicitly enabled Shadow-UEFI-Intel network calls."
     ),
 )
 @click.option(
@@ -241,7 +241,7 @@ def scan(
     risk_penalty_low: Optional[int],
     risk_penalty_governance: Optional[int],
     risk_penalty_cve: Optional[int],
-    include_shadow_uefi_intel: bool,
+    enable_shadow_uefi_intel: bool,
     offline: bool,
     osv_url: Optional[str],
     osv_timeout: Optional[float],
@@ -260,7 +260,7 @@ def scan(
         requirements_path,
         pyproject_path,
         manifest,
-        include_shadow_repo=include_shadow_uefi_intel,
+        include_shadow_repo=enable_shadow_uefi_intel,
         shadow_timeout=shadow_uefi_timeout,
         offline=offline,
     )

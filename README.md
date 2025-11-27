@@ -2,7 +2,7 @@
 
 ![AI-BOM Inspector CI](https://img.shields.io/badge/AI--BOM%20Inspector-Scan%20your%20AI%20stack%20in%20CI-blue)
 
-Offline-first SBOM + AI supply-chain risk and license scanner. Privacy posture: default is `--offline` (no network calls) unless you opt into `--online`. The "AI" is transparent rules + heuristics with an optional summarizer hook that is stubbed/disabled until you wire in your own LLM.
+Offline-first SBOM + AI supply-chain risk and license scanner. Privacy posture: default is `--offline` (no network calls) unless you opt into `--online`. Local-first; optional enrichment (OSV/HF/Shadow-UEFI) can be enabled explicitly. Fully offline supported. The "AI" is transparent rules + heuristics with an optional summarizer hook that is stubbed/disabled until you wire in your own LLM.
 
 ## Architecture at a glance
 
@@ -16,7 +16,7 @@ graph TD
     E --> F["CI gates<br/>(fail-on-score, diff)"]
 ```
 
-The scanner keeps everything local: it ingests manifests/SBOMs, layers in optional OSV/Hugging Face lookups, and emits reports that CI can enforce. Network enrichment (OSV, Hugging Face, Shadow-UEFI-Intel metadata) only occurs when you deliberately pass `--online`.
+The scanner defaults to local-only analysis: it ingests manifests/SBOMs, can layer in optional OSV/Hugging Face lookups, and emits reports that CI can enforce. Network enrichment (OSV, Hugging Face, Shadow-UEFI-Intel metadata) only occurs when you deliberately pass `--online` and enable the relevant feature flag.
 
 ## What it does
 - Parse dependency manifests across Python (`requirements.txt`, `pyproject.toml`), JavaScript (`package.json` / `package-lock.json`), Go (`go.mod`), and Java (`pom.xml`)
@@ -24,20 +24,21 @@ The scanner keeps everything local: it ingests manifests/SBOMs, layers in option
 - Gather AI model metadata from JSON or explicit Hugging Face IDs (bring your own JSON or HF IDs; no automatic pipeline discovery)
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
 - Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics; the optional AI-summary hook is disabled by default and ready for teams to wire up their own LLM if they choose
-- Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --include-shadow-uefi-intel` is used
+- Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --enable-shadow-uefi-intel` is used
 
 The default reports only use the deterministic heuristics listed below; the "AI summary" field is a stubbed, human-readable placeholder so teams can wire in their own LLM if desired without expecting hosted inference out of the box.
 
-## Network behavior (offline by default)
-- Default posture: `--offline` is the default and suppresses every remote call. Expect `[OFFLINE_MODE]` / `[CVE_LOOKUP_SKIPPED]` annotations in reports when enrichment is skipped.
-- Opt-in: add `--online` to allow outbound calls. Pair it with feature flags (e.g., `--with-cves`, `--model-id`, `--include-shadow-uefi-intel`) to choose what actually dials out.
+## Network behavior
+- Global posture: `--offline` is the default and hard-blocks every remote call. Expect `[OFFLINE_MODE]` / `[CVE_LOOKUP_SKIPPED]` annotations in reports when enrichment is skipped.
+- Opt-in enrichment: add `--online` to allow outbound calls, then enable specific feeds (e.g., `--with-cves`, `--model-id`, `--enable-shadow-uefi-intel`) to choose what actually dials out.
 - Endpoints and payloads:
 
-| Endpoint | When it fires | Payload sent | How to disable |
+| Endpoint | When it fires | Data sent | How to disable |
 | --- | --- | --- | --- |
-| `https://api.osv.dev/v1/query` (or `OSV_API_URL`) | `--online --with-cves` | JSON body containing `package.name`, `package.ecosystem`, and `version` for each dependency | Default offline; omit `--with-cves`; set `--offline`; or point `OSV_API_URL` to an internal mirror |
+| `https://api.osv.dev/v1/query` (or `OSV_API_URL`) | `--online` **and** `--with-cves` | JSON body containing `package.name`, `package.ecosystem`, and `version` for each dependency | Default offline; omit `--with-cves`; keep `--offline`; or point `OSV_API_URL` to an internal mirror |
 | `https://huggingface.co/api/models/<id>` (or `huggingface_hub` SDK) | `--online` with `--model-id` or models whose `source` is `huggingface` | Model identifier only; response cached locally | Default offline; avoid `--online`; or provide a fully populated `models.json` |
-| GitHub API for [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) | `--online --include-shadow-uefi-intel` (default is on, but still inert while offline) | Repository metadata fetch; no project data sent | Default offline; pass `--skip-shadow-uefi-intel`; or leave `--offline` in place |
+| GitHub API for [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) | `--online` **and** `--enable-shadow-uefi-intel` | Repository metadata fetch; no project data sent | Default is disabled; leave `--enable-shadow-uefi-intel` off or keep `--offline` enabled |
+| Future feeds | Any new integrations (documented as added) | Varies by feed | Default offline; disable the specific feature flag; or run with `--offline` |
 
 Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_API_TIMEOUT` / `SHADOW_UEFI_INTEL_TIMEOUT` environment variables.
 
