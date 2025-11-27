@@ -194,9 +194,13 @@ def main() -> None:
     help="Include Shadow-UEFI-Intel repository metadata as a required dependency context.",
 )
 @click.option(
-    "--offline",
-    is_flag=True,
-    help="Disable remote lookups (OSV, HuggingFace) for strictly offline scans.",
+    "--offline/--online",
+    default=True,
+    show_default=True,
+    help=(
+        "Run without remote lookups by default; pass --online to allow OSV, "
+        "HuggingFace, and Shadow-UEFI-Intel network calls."
+    ),
 )
 @click.option(
     "--osv-url",
