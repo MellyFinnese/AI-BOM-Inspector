@@ -17,7 +17,11 @@ def _write_safetensors(path: Path, tensors: dict[str, bytes]) -> None:
     offset = 0
     data_blobs = []
     for name, blob in tensors.items():
-        header[name] = {"dtype": "F32", "shape": [len(blob) // 4], "data_offsets": [offset, offset + len(blob)]}
+        header[name] = {
+            "dtype": "F32",
+            "shape": [len(blob) // 4],
+            "data_offsets": [offset, offset + len(blob)],
+        }
         data_blobs.append(blob)
         offset += len(blob)
 

@@ -116,9 +116,7 @@ def _issue_for_specifier(specifier: str | None, version: str | None) -> list[Dep
     issues: list[DependencyIssue] = []
     if not version:
         issues.append(
-            DependencyIssue(
-                "[MISSING_PIN] Dependency is not pinned", severity="high", code="MISSING_PIN"
-            )
+            DependencyIssue("[MISSING_PIN] Dependency is not pinned", severity="high", code="MISSING_PIN")
         )
     elif specifier not in {"==", "~="}:
         issues.append(
@@ -154,6 +152,8 @@ def _github_api_from_repo(repo_url: str) -> str | None:
     except Exception:
         return None
     return None
+
+
 def parse_requirement_line(line: str, source: str = "requirements.txt") -> DependencyInfo | None:
     cleaned = line.strip()
     if not cleaned or cleaned.startswith("#"):
@@ -303,11 +303,7 @@ def fetch_shadow_uefi_intel_dependency(
     description = payload.get("description") or ""
 
     if description:
-        issues.append(
-            DependencyIssue(
-                f"[INFO] {description}", severity="low", code="SHADOW_UEFI_INTEL_INFO"
-            )
-        )
+        issues.append(DependencyIssue(f"[INFO] {description}", severity="low", code="SHADOW_UEFI_INTEL_INFO"))
 
     dep = DependencyInfo(
         name="Shadow-UEFI-Intel",
@@ -491,9 +487,7 @@ def scan_pom(path: Path) -> List[DependencyInfo]:
         name = f"{group_id.strip()}:{artifact_id.strip()}"
         version_cleaned = version_value.strip() if version_value else None
         issues = _issue_for_specifier("==" if version_cleaned else None, version_cleaned)
-        dep = DependencyInfo(
-            name=name, version=version_cleaned, source="pom.xml", issues=issues
-        )
+        dep = DependencyInfo(name=name, version=version_cleaned, source="pom.xml", issues=issues)
         apply_license_category_dependency(dep)
         _apply_trust_heuristics(dep)
         deps.append(dep)

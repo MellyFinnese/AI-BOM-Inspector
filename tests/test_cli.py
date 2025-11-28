@@ -31,7 +31,9 @@ def test_diff_cli_reports_changes(tmp_path: Path):
 
         base.write_text(json.dumps({"dependencies": [{"name": "demo", "issues": []}]}))
         target.write_text(
-            json.dumps({"dependencies": [{"name": "demo", "issues": ["something"]}, {"name": "new", "issues": []}]})
+            json.dumps(
+                {"dependencies": [{"name": "demo", "issues": ["something"]}, {"name": "new", "issues": []}]}
+            )
         )
 
         result = runner.invoke(main, ["diff", str(base), str(target)])

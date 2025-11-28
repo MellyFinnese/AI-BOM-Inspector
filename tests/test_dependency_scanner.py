@@ -92,9 +92,7 @@ def test_scan_package_json_flags_loose_ranges(tmp_path: Path):
 
 def test_scan_package_lock_flags_missing_pin(tmp_path: Path):
     pkg_lock = tmp_path / "package-lock.json"
-    pkg_lock.write_text(
-        json.dumps({"packages": {"node_modules/lodash": {"version": "4.17.21"}}})
-    )
+    pkg_lock.write_text(json.dumps({"packages": {"node_modules/lodash": {"version": "4.17.21"}}}))
 
     deps = scan_package_lock(pkg_lock)
     assert deps[0].name.endswith("lodash")
@@ -141,9 +139,7 @@ def test_scan_pom_reads_dependencies(tmp_path: Path):
 def test_parse_sbom_and_enrich_with_osv(monkeypatch, tmp_path: Path):
     cyclonedx = {
         "bomFormat": "CycloneDX",
-        "components": [
-            {"name": "demo", "version": "1.0.0", "licenses": [{"license": {"id": "MIT"}}]}
-        ],
+        "components": [{"name": "demo", "version": "1.0.0", "licenses": [{"license": {"id": "MIT"}}]}],
     }
     sbom_path = tmp_path / "bom.json"
     sbom_path.write_text(json.dumps(cyclonedx))
@@ -164,7 +160,9 @@ def test_parse_sbom_and_enrich_with_osv(monkeypatch, tmp_path: Path):
 
     monkeypatch.setitem(sys.modules, "requests", DummyRequests)
 
-    enriched = enrich_with_osv([DependencyInfo(name="demo", version="1.0.0", source="requirements.txt", issues=[])])
+    enriched = enrich_with_osv(
+        [DependencyInfo(name="demo", version="1.0.0", source="requirements.txt", issues=[])]
+    )
     assert any("CVE" in issue.message for issue in enriched[0].issues)
 
 
@@ -196,6 +194,8 @@ def test_cc_by_license_classification():
     apply_license_category_dependency(dep)
     assert dep.license_category == "copyleft"
 
-    dep_nc = DependencyInfo(name="demo-nc", version="1.0.0", source="cyclonedx", issues=[], license="CC-BY-NC-4.0")
+    dep_nc = DependencyInfo(
+        name="demo-nc", version="1.0.0", source="cyclonedx", issues=[], license="CC-BY-NC-4.0"
+    )
     apply_license_category_dependency(dep_nc)
     assert dep_nc.license_category == "proprietary"
