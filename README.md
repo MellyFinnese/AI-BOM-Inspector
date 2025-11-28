@@ -18,6 +18,40 @@ graph TD
 
 The scanner defaults to local-only analysis: it ingests manifests/SBOMs, can layer in optional OSV/Hugging Face lookups, and emits reports that CI can enforce. Network enrichment (OSV, Hugging Face, Shadow-UEFI-Intel metadata) only occurs when you deliberately pass `--online` and enable the relevant feature flag.
 
+## Repository layout
+
+```
+ai-bom-inspector/
+  crates/
+    core/                       # parsing, normalization, scoring (Rust extension)
+    licenses/                   # license rules, SPDX mapping
+    advisories/                 # CVE ingestion adapters (OSV/NVD/etc)
+    report/                     # JSON/MD/SARIF outputs + diff support
+  src/                          # Python package (aibom_inspector)
+  policies/
+    examples/
+      default.yml
+      strict.yml
+      oss-friendly.yml
+  schemas/
+    policy.schema.json
+    report.schema.json
+  integrations/
+    github-action/              # composite action wrapper for CI
+    pre-commit/                 # reusable hook definition
+  docs/
+    QUICKSTART.md
+    POLICY.md
+    SCORING.md
+    FAQ.md
+  .github/
+    workflows/
+      ci.yml
+      scan-pr.yml               # runs on PR and posts summary
+  tests/
+  README.md
+```
+
 ## What it does
 - Parse dependency manifests across Python (`requirements.txt`, `pyproject.toml`), JavaScript (`package.json` / `package-lock.json`), Go (`go.mod`), and Java (`pom.xml`)
 - Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
@@ -81,7 +115,7 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 - **End-to-end demo** (`examples/demo/`): tiny app with `requirements.txt`, `pyproject.toml`, `package-lock.json`, `go.mod`, `models.json`, and generated `aibom-report.json/md/html`.
   - HTML report snapshot: open `examples/demo/aibom-report.html`
   - Markdown rendering snapshot: see `examples/demo/aibom-report.md`
-  - Before/after hygiene comparison: `screenshots/before-after.html`
+  - Before/after hygiene comparison: `docs/screenshots/before-after.html`
 
   Small JSON excerpt (full file in `examples/demo/aibom-report.json`):
   ```json
@@ -95,7 +129,7 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 - **Screenshots:**
   - HTML report: open `examples/demo/aibom-report.html`
   - Markdown rendering: view `examples/demo/aibom-report.md`
-  - Before vs. after: open `screenshots/before-after.html`
+  - Before vs. after: open `docs/screenshots/before-after.html`
 - **Sample models file:** `examples/models.sample.json`
 - **Sample Markdown report:** `examples/report.sample.md`
 - **Example commands:**
@@ -190,7 +224,7 @@ Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift,
 
 ## Testing and CI
 - Run unit tests: `pytest`
-- GitHub Action: `.github/workflows/aibom-inspector-action.yml` uses the bundled composite action to scan PRs and post a risk comment.
+- GitHub Action: `.github/workflows/scan-pr.yml` uses the bundled composite action to scan PRs and post a risk comment.
 - Copy/paste workflow example (offline by default; recommended `--fail-on-score` = 75, allowlist supported via `ALLOWED_ISSUE_CODES`):
   ```yaml
   name: AI-BOM Inspector

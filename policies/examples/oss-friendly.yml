@@ -1,0 +1,13 @@
+min_score: 60
+max_cves: 0
+disallow:
+  - "[KNOWN_VULN]"
+min_trust_score: 65
+publisher_expectations:
+  huggingface-hub: "pypi"
+exceptions:
+  - code: "UNKNOWN_LICENSE"
+    subject: "research-prototype"
+    reason: "Prototype model shared under research terms"
+    approved_by: "legal"
+    expires: "2025-06-30T00:00:00"
