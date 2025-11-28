@@ -1,8 +1,0 @@
-- id: aibom-scan
-  name: AI-BOM Inspector (offline)
-  description: "Run AI-BOM Inspector in offline mode before committing"
-  entry: python -m aibom_inspector.cli scan --require-input --format json --output /tmp/aibom-report.json
-  language: python
-  additional_dependencies: [aibom-inspector]
-  pass_filenames: false
-  stages: [commit]
