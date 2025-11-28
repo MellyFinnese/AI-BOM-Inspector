@@ -48,7 +48,7 @@ where = ["src"]
 
 [tool.setuptools-rust]
 rust_extensions = [
-    { name = "aibom_inspector._tensor_fuzz", path = "rust/tensor_fuzz/Cargo.toml", binding = "pyo3" }
+    { name = "aibom_inspector._tensor_fuzz", path = "crates/core/Cargo.toml", binding = "pyo3" }
 ]
 
 [tool.ruff]

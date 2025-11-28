@@ -1,4 +1,4 @@
-name: ai-bom-inspector-action
+name: scan-pr
 
 on:
   pull_request:
@@ -7,10 +7,13 @@ on:
 jobs:
   scan-ai-stack:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - name: Run AI-BOM Inspector and comment
-        uses: ./.github/actions/aibom-inspector-action
+        uses: ./integrations/github-action
         with:
           manifest: "requirements.txt,pyproject.toml"
           github-token: ${{ secrets.GITHUB_TOKEN }}
