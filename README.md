@@ -77,11 +77,12 @@ The default reports only use the deterministic heuristics listed below; the "AI 
 Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_API_TIMEOUT` / `SHADOW_UEFI_INTEL_TIMEOUT` environment variables.
 
 ## Installation
-- **From PyPI (once published):** `pip install aibom-inspector`
-- **From source for local development:**
+- **From source (current canonical path):**
   ```bash
   pip install -e .[dev]
-  # Or use the reproducible, pinned set for audits/CI:
+  # Or install straight from GitHub without cloning:
+  pip install "git+https://github.com/aibom-inspector/AI-BOM-Inspector.git#egg=aibom-inspector"
+  # For fully pinned, reproducible envs (CI/audits):
   pip install -r requirements.txt
   ```
 
@@ -110,6 +111,7 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 - **Small, OSS, local-first**: zero data leaves your laptop or CI box.
 - **AI-stack aware**: treats models as first-class assets instead of opaque blobs.
 - **Customizable rules**: heuristics are readable Python, not black-box policies.
+- **Offline gates + allowlists + model-as-asset scoring**: enforce allowlisted model sources, run fully offline by default, and score models/dependencies together—capabilities that hosted scanners often treat as optional add-ons.
 
 ## Examples
 - **End-to-end demo** (`examples/demo/`): tiny app with `requirements.txt`, `pyproject.toml`, `package-lock.json`, `go.mod`, `models.json`, and generated `aibom-report.json/md/html`.
@@ -160,6 +162,19 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 ### AI-BOM extensions
 
 CycloneDX and SPDX exports include AI-BOM extension data (e.g., `aibom:source`, license category, risk score, and issues) alongside the standard SBOM fields. See `docs/ai-bom-extensions.md` for the JSON schema and how each extension maps into CycloneDX properties and SPDX summaries.
+
+### Standards alignment
+- **AI-BOM schema mapping**: `schemas/report.schema.json` tracks the AI-BOM JSON conventions and is structured to align with the TAIBOM-style trust/attestation fields emerging in the community (e.g., explicit model source, license, provenance, and risk signals).
+- **CycloneDX/SPDX bridges**: the CycloneDX/SPDX exporters project `aibom:*` properties into vendor-neutral fields so the output can slot into existing SBOM pipelines without custom parsers.
+- **Reference-first posture**: schema updates aim to follow the AI-BOM working drafts; additions are scoped so teams can diff their SBOMs against the schema and treat this project as a reference implementation rather than a one-off tool.
+
+### Output formats at a glance
+See `docs/OUTPUTS.md` for a side-by-side JSON, SARIF, and CycloneDX example plus guidance on when to use each.
+
+### Adoption defaults
+- **Gates to start with**: fail CI on `--fail-on-score 70`, require allowlisted model sources (`--require-input` plus allowlist rules in `policies/examples/*`), and keep `--offline` as the default posture.
+- **CI vs. local**: run `aibom scan --format json --output aibom-report.json --fail-on-score 70` in CI, then publish CycloneDX/SPDX via `--format cyclonedx` or `--format spdx` for downstream compliance jobs. Locally, add `--format html` or `--format markdown` for readability and iterate with `--diff` against previous runs.
+- **Policy cookbook**: see `docs/POLICY_COOKBOOK.md` for OSS-friendly, enterprise-strict, and regulated defaults that can be copied into your own policy file.
 
 Configuration tips:
 
