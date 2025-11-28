@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
-
+from datetime import datetime
 import click
 
 from .dependency_scanner import (
@@ -19,6 +19,7 @@ from .dependency_scanner import (
     scan_requirements,
 )
 from .model_inspector import enrich_models_with_cves, scan_models_from_file, summarize_models
+from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_pack, write_github_check
 from .reporting import render_report, write_report
 from .tensor_fuzz import inspect_weight_files
 from .types import Report, RiskSettings
@@ -222,6 +223,31 @@ def main() -> None:
     is_flag=True,
     help="Fail the scan if no dependencies or models are discovered.",
 )
+@click.option(
+    "--policy",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Path to a policy-as-code YAML file for CI gating.",
+)
+@click.option(
+    "--github-check-output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Write a GitHub Check-style JSON summary for PR gating.",
+)
+@click.option(
+    "--evidence-pack",
+    type=click.Path(file_okay=False, path_type=str),
+    help="Directory to write an audit-friendly evidence bundle (policy decisions, signed report).",
+)
+@click.option(
+    "--sign-report",
+    is_flag=True,
+    help="Emit a SHA256 signature alongside the rendered report for tamper evidence.",
+)
+@click.option(
+    "--baseline-report",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Previous JSON report to diff against for change detection.",
+)
 def scan(
     requirements: Optional[str],
     pyproject: Optional[str],
@@ -247,6 +273,11 @@ def scan(
     osv_timeout: Optional[float],
     shadow_uefi_timeout: Optional[float],
     require_input: bool,
+    policy: Optional[str],
+    github_check_output: Optional[str],
+    evidence_pack: Optional[str],
+    sign_report: bool,
+    baseline_report: Optional[str],
 ) -> None:
     """Scan dependencies, models, and produce a report."""
     requirements_path = requirements or (
@@ -311,19 +342,62 @@ def scan(
         risk_settings=risk_settings,
     )
 
+    rendered = render_report(report, fmt)
     destination = Path(output) if output else None
+    report_path: Path | None = destination
     if fmt in {"cyclonedx", "spdx"} and sbom_output:
-        rendered = render_report(report, fmt)
-        Path(sbom_output).parent.mkdir(parents=True, exist_ok=True)
-        Path(sbom_output).write_text(rendered)
+        report_path = Path(sbom_output)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(rendered)
     else:
         rendered = write_report(report, fmt, destination)
+        report_path = destination
         if not destination:
+            report_path = Path(f"aibom-report.{fmt}")
             click.echo(rendered)
+
+    policy_evaluation = None
+    report_json = json.loads(render_report(report, "json"))
+    baseline_diff = None
+    if baseline_report:
+        try:
+            base_data = json.loads(Path(baseline_report).read_text())
+            baseline_diff = diff_reports(base_data, report_json)
+        except Exception as exc:  # pragma: no cover - I/O heavy
+            click.echo(f"Unable to diff with baseline report: {exc}", err=True)
+
+    if policy:
+        policy_data = load_policy(Path(policy))
+        policy_evaluation = evaluate_policy(report, policy_data)
+        if github_check_output:
+            write_github_check(Path(github_check_output), policy_evaluation, report)
+        if not policy_evaluation.passed:
+            raise SystemExit(1)
 
     if fail_on_score is not None:
         if report.stack_risk_score < fail_on_score:
             raise SystemExit(1)
+
+    signature_text = None
+    if sign_report:
+        digest = hashlib.sha256(rendered.encode()).hexdigest()
+        sig_path = (report_path or Path(f"aibom-report.{fmt}")).with_suffix(
+            (report_path or Path(f"aibom-report.{fmt}")).suffix + ".sha256"
+        )
+        sig_path.parent.mkdir(parents=True, exist_ok=True)
+        sig_path.write_text(digest)
+        signature_text = digest
+
+    if evidence_pack:
+        write_evidence_pack(
+            Path(evidence_pack),
+            rendered,
+            report_path or Path(f"aibom-report.{fmt}"),
+            policy_evaluation,
+            Path(policy) if policy else None,
+            baseline_diff,
+            signature_text,
+        )
 
 
 @main.command()
@@ -375,21 +449,13 @@ def diff(base: str, target: str) -> None:
     base_data = json.loads(Path(base).read_text())
     target_data = json.loads(Path(target).read_text())
 
-    base_deps = {d["name"]: d for d in base_data.get("dependencies", [])}
-    target_deps = {d["name"]: d for d in target_data.get("dependencies", [])}
-
-    added = sorted(set(target_deps) - set(base_deps))
-    removed = sorted(set(base_deps) - set(target_deps))
-
-    changed = []
-    for name in set(base_deps).intersection(target_deps):
-        if base_deps[name].get("issues") != target_deps[name].get("issues"):
-            changed.append(name)
+    summary = diff_reports(base_data, target_data)
 
     click.echo("Dependency changes:")
-    click.echo(f"  Added: {', '.join(added) if added else 'none'}")
-    click.echo(f"  Removed: {', '.join(removed) if removed else 'none'}")
-    click.echo(f"  Changed risk: {', '.join(changed) if changed else 'none'}")
+    click.echo(f"  Added: {', '.join(summary['added_dependencies']) if summary['added_dependencies'] else 'none'}")
+    click.echo(f"  Removed: {', '.join(summary['removed_dependencies']) if summary['removed_dependencies'] else 'none'}")
+    click.echo(f"  Changed risk: {', '.join(summary['changed_dependencies']) if summary['changed_dependencies'] else 'none'}")
+    click.echo(f"Stack risk delta: {summary['stack_risk_delta']}")
 
 
 if __name__ == "__main__":
