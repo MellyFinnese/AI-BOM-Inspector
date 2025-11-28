@@ -28,11 +28,6 @@ def _dependency_rows(report: Report) -> Iterable[dict]:
             "issues": [issue["message"] for issue in issue_details],
             "issue_details": issue_details,
             "risk": dep.risk_score,
-            "trust_signals": [
-                {"message": signal.message, "severity": signal.severity, "code": signal.code}
-                for signal in dep.trust_signals
-            ],
-            "trust_score": dep.trust_score,
         }
 
 
@@ -51,11 +46,6 @@ def _model_rows(report: Report) -> Iterable[dict]:
             "issues": [issue["message"] for issue in issue_details],
             "issue_details": issue_details,
             "risk": model.risk_score,
-            "trust_signals": [
-                {"message": signal.message, "severity": signal.severity, "code": signal.code}
-                for signal in model.trust_signals
-            ],
-            "trust_score": model.trust_score,
         }
 
 
@@ -85,27 +75,27 @@ def render_markdown(report: Report) -> str:
         lines.append(report.ai_summary)
 
     lines.append("\n## Dependencies\n")
-    lines.append("| Name | Version | Source | License | Risk | Trust | Issues |")
-    lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+    lines.append("| Name | Version | Source | License | Risk | Issues |")
+    lines.append("| --- | --- | --- | --- | --- | --- |")
     for row in _dependency_rows(report):
         issues = "; ".join(
             f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"]
         )
         issues = issues or "None"
         lines.append(
-            f"| {row['name']} | {row['version']} | {row['source']} | {row['license']} ({row['license_category']}) | {row['risk']} | {row['trust_score']} | {issues} |"
+            f"| {row['name']} | {row['version']} | {row['source']} | {row['license']} ({row['license_category']}) | {row['risk']} | {issues} |"
         )
 
     lines.append("\n## Models\n")
-    lines.append("| ID | Source | License | Last Updated | Risk | Trust | Issues |")
-    lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+    lines.append("| ID | Source | License | Last Updated | Risk | Issues |")
+    lines.append("| --- | --- | --- | --- | --- | --- |")
     for row in _model_rows(report):
         issues = "; ".join(
             f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"]
         )
         issues = issues or "None"
         lines.append(
-            f"| {row['id']} | {row['source']} | {row['license']} | {row['last_updated']} | {row['risk']} | {row['trust_score']} | {issues} |"
+            f"| {row['id']} | {row['source']} | {row['license']} | {row['last_updated']} | {row['risk']} | {issues} |"
         )
 
     return "\n".join(lines)
@@ -149,7 +139,7 @@ def render_html(report: Report) -> str:
   <section>
     <h2>Dependencies</h2>
     <table>
-      <thead><tr><th>Name</th><th>Version</th><th>Source</th><th>License</th><th>Risk</th><th>Trust</th><th>Issues</th></tr></thead>
+      <thead><tr><th>Name</th><th>Version</th><th>Source</th><th>License</th><th>Risk</th><th>Issues</th></tr></thead>
       <tbody>
         {% for row in dependencies %}
         <tr>
@@ -158,7 +148,6 @@ def render_html(report: Report) -> str:
           <td>{{ row.source }}</td>
           <td>{{ row.license }} ({{ row.license_category }})</td>
           <td class=\"risk\">{{ row.risk }}</td>
-          <td class=\"risk\">{{ row.trust_score }}</td>
           <td>
             {% if row.issue_details %}
               {% for issue in row.issue_details %}
@@ -177,7 +166,7 @@ def render_html(report: Report) -> str:
   <section>
     <h2>Models</h2>
     <table>
-      <thead><tr><th>ID</th><th>Source</th><th>License</th><th>Last Updated</th><th>Risk</th><th>Trust</th><th>Issues</th></tr></thead>
+      <thead><tr><th>ID</th><th>Source</th><th>License</th><th>Last Updated</th><th>Risk</th><th>Issues</th></tr></thead>
       <tbody>
         {% for row in models %}
         <tr>
@@ -186,7 +175,6 @@ def render_html(report: Report) -> str:
           <td>{{ row.license }}</td>
           <td>{{ row.last_updated }}</td>
           <td class=\"risk\">{{ row.risk }}</td>
-          <td class=\"risk\">{{ row.trust_score }}</td>
           <td>
             {% if row.issue_details %}
               {% for issue in row.issue_details %}

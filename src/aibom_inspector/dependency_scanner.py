@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import re
-from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Iterable, List
 
@@ -43,71 +42,6 @@ KNOWN_BAD_VERSIONS = {
 
 SHADOW_UEFI_INTEL_REPO = "https://github.com/MellyFinnese/Shadow-UEFI-Intel"
 SHADOW_UEFI_INTEL_API = "https://api.github.com/repos/MellyFinnese/Shadow-UEFI-Intel"
-
-COMMON_CANONICAL_PACKAGES = {
-    "requests",
-    "numpy",
-    "pandas",
-    "flask",
-    "django",
-    "tensorflow",
-    "torch",
-    "fastapi",
-}
-
-
-def _apply_trust_heuristics(dep: DependencyInfo) -> None:
-    normalized_name = dep.name.lower()
-    for canonical in COMMON_CANONICAL_PACKAGES:
-        if canonical == normalized_name:
-            break
-        ratio = SequenceMatcher(a=normalized_name, b=canonical).ratio()
-        if ratio > 0.92 and abs(len(normalized_name) - len(canonical)) <= 2:
-            dep.trust_signals.append(
-                DependencyIssue(
-                    f"[TYPOSQUAT_SUSPECT] {dep.name} resembles {canonical}",
-                    severity="high",
-                    code="TYPOSQUAT_SUSPECT",
-                )
-            )
-            break
-
-    if dep.version and any(tag in dep.version.lower() for tag in {"rc", "alpha", "beta", "dev"}):
-        dep.trust_signals.append(
-            DependencyIssue(
-                "[SUSPICIOUS_RELEASE] Pre-release or unstable version detected",
-                severity="medium",
-                code="SUSPICIOUS_RELEASE",
-            )
-        )
-
-    if dep.source.startswith("http") and normalized_name.replace("_", "-") not in dep.source.lower():
-        dep.trust_signals.append(
-            DependencyIssue(
-                "[REPO_MISMATCH] Package name not present in source URL",
-                severity="medium",
-                code="REPO_MISMATCH",
-            )
-        )
-
-    known_sources = {
-        "requirements.txt",
-        "pyproject.toml",
-        "package.json",
-        "package-lock.json",
-        "go.mod",
-        "pom.xml",
-        "cyclonedx",
-        "spdx",
-    }
-    if dep.source not in known_sources and not dep.source.startswith("http"):
-        dep.trust_signals.append(
-            DependencyIssue(
-                "[PUBLISHER_UNKNOWN] Publisher or source metadata is missing",
-                severity="low",
-                code="PUBLISHER_UNKNOWN",
-            )
-        )
 
 
 def _issue_for_specifier(specifier: str | None, version: str | None) -> list[DependencyIssue]:
@@ -181,7 +115,6 @@ def parse_requirement_line(line: str, source: str = "requirements.txt") -> Depen
 
     dep = DependencyInfo(name=req.name, version=resolved_version, source=source, issues=issues)
     apply_license_category_dependency(dep)
-    _apply_trust_heuristics(dep)
     return dep
 
 
@@ -295,7 +228,6 @@ def fetch_shadow_uefi_intel_dependency(offline: bool, timeout: float | None = No
         issues=issues,
     )
     apply_license_category_dependency(dep)
-    _apply_trust_heuristics(dep)
     return dep
 
 
@@ -325,7 +257,6 @@ def scan_package_json(path: Path) -> List[DependencyInfo]:
                 issues=issues,
             )
             apply_license_category_dependency(dep)
-            _apply_trust_heuristics(dep)
             dependencies.append(dep)
 
     _parse_block(data.get("dependencies"))
@@ -352,7 +283,6 @@ def scan_package_lock(path: Path) -> List[DependencyInfo]:
             issues=issues,
         )
         apply_license_category_dependency(dep)
-        _apply_trust_heuristics(dep)
         deps.append(dep)
     return deps
 
@@ -377,7 +307,6 @@ def scan_go_mod(path: Path) -> List[DependencyInfo]:
             issues = _issue_for_specifier("==", version)
             dep = DependencyInfo(name=name, version=version, source="go.mod", issues=issues)
             apply_license_category_dependency(dep)
-            _apply_trust_heuristics(dep)
             dependencies.append(dep)
     return dependencies
 
@@ -402,7 +331,6 @@ def scan_pom(path: Path) -> List[DependencyInfo]:
             name=name, version=version_value, source="pom.xml", issues=issues
         )
         apply_license_category_dependency(dep)
-        _apply_trust_heuristics(dep)
         deps.append(dep)
     return deps
 
@@ -435,7 +363,7 @@ def normalize_version(version: str | None) -> str:
 
 def enrich_with_osv(
     dependencies: List[DependencyInfo],
-    offline: bool = False,
+    offline: bool = True,
     osv_url: str | None = None,
     timeout: float | None = None,
 ) -> List[DependencyInfo]:
@@ -556,7 +484,6 @@ def parse_sbom(path: Path) -> List[DependencyInfo]:
                 issues=_issue_for_specifier("==", comp.get("version")),
             )
             apply_license_category_dependency(dep)
-            _apply_trust_heuristics(dep)
             deps.append(dep)
         return deps
 
@@ -572,7 +499,6 @@ def parse_sbom(path: Path) -> List[DependencyInfo]:
                 issues=_issue_for_specifier("==", pkg.get("versionInfo")),
             )
             apply_license_category_dependency(dep)
-            _apply_trust_heuristics(dep)
             deps.append(dep)
         return deps
 
