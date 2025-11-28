@@ -37,7 +37,7 @@ def _cache_path(cache_dir: Path, identifier: str) -> Path:
     return cache_dir / f"{sanitized}.json"
 
 
-def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline: bool = True) -> dict:
+def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline: bool = False) -> dict:
     cache = cache_dir or Path(".aibom_cache")
     cache.mkdir(parents=True, exist_ok=True)
     cache_file = _cache_path(cache, identifier)
@@ -186,7 +186,7 @@ def scan_models_from_file(path: Path) -> List[ModelInfo]:
     return models
 
 
-def summarize_models(model_ids: List[str], offline: bool = True) -> List[ModelInfo]:
+def summarize_models(model_ids: List[str], offline: bool = False) -> List[ModelInfo]:
     models: List[ModelInfo] = []
     for identifier in model_ids:
         metadata = fetch_model_metadata(identifier, offline=offline)
