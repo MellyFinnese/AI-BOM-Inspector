@@ -31,6 +31,7 @@ def _collect_dependencies(
     extra_manifests: tuple[str, ...],
     include_shadow_repo: bool,
     shadow_timeout: Optional[float],
+    shadow_repo_url: Optional[str],
     offline: bool,
 ):
     deps = []
@@ -57,7 +58,7 @@ def _collect_dependencies(
     if include_shadow_repo:
         deps.append(
             fetch_shadow_uefi_intel_dependency(
-                offline=offline, timeout=shadow_timeout
+                offline=offline, timeout=shadow_timeout, repo_url=shadow_repo_url
             )
         )
 
@@ -219,6 +220,14 @@ def main() -> None:
     help="HTTP timeout (seconds) for fetching Shadow-UEFI-Intel metadata; defaults to SHADOW_UEFI_INTEL_TIMEOUT or 8s.",
 )
 @click.option(
+    "--shadow-uefi-repo",
+    type=str,
+    help=(
+        "Override the repository URL used when fetching Shadow-UEFI-Intel context. "
+        "Defaults to SHADOW_UEFI_INTEL_REPO or the upstream repository."
+    ),
+)
+@click.option(
     "--require-input",
     is_flag=True,
     help="Fail the scan if no dependencies or models are discovered.",
@@ -272,6 +281,7 @@ def scan(
     osv_url: Optional[str],
     osv_timeout: Optional[float],
     shadow_uefi_timeout: Optional[float],
+    shadow_uefi_repo: Optional[str],
     require_input: bool,
     policy: Optional[str],
     github_check_output: Optional[str],
@@ -293,6 +303,7 @@ def scan(
         manifest,
         include_shadow_repo=enable_shadow_uefi_intel,
         shadow_timeout=shadow_uefi_timeout,
+        shadow_repo_url=shadow_uefi_repo,
         offline=offline,
     )
     for sbom in sbom_file:

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import os
-import re
+import shutil
+import subprocess
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Iterable, List
+import xml.etree.ElementTree as ET
 
 try:  # Python < 3.11 compatibility
     import tomllib  # type: ignore
@@ -137,6 +139,21 @@ def _issue_for_specifier(specifier: str | None, version: str | None) -> list[Dep
         )
 
     return issues
+
+
+def _github_api_from_repo(repo_url: str) -> str | None:
+    if not repo_url.startswith("http"):
+        return None
+    try:
+        from urllib.parse import urlsplit
+
+        parsed = urlsplit(repo_url)
+        parts = parsed.path.strip("/").split("/")
+        if len(parts) >= 2:
+            return f"https://api.github.com/repos/{parts[0]}/{parts[1]}"
+    except Exception:
+        return None
+    return None
 def parse_requirement_line(line: str, source: str = "requirements.txt") -> DependencyInfo | None:
     cleaned = line.strip()
     if not cleaned or cleaned.startswith("#"):
@@ -219,7 +236,9 @@ def scan_pyproject(path: Path) -> List[DependencyInfo]:
     return dependencies
 
 
-def fetch_shadow_uefi_intel_dependency(offline: bool, timeout: float | None = None) -> DependencyInfo:
+def fetch_shadow_uefi_intel_dependency(
+    offline: bool, timeout: float | None = None, repo_url: str | None = None
+) -> DependencyInfo:
     """Return a DependencyInfo entry tied to the Shadow-UEFI-Intel repository.
 
     The tool depends on this GitHub repository to surface firmware-related
@@ -227,6 +246,8 @@ def fetch_shadow_uefi_intel_dependency(offline: bool, timeout: float | None = No
     callers can see that the enrichment did not occur.
     """
 
+    repo_url = repo_url or os.getenv("SHADOW_UEFI_INTEL_REPO") or SHADOW_UEFI_INTEL_REPO
+    api_url = _github_api_from_repo(repo_url) or SHADOW_UEFI_INTEL_API
     timeout = timeout or float(os.getenv("SHADOW_UEFI_INTEL_TIMEOUT", "8"))
     issues: list[DependencyIssue] = []
 
@@ -241,12 +262,12 @@ def fetch_shadow_uefi_intel_dependency(offline: bool, timeout: float | None = No
         return DependencyInfo(
             name="Shadow-UEFI-Intel",
             version=None,
-            source=SHADOW_UEFI_INTEL_REPO,
+            source=repo_url,
             issues=issues,
         )
 
     try:
-        response = requests.get(SHADOW_UEFI_INTEL_API, timeout=timeout)
+        response = requests.get(api_url, timeout=timeout)
     except Exception as exc:  # pragma: no cover - depends on network conditions
         issues.append(
             DependencyIssue(
@@ -258,7 +279,7 @@ def fetch_shadow_uefi_intel_dependency(offline: bool, timeout: float | None = No
         return DependencyInfo(
             name="Shadow-UEFI-Intel",
             version=None,
-            source=SHADOW_UEFI_INTEL_REPO,
+            source=repo_url,
             issues=issues,
         )
 
@@ -273,7 +294,7 @@ def fetch_shadow_uefi_intel_dependency(offline: bool, timeout: float | None = No
         return DependencyInfo(
             name="Shadow-UEFI-Intel",
             version=None,
-            source=SHADOW_UEFI_INTEL_REPO,
+            source=repo_url,
             issues=issues,
         )
 
@@ -291,7 +312,7 @@ def fetch_shadow_uefi_intel_dependency(offline: bool, timeout: float | None = No
     dep = DependencyInfo(
         name="Shadow-UEFI-Intel",
         version=str(latest_ref) if latest_ref else None,
-        source=SHADOW_UEFI_INTEL_REPO,
+        source=repo_url,
         issues=issues,
     )
     apply_license_category_dependency(dep)
@@ -357,9 +378,57 @@ def scan_package_lock(path: Path) -> List[DependencyInfo]:
     return deps
 
 
+def _parse_go_list_output(output: str) -> List[DependencyInfo]:
+    decoder = json.JSONDecoder()
+    deps: List[DependencyInfo] = []
+    remainder = output
+    while True:
+        remainder = remainder.lstrip()
+        if not remainder:
+            break
+        module, idx = decoder.raw_decode(remainder)
+        remainder = remainder[idx:]
+        path = module.get("Path")
+        version = module.get("Version")
+        if not path or module.get("Main"):
+            continue
+        issues = _issue_for_specifier("==", version)
+        dep = DependencyInfo(name=path, version=version, source="go.mod", issues=issues)
+        apply_license_category_dependency(dep)
+        _apply_trust_heuristics(dep)
+        deps.append(dep)
+    return deps
+
+
+def _scan_go_mod_with_cli(path: Path) -> List[DependencyInfo]:
+    go_bin = shutil.which("go")
+    if not go_bin:
+        return []
+    try:
+        result = subprocess.run(
+            [go_bin, "list", "-m", "-json", "-mod=readonly", "all"],
+            cwd=path.parent,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if result.returncode != 0 or not result.stdout.strip():
+        return []
+    try:
+        return _parse_go_list_output(result.stdout)
+    except json.JSONDecodeError:
+        return []
+
+
 def scan_go_mod(path: Path) -> List[DependencyInfo]:
     if not path.exists():
         return []
+
+    cli_deps = _scan_go_mod_with_cli(path)
+    if cli_deps:
+        return cli_deps
 
     dependencies: List[DependencyInfo] = []
     for line in path.read_text().splitlines():
@@ -386,20 +455,36 @@ def scan_pom(path: Path) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
-    content = path.read_text()
-    dependency_blocks = re.findall(r"<dependency>(.*?)</dependency>", content, flags=re.DOTALL)
+    try:
+        root = ET.parse(path).getroot()
+    except ET.ParseError as exc:
+        return [
+            DependencyInfo(
+                name=path.name,
+                version=None,
+                source="pom.xml",
+                issues=[
+                    DependencyIssue(
+                        f"[INVALID_POM] Unable to parse pom.xml: {exc}",
+                        severity="medium",
+                        code="INVALID_POM",
+                    )
+                ],
+            )
+        ]
+
     deps: List[DependencyInfo] = []
-    for block in dependency_blocks:
-        group_id = re.search(r"<groupId>(.*?)</groupId>", block)
-        artifact_id = re.search(r"<artifactId>(.*?)</artifactId>", block)
-        version = re.search(r"<version>(.*?)</version>", block)
-        if not (artifact_id and group_id):
+    for dep_node in root.findall(".//{*}dependency"):
+        group_id = dep_node.findtext("{*}groupId")
+        artifact_id = dep_node.findtext("{*}artifactId")
+        version_value = dep_node.findtext("{*}version")
+        if not (group_id and artifact_id):
             continue
-        name = f"{group_id.group(1)}:{artifact_id.group(1)}"
-        version_value = version.group(1).strip() if version else None
-        issues = _issue_for_specifier("==" if version_value else None, version_value)
+        name = f"{group_id.strip()}:{artifact_id.strip()}"
+        version_cleaned = version_value.strip() if version_value else None
+        issues = _issue_for_specifier("==" if version_cleaned else None, version_cleaned)
         dep = DependencyInfo(
-            name=name, version=version_value, source="pom.xml", issues=issues
+            name=name, version=version_cleaned, source="pom.xml", issues=issues
         )
         apply_license_category_dependency(dep)
         _apply_trust_heuristics(dep)
