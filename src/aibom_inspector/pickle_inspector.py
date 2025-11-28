@@ -51,6 +51,20 @@ class PickleScanResult:
         }
 
 
+class PickleScanError(Exception):
+    """Base class for pickle scanning errors."""
+
+
+class PickleFileTooLargeError(PickleScanError):
+    """Raised when a pickle exceeds a configured maximum size."""
+
+    def __init__(self, path: Path, max_bytes: int, actual_size: int) -> None:
+        super().__init__(f"Pickle file '{path}' is {actual_size} bytes; exceeds limit of {max_bytes} bytes")
+        self.path = Path(path)
+        self.max_bytes = max_bytes
+        self.actual_size = actual_size
+
+
 def _is_dangerous(module: Optional[str], name: Optional[str]) -> bool:
     module_l = (module or "").lower()
     name_l = (name or "").lower()
@@ -94,14 +108,22 @@ def _scan_globals(data: bytes) -> List[PickleFinding]:
     return findings
 
 
-def inspect_pickle_file(path: Path | str) -> PickleScanResult:
-    data = Path(path).read_bytes()
+def inspect_pickle_file(path: Path | str, max_bytes: int | None = 10_000_000) -> PickleScanResult:
+    path = Path(path)
+    if max_bytes is not None and max_bytes > 0:
+        file_size = path.stat().st_size
+        if file_size > max_bytes:
+            raise PickleFileTooLargeError(path, max_bytes, file_size)
+
+    data = path.read_bytes()
     findings = _scan_globals(data)
-    return PickleScanResult(path=Path(path), findings=findings)
+    return PickleScanResult(path=path, findings=findings)
 
 
-def inspect_pickle_files(paths: Iterable[Path | str]) -> List[PickleScanResult]:
+def inspect_pickle_files(
+    paths: Iterable[Path | str], *, max_bytes: int | None = 10_000_000
+) -> List[PickleScanResult]:
     results: List[PickleScanResult] = []
     for candidate in paths:
-        results.append(inspect_pickle_file(candidate))
+        results.append(inspect_pickle_file(candidate, max_bytes=max_bytes))
     return results

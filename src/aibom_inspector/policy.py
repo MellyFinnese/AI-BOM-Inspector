@@ -130,9 +130,7 @@ def evaluate_policy(report: Report, policy: Policy) -> PolicyEvaluation:
     now = datetime.utcnow()
 
     if policy.min_score is not None and report.stack_risk_score < policy.min_score:
-        failures.append(
-            f"Stack risk score {report.stack_risk_score} below policy minimum {policy.min_score}"
-        )
+        failures.append(f"Stack risk score {report.stack_risk_score} below policy minimum {policy.min_score}")
 
     if policy.max_cves is not None:
         cve_hits = report.risk_breakdown.get("cves", 0)
@@ -169,9 +167,7 @@ def evaluate_policy(report: Report, policy: Policy) -> PolicyEvaluation:
     for exc in policy.exceptions:
         if exc.expires and exc.expires < now:
             expired.append(exc)
-            warnings.append(
-                f"Exception for {exc.subject} ({exc.code}) expired on {exc.expires.isoformat()}"
-            )
+            warnings.append(f"Exception for {exc.subject} ({exc.code}) expired on {exc.expires.isoformat()}")
 
     return PolicyEvaluation(
         passed=not failures,
@@ -231,16 +227,12 @@ def write_evidence_pack(
     destination.mkdir(parents=True, exist_ok=True)
     (destination / report_filename.name).write_text(report_content)
     if evaluation:
-        (destination / "policy-evaluation.json").write_text(
-            json.dumps(evaluation.as_dict(), indent=2)
-        )
+        (destination / "policy-evaluation.json").write_text(json.dumps(evaluation.as_dict(), indent=2))
     if policy_path and policy_path.exists():
         policy_dest = destination / policy_path.name
         if policy_dest.resolve() != policy_path.resolve():
             policy_dest.write_text(policy_path.read_text())
     if diff_summary:
-        (destination / "changes-since-last-run.json").write_text(
-            json.dumps(diff_summary, indent=2)
-        )
+        (destination / "changes-since-last-run.json").write_text(json.dumps(diff_summary, indent=2))
     if signature_text:
         (destination / f"{report_filename.name}.sha256").write_text(signature_text)

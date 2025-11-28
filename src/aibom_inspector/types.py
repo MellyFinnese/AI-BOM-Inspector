@@ -10,9 +10,7 @@ class RiskSettings:
     """Tunable weights for the 0-100 AI stack risk score."""
 
     max_score: int = 100
-    severity_penalties: dict[str, int] = field(
-        default_factory=lambda: {"high": 8, "medium": 4, "low": 2}
-    )
+    severity_penalties: dict[str, int] = field(default_factory=lambda: {"high": 8, "medium": 4, "low": 2})
     governance_penalty: int = 3
     cve_penalty: int = 7
 

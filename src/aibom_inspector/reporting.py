@@ -16,8 +16,7 @@ env = Environment(autoescape=select_autoescape(["html", "xml"]))
 def _dependency_rows(report: Report) -> Iterable[dict]:
     for dep in report.dependencies:
         issue_details = [
-            {"message": issue.message, "severity": issue.severity, "code": issue.code}
-            for issue in dep.issues
+            {"message": issue.message, "severity": issue.severity, "code": issue.code} for issue in dep.issues
         ]
         yield {
             "name": dep.name,
@@ -88,9 +87,7 @@ def render_markdown(report: Report) -> str:
     lines.append("| Name | Version | Source | License | Risk | Trust | Issues |")
     lines.append("| --- | --- | --- | --- | --- | --- | --- |")
     for row in _dependency_rows(report):
-        issues = "; ".join(
-            f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"]
-        )
+        issues = "; ".join(f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"])
         issues = issues or "None"
         lines.append(
             f"| {row['name']} | {row['version']} | {row['source']} | {row['license']} ({row['license_category']}) | {row['risk']} | {row['trust_score']} | {issues} |"
@@ -100,9 +97,7 @@ def render_markdown(report: Report) -> str:
     lines.append("| ID | Source | License | Last Updated | Risk | Trust | Issues |")
     lines.append("| --- | --- | --- | --- | --- | --- | --- |")
     for row in _model_rows(report):
-        issues = "; ".join(
-            f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"]
-        )
+        issues = "; ".join(f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"])
         issues = issues or "None"
         lines.append(
             f"| {row['id']} | {row['source']} | {row['license']} | {row['last_updated']} | {row['risk']} | {row['trust_score']} | {issues} |"
@@ -215,10 +210,17 @@ def render_html(report: Report) -> str:
             "bad"
             if (
                 report.risk_breakdown.get("cves", 0) > 0
-                or (report.risk_breakdown.get("unpinned_deps", 0) + report.risk_breakdown.get("unverified_sources", 0))
+                or (
+                    report.risk_breakdown.get("unpinned_deps", 0)
+                    + report.risk_breakdown.get("unverified_sources", 0)
+                )
                 >= 2
             )
-            else ("good" if report.stack_risk_score >= 80 else ("warn" if report.stack_risk_score >= 50 else "bad"))
+            else (
+                "good"
+                if report.stack_risk_score >= 80
+                else ("warn" if report.stack_risk_score >= 50 else "bad")
+            )
         ),
         max_score=report.risk_settings.max_score,
         dependencies=list(_dependency_rows(report)),
@@ -234,9 +236,7 @@ def render_cyclonedx(report: Report) -> str:
                 "type": "library",
                 "name": row["name"],
                 "version": row["version"],
-                "licenses": [
-                    {"license": {"id": row["license"] if row["license"] else "UNKNOWN"}}
-                ],
+                "licenses": [{"license": {"id": row["license"] if row["license"] else "UNKNOWN"}}],
                 "properties": [
                     {"name": "aibom:source", "value": row["source"]},
                     {"name": "aibom:license_category", "value": row["license_category"]},
@@ -252,9 +252,7 @@ def render_cyclonedx(report: Report) -> str:
                 "type": "application",
                 "name": model["id"],
                 "version": model["last_updated"],
-                "licenses": [
-                    {"license": {"id": model["license"] if model["license"] else "UNKNOWN"}}
-                ],
+                "licenses": [{"license": {"id": model["license"] if model["license"] else "UNKNOWN"}}],
                 "properties": [
                     {"name": "aibom:source", "value": model["source"]},
                     {"name": "aibom:license_category", "value": model["license_category"]},

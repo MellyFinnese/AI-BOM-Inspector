@@ -20,7 +20,7 @@ from .dependency_scanner import (
 )
 from .model_inspector import enrich_models_with_cves, scan_models_from_file, summarize_models
 from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_pack, write_github_check
-from .pickle_inspector import inspect_pickle_files
+from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
 from .reporting import render_report, write_report
 from .tensor_fuzz import inspect_weight_files
 from .types import Report, RiskSettings
@@ -294,9 +294,7 @@ def scan(
     requirements_path = requirements or (
         str(Path("requirements.txt")) if Path("requirements.txt").exists() else None
     )
-    pyproject_path = pyproject or (
-        str(Path("pyproject.toml")) if Path("pyproject.toml").exists() else None
-    )
+    pyproject_path = pyproject or (str(Path("pyproject.toml")) if Path("pyproject.toml").exists() else None)
 
     dependencies = _collect_dependencies(
         requirements_path,
@@ -318,9 +316,7 @@ def scan(
             raise SystemExit(1)
 
     if with_cves:
-        dependencies = enrich_with_osv(
-            dependencies, offline=offline, osv_url=osv_url, timeout=osv_timeout
-        )
+        dependencies = enrich_with_osv(dependencies, offline=offline, osv_url=osv_url, timeout=osv_timeout)
 
     models = enrich_models_with_cves(models)
 
@@ -460,14 +456,31 @@ def weights(weights: tuple[str, ...], sample_limit: int, json_output: bool, fail
     is_flag=True,
     help="Exit non-zero if any pickle file references dangerous globals.",
 )
-def pickles(checkpoints: tuple[str, ...], json_output: bool, fail_on_suspect: bool) -> None:
+@click.option(
+    "--max-bytes",
+    type=int,
+    default=10_000_000,
+    show_default=True,
+    help="Maximum allowed pickle size in bytes before aborting the scan (0 disables the limit).",
+)
+def pickles(
+    checkpoints: tuple[str, ...],
+    json_output: bool,
+    fail_on_suspect: bool,
+    max_bytes: int,
+) -> None:
     """Inspect pickle-based checkpoints for unsafe globals or system calls."""
 
     if not checkpoints:
         click.echo("No pickle files supplied; nothing to inspect.", err=True)
         raise SystemExit(1)
 
-    results = inspect_pickle_files(checkpoints)
+    limit = None if max_bytes <= 0 else max_bytes
+    try:
+        results = inspect_pickle_files(checkpoints, max_bytes=limit)
+    except PickleFileTooLargeError as exc:
+        click.echo(str(exc), err=True)
+        raise SystemExit(1) from exc
 
     if json_output:
         payload = [result.as_dict() for result in results]
@@ -476,9 +489,7 @@ def pickles(checkpoints: tuple[str, ...], json_output: bool, fail_on_suspect: bo
         for result in results:
             click.echo(f"[pickle] {result.path} — suspected={result.suspected}")
             for finding in result.findings:
-                click.echo(
-                    f"  opcode={finding.opcode} module={finding.module} symbol={finding.name}"
-                )
+                click.echo(f"  opcode={finding.opcode} module={finding.module} symbol={finding.name}")
 
     if fail_on_suspect and any(r.suspected for r in results):
         raise SystemExit(1)
@@ -496,9 +507,15 @@ def diff(base: str, target: str) -> None:
     summary = diff_reports(base_data, target_data)
 
     click.echo("Dependency changes:")
-    click.echo(f"  Added: {', '.join(summary['added_dependencies']) if summary['added_dependencies'] else 'none'}")
-    click.echo(f"  Removed: {', '.join(summary['removed_dependencies']) if summary['removed_dependencies'] else 'none'}")
-    click.echo(f"  Changed risk: {', '.join(summary['changed_dependencies']) if summary['changed_dependencies'] else 'none'}")
+    click.echo(
+        f"  Added: {', '.join(summary['added_dependencies']) if summary['added_dependencies'] else 'none'}"
+    )
+    click.echo(
+        f"  Removed: {', '.join(summary['removed_dependencies']) if summary['removed_dependencies'] else 'none'}"
+    )
+    click.echo(
+        f"  Changed risk: {', '.join(summary['changed_dependencies']) if summary['changed_dependencies'] else 'none'}"
+    )
     click.echo(f"Stack risk delta: {summary['stack_risk_delta']}")
 
 

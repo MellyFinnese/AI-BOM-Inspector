@@ -12,8 +12,7 @@ try:  # pragma: no cover - optional Rust acceleration
 except Exception as exc:  # pragma: no cover - handled gracefully below
     _tensor_fuzz = None
     warnings.warn(
-        f"Falling back to pure-Python tensor inspection because the Rust extension"
-        f" failed to load: {exc}",
+        f"Falling back to pure-Python tensor inspection because the Rust extension failed to load: {exc}",
         RuntimeWarning,
     )
 
@@ -157,6 +156,7 @@ def _python_inspect(path: Path, sample_limit: int = 1_000_000) -> WeightScanResu
             target_samples = min(elements, sample_limit)
             processed = 0
             block_values = max(1, (8192 // size))
+            buffer = bytearray(block_values * size)
             chunk_count = max(1, (target_samples + block_values - 1) // block_values)
             chunk_index = 0
 
@@ -169,22 +169,15 @@ def _python_inspect(path: Path, sample_limit: int = 1_000_000) -> WeightScanResu
                 remaining = target_samples - processed
                 values_to_read = min(remaining, block_values)
                 available_span = max(elements - values_to_read, 0)
-                start_value = (
-                    0
-                    if chunk_count <= 1
-                    else chunk_index * available_span // (chunk_count - 1)
-                )
+                start_value = 0 if chunk_count <= 1 else chunk_index * available_span // (chunk_count - 1)
 
                 handle.seek(base_offset + start + start_value * size)
-                data = handle.read(values_to_read * size)
-                if len(data) != values_to_read * size:
-                    raise SafetensorsDataError(
-                        f"Tensor '{name}' terminated early during read"
-                    )
+                view = memoryview(buffer)[: values_to_read * size]
+                read_bytes = handle.readinto(view)
+                if read_bytes != values_to_read * size:
+                    raise SafetensorsDataError(f"Tensor '{name}' terminated early during read")
 
-                chunk_nan, chunk_inf, chunk_lsb_ones, chunk_lsb_zero = _lsb_ratio_from_bytes(
-                    data, fmt
-                )
+                chunk_nan, chunk_inf, chunk_lsb_ones, chunk_lsb_zero = _lsb_ratio_from_bytes(bytes(view), fmt)
                 nan_count += chunk_nan
                 inf_count += chunk_inf
                 lsb_ones += chunk_lsb_ones
@@ -235,9 +228,10 @@ def inspect_weight_file(path: Path | str, sample_limit: int = 1_000_000) -> Weig
     return _python_inspect(path, sample_limit=sample_limit)
 
 
-def inspect_weight_files(paths: Iterable[Path | str], sample_limit: int = 1_000_000) -> List[WeightScanResult]:
+def inspect_weight_files(
+    paths: Iterable[Path | str], sample_limit: int = 1_000_000
+) -> List[WeightScanResult]:
     results: List[WeightScanResult] = []
     for candidate in paths:
         results.append(inspect_weight_file(candidate, sample_limit=sample_limit))
     return results
-
