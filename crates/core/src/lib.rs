@@ -90,12 +90,6 @@ fn analyze_tensor(
         )));
     }
 
-    file
-        .seek(SeekFrom::Start(base_offset + start))
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!(
-            "Unable to seek to tensor '{name}': {e}"
-        )))?;
-
     let mut nan_count = 0u64;
     let mut inf_count = 0u64;
     let mut lsb_one = 0u64;
@@ -104,10 +98,28 @@ fn analyze_tensor(
     let mut processed = 0u64;
     let max_values = sample_limit.min(total_values);
     let mut buf = vec![0u8; (dtype_bytes as usize).min(8192)];
+    let block_values = ((buf.len() as u64) / dtype_bytes).max(1);
+    let chunk_count = ((max_values + block_values - 1) / block_values).max(1);
+    let mut chunk_index = 0u64;
 
     while processed < max_values {
         let remaining = max_values - processed;
-        let values_to_read = remaining.min((buf.len() as u64) / dtype_bytes);
+        let values_to_read = remaining.min(block_values);
+        let available_span = total_values.saturating_sub(values_to_read);
+        let start_value = if chunk_count <= 1 {
+            0
+        } else {
+            (chunk_index * available_span) / (chunk_count - 1)
+        };
+
+        file
+            .seek(SeekFrom::Start(
+                base_offset + start + start_value.saturating_mul(dtype_bytes),
+            ))
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!(
+                "Unable to seek to tensor '{name}': {e}"
+            )))?;
+
         let bytes_to_read = (values_to_read * dtype_bytes) as usize;
         let slice = &mut buf[..bytes_to_read];
         file.read_exact(slice).map_err(|e| {
@@ -175,6 +187,8 @@ fn analyze_tensor(
                 break;
             }
         }
+
+        chunk_index += 1;
     }
 
     Ok(TensorStats {

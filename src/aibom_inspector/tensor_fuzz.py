@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import json
 import struct
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List
 
 try:  # pragma: no cover - optional Rust acceleration
     from . import _tensor_fuzz  # type: ignore
-except Exception:  # pragma: no cover - handled gracefully below
+except Exception as exc:  # pragma: no cover - handled gracefully below
     _tensor_fuzz = None
+    warnings.warn(
+        f"Falling back to pure-Python tensor inspection because the Rust extension"
+        f" failed to load: {exc}",
+        RuntimeWarning,
+    )
 
 
 @dataclass
@@ -148,15 +154,45 @@ def _python_inspect(path: Path, sample_limit: int = 1_000_000) -> WeightScanResu
 
             total_bytes = end - start
             elements = total_bytes // size
-            sampled = min(elements, sample_limit)
-            to_read = int(sampled * size)
+            target_samples = min(elements, sample_limit)
+            processed = 0
+            block_values = max(1, (8192 // size))
+            chunk_count = max(1, (target_samples + block_values - 1) // block_values)
+            chunk_index = 0
 
-            handle.seek(base_offset + start)
-            data = handle.read(to_read)
-            if len(data) != to_read:
-                raise SafetensorsDataError(f"Tensor '{name}' terminated early during read")
+            nan_count = 0
+            inf_count = 0
+            lsb_ones = 0
+            lsb_zero = 0
 
-            nan_count, inf_count, lsb_ones, lsb_zero = _lsb_ratio_from_bytes(data, fmt)
+            while processed < target_samples:
+                remaining = target_samples - processed
+                values_to_read = min(remaining, block_values)
+                available_span = max(elements - values_to_read, 0)
+                start_value = (
+                    0
+                    if chunk_count <= 1
+                    else chunk_index * available_span // (chunk_count - 1)
+                )
+
+                handle.seek(base_offset + start + start_value * size)
+                data = handle.read(values_to_read * size)
+                if len(data) != values_to_read * size:
+                    raise SafetensorsDataError(
+                        f"Tensor '{name}' terminated early during read"
+                    )
+
+                chunk_nan, chunk_inf, chunk_lsb_ones, chunk_lsb_zero = _lsb_ratio_from_bytes(
+                    data, fmt
+                )
+                nan_count += chunk_nan
+                inf_count += chunk_inf
+                lsb_ones += chunk_lsb_ones
+                lsb_zero += chunk_lsb_zero
+                processed += values_to_read
+                chunk_index += 1
+
+            sampled = processed
             total_lsb = max(lsb_zero + lsb_ones, 1)
             ratio = lsb_ones / total_lsb
             suspected_steg = total_lsb >= 16 and (ratio < 0.25 or ratio > 0.75)

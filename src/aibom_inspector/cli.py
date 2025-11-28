@@ -20,6 +20,7 @@ from .dependency_scanner import (
 )
 from .model_inspector import enrich_models_with_cves, scan_models_from_file, summarize_models
 from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_pack, write_github_check
+from .pickle_inspector import inspect_pickle_files
 from .reporting import render_report, write_report
 from .tensor_fuzz import inspect_weight_files
 from .types import Report, RiskSettings
@@ -445,6 +446,38 @@ def weights(weights: tuple[str, ...], sample_limit: int, json_output: bool, fail
                 click.echo(
                     f"  tensor={tensor.name} dtype={tensor.dtype} lsb_bias={tensor.lsb_ones_ratio:.3f}"
                     f" poison={tensor.suspected_poison} steg={tensor.suspected_steg}"
+                )
+
+    if fail_on_suspect and any(r.suspected for r in results):
+        raise SystemExit(1)
+
+
+@main.command()
+@click.argument("checkpoints", nargs=-1, type=click.Path(exists=True, dir_okay=False, path_type=str))
+@click.option("--json", "json_output", is_flag=True, help="Emit JSON instead of human text.")
+@click.option(
+    "--fail-on-suspect",
+    is_flag=True,
+    help="Exit non-zero if any pickle file references dangerous globals.",
+)
+def pickles(checkpoints: tuple[str, ...], json_output: bool, fail_on_suspect: bool) -> None:
+    """Inspect pickle-based checkpoints for unsafe globals or system calls."""
+
+    if not checkpoints:
+        click.echo("No pickle files supplied; nothing to inspect.", err=True)
+        raise SystemExit(1)
+
+    results = inspect_pickle_files(checkpoints)
+
+    if json_output:
+        payload = [result.as_dict() for result in results]
+        click.echo(json.dumps(payload, indent=2))
+    else:
+        for result in results:
+            click.echo(f"[pickle] {result.path} — suspected={result.suspected}")
+            for finding in result.findings:
+                click.echo(
+                    f"  opcode={finding.opcode} module={finding.module} symbol={finding.name}"
                 )
 
     if fail_on_suspect and any(r.suspected for r in results):

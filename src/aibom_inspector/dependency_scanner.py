@@ -400,10 +400,10 @@ def _parse_go_list_output(output: str) -> List[DependencyInfo]:
     return deps
 
 
-def _scan_go_mod_with_cli(path: Path) -> List[DependencyInfo]:
+def _scan_go_mod_with_cli(path: Path) -> tuple[List[DependencyInfo], str | None]:
     go_bin = shutil.which("go")
     if not go_bin:
-        return []
+        return [], "missing_go"
     try:
         result = subprocess.run(
             [go_bin, "list", "-m", "-json", "-mod=readonly", "all"],
@@ -413,20 +413,20 @@ def _scan_go_mod_with_cli(path: Path) -> List[DependencyInfo]:
             timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
-        return []
+        return [], "go_invocation_failed"
     if result.returncode != 0 or not result.stdout.strip():
-        return []
+        return [], "go_list_failed"
     try:
-        return _parse_go_list_output(result.stdout)
+        return _parse_go_list_output(result.stdout), None
     except json.JSONDecodeError:
-        return []
+        return [], "go_list_parse_error"
 
 
 def scan_go_mod(path: Path) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
-    cli_deps = _scan_go_mod_with_cli(path)
+    cli_deps, cli_failure = _scan_go_mod_with_cli(path)
     if cli_deps:
         return cli_deps
 
@@ -444,6 +444,14 @@ def scan_go_mod(path: Path) -> List[DependencyInfo]:
         if " " in stripped:
             name, version = stripped.split(None, 1)
             issues = _issue_for_specifier("==", version)
+            if cli_failure:
+                issues.append(
+                    DependencyIssue(
+                        "[IMPRECISE_SCAN] go.mod parsed without `go` CLI; replace/exclude directives may be ignored",
+                        severity="low",
+                        code="IMPRECISE_SCAN",
+                    )
+                )
             dep = DependencyInfo(name=name, version=version, source="go.mod", issues=issues)
             apply_license_category_dependency(dep)
             _apply_trust_heuristics(dep)
