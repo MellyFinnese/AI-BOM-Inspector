@@ -148,6 +148,9 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 - Inspect model weights directly (detect NaNs/LSB steganography): `aibom weights my_model.safetensors --json`
   - Quick comparison of two runs: `aibom diff aibom-report-old.json aibom-report-new.json`
 
+## Highest-impact feature bets
+See [docs/HIGHEST_IMPACT_NEXT_MOVES.md](docs/HIGHEST_IMPACT_NEXT_MOVES.md) for the feature bets that enable the end-to-end `discover → enforce` loop, policy-as-code UX, and GitHub-native SARIF outputs.
+
 ### 30-second sample report (before vs. after)
 - **Input SBOM**: lightweight CycloneDX with a few Python and npm components plus a Hugging Face model ID.
 - **Before (messy state)**:
