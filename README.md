@@ -240,7 +240,7 @@ Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift,
 ## Testing and CI
 - Run unit tests: `pytest`
 - GitHub Action: `.github/workflows/scan-pr.yml` uses the bundled composite action to scan PRs and post a risk comment.
-- Copy/paste workflow example (offline by default; recommended `--fail-on-score` = 75, allowlist supported via `ALLOWED_ISSUE_CODES`):
+- One-command SARIF + Markdown upload (offline by default; pair with `--online --with-cves` when you want CVEs):
   ```yaml
   name: AI-BOM Inspector
   on: [pull_request]
@@ -251,25 +251,19 @@ Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift,
         - uses: actions/checkout@v4
         - name: Install AI-BOM Inspector
           run: pip install aibom-inspector
-        - name: Scan AI stack (offline by default)
-          run: aibom scan --format json --output aibom-report.json --fail-on-score 75 --require-input
-        - name: Enforce allowlist (optional)
-          env:
-            ALLOWED_ISSUE_CODES: '["OFFLINE_MODE","CVE_LOOKUP_SKIPPED"]'
-          run: |
-            disallowed=$(jq --argjson allowed "$ALLOWED_ISSUE_CODES" '[.dependencies[]?.issues[]?.code, .models[]?.issues[]?.code] | map(select(. != null and ($allowed | index(.) | not))) | length' aibom-report.json)
-            if [ "$disallowed" -gt 0 ]; then
-              echo "Unapproved issues detected"; exit 1;
-            fi
-        - name: Upload human report
-          run: aibom scan --format markdown --output aibom-report.md
-        - name: Upload artifacts
+        - name: Scan AI stack and emit SARIF + Markdown
+          run: >-
+            aibom scan --format sarif --output aibom-report.sarif --markdown-output aibom-report.md
+            --fail-on-score 75 --require-input
+        - name: Upload SARIF to GitHub Security
+          uses: github/codeql-action/upload-sarif@v3
+          with:
+            sarif_file: aibom-report.sarif
+        - name: Upload Markdown artifact
           uses: actions/upload-artifact@v4
           with:
             name: aibom-report
-            path: |
-              aibom-report.json
-              aibom-report.md
+            path: aibom-report.md
   ```
 - CI guardrails: keep `--offline` unless you need enrichments; when allowed, add `--online --with-cves` to the scan step and adjust allowlists accordingly.
 
