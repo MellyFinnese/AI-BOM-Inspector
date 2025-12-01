@@ -10,6 +10,7 @@ Policies let teams codify their risk appetite for dependencies and models. They 
 - `min_trust_score` – minimum trust score for dependencies/models (0–100).
 - `publisher_expectations` – map of component names to expected publishers or sources.
 - `exceptions` – allowlist entries that can soften strict rules with optional expiration timestamps.
+- `enforce_graph_policies` – enable high-signal stack graph guardrails (MCP write scopes in prod, shell tools wired to agents in prod, unpinned models in prod, and broad filesystem writes).
 
 ## Examples
 

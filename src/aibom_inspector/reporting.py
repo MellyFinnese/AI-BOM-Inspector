@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Iterable
 from uuid import uuid4
 
 from jinja2 import Environment, select_autoescape
 
+from .stack_discovery import snapshot_as_dict
 from .types import Report
 
 
@@ -69,6 +72,10 @@ def render_json(report: Report) -> str:
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
+    if report.stack_snapshot:
+        payload["stack"] = snapshot_as_dict(report.stack_snapshot)
+    if report.graph_policy_violations:
+        payload["graph_policy_violations"] = [asdict(v) for v in report.graph_policy_violations]
     return json.dumps(payload, indent=2)
 
 
@@ -102,6 +109,26 @@ def render_markdown(report: Report) -> str:
         lines.append(
             f"| {row['id']} | {row['source']} | {row['license']} | {row['last_updated']} | {row['risk']} | {row['trust_score']} | {issues} |"
         )
+
+    if report.stack_snapshot:
+        lines.append("\n## Stack discovery\n")
+        lines.append("| Kind | ID | Evidence | Metadata |")
+        lines.append("| --- | --- | --- | --- |")
+        for node in report.stack_snapshot.nodes:
+            metadata = ", ".join(f"{k}={v}" for k, v in node.metadata.items()) or "None"
+            evidence = node.metadata.get("evidence", "") if isinstance(node.metadata, dict) else ""
+            lines.append(f"| {node.kind} | {node.id} | {evidence} | {metadata} |")
+
+    if report.graph_policy_violations:
+        lines.append("\n## Graph policy violations\n")
+        lines.append("| ID | Severity | Message | Evidence | Suggested fixes |")
+        lines.append("| --- | --- | --- | --- | --- |")
+        for violation in report.graph_policy_violations:
+            evidence = "; ".join(violation.evidence) if violation.evidence else "None"
+            fixes = "; ".join(violation.suggested_fixes) if violation.suggested_fixes else "None"
+            lines.append(
+                f"| {violation.id} | {violation.severity} | {violation.message} | {evidence} | {fixes} |"
+            )
 
     return "\n".join(lines)
 
@@ -139,6 +166,24 @@ def render_html(report: Report) -> str:
   <section>
     <h2>AI Summary</h2>
     <p>{{ ai_summary }}</p>
+  </section>
+  {% endif %}
+  {% if stack %}
+  <section>
+    <h2>Stack discovery</h2>
+    <table>
+      <thead><tr><th>Kind</th><th>ID</th><th>Evidence</th><th>Metadata</th></tr></thead>
+      <tbody>
+        {% for node in stack.nodes %}
+        <tr>
+          <td>{{ node.kind }}</td>
+          <td>{{ node.id }}</td>
+          <td>{{ node.metadata.get('evidence', '') }}</td>
+          <td>{{ node.metadata }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </section>
   {% endif %}
   <section>
@@ -197,6 +242,25 @@ def render_html(report: Report) -> str:
       </tbody>
     </table>
   </section>
+  {% if graph_violations %}
+  <section>
+    <h2>Graph policy violations</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Severity</th><th>Message</th><th>Evidence</th><th>Suggested fixes</th></tr></thead>
+      <tbody>
+        {% for violation in graph_violations %}
+        <tr>
+          <td>{{ violation.id }}</td>
+          <td>{{ violation.severity }}</td>
+          <td>{{ violation.message }}</td>
+          <td>{{ "; ".join(violation.evidence) if violation.evidence else "" }}</td>
+          <td>{{ "; ".join(violation.suggested_fixes) if violation.suggested_fixes else "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
 </body>
 </html>
 """
@@ -225,6 +289,8 @@ def render_html(report: Report) -> str:
         max_score=report.risk_settings.max_score,
         dependencies=list(_dependency_rows(report)),
         models=list(_model_rows(report)),
+        stack=snapshot_as_dict(report.stack_snapshot) if report.stack_snapshot else None,
+        graph_violations=[asdict(v) for v in report.graph_policy_violations],
     )
 
 
@@ -364,6 +430,30 @@ def render_sarif(report: Report) -> str:
                 },
             )
 
+    for violation in report.graph_policy_violations:
+        rule_id = f"graph_{violation.id}"[:64]
+        results.append(
+            {
+                "ruleId": rule_id,
+                "level": _sarif_level(violation.severity),
+                "message": {"text": violation.message},
+                "properties": {
+                    "aibom:evidence": violation.evidence,
+                    "aibom:suggested_fixes": violation.suggested_fixes,
+                },
+            }
+        )
+        rules.setdefault(
+            rule_id,
+            {
+                "id": rule_id,
+                "shortDescription": {"text": violation.message},
+                "properties": {"aibom:severity": violation.severity},
+            },
+        )
+
+    graph_violations = [asdict(v) for v in report.graph_policy_violations]
+
     sarif = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
@@ -377,6 +467,7 @@ def render_sarif(report: Report) -> str:
                         "properties": {
                             "aibom:stack_risk_score": report.stack_risk_score,
                             "aibom:risk_breakdown": report.risk_breakdown,
+                            "aibom:graph_policy_violations": graph_violations,
                         },
                     }
                 ],

@@ -11,6 +11,7 @@ try:  # Optional dependency so we can still run without policy files
 except Exception:  # pragma: no cover - exercised when PyYAML is missing
     yaml = None
 
+from .policy_graph import GraphPolicyViolation, GraphSnapshot, evaluate_graph_policies
 from .types import DependencyIssue, ModelIssue, Report
 
 
@@ -31,6 +32,7 @@ class Policy:
     min_trust_score: Optional[int] = None
     publisher_expectations: dict[str, str] = field(default_factory=dict)
     exceptions: List[PolicyException] = field(default_factory=list)
+    enforce_graph_policies: bool = False
 
 
 @dataclass
@@ -40,6 +42,7 @@ class PolicyEvaluation:
     warnings: List[str] = field(default_factory=list)
     used_exceptions: List[PolicyException] = field(default_factory=list)
     expired_exceptions: List[PolicyException] = field(default_factory=list)
+    graph_policy_violations: List[GraphPolicyViolation] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {
@@ -65,6 +68,16 @@ class PolicyEvaluation:
                     "expires": exc.expires.isoformat() if exc.expires else None,
                 }
                 for exc in self.expired_exceptions
+            ],
+            "graph_violations": [
+                {
+                    "id": violation.id,
+                    "severity": violation.severity,
+                    "message": violation.message,
+                    "evidence": violation.evidence,
+                    "suggested_fixes": violation.suggested_fixes,
+                }
+                for violation in self.graph_policy_violations
             ],
         }
 
@@ -103,6 +116,7 @@ def load_policy(path: Path) -> Policy:
         min_trust_score=raw.get("min_trust_score"),
         publisher_expectations=raw.get("publisher_expectations") or {},
         exceptions=exceptions,
+        enforce_graph_policies=bool(raw.get("enforce_graph_policies", False)),
     )
 
 
@@ -122,7 +136,12 @@ def _match_exception(
     return None
 
 
-def evaluate_policy(report: Report, policy: Policy) -> PolicyEvaluation:
+def evaluate_policy(
+    report: Report,
+    policy: Policy,
+    graph_snapshot: GraphSnapshot | None = None,
+    enforce_graph: bool = False,
+) -> PolicyEvaluation:
     failures: list[str] = []
     warnings: list[str] = []
     used_exceptions: list[PolicyException] = []
@@ -169,12 +188,23 @@ def evaluate_policy(report: Report, policy: Policy) -> PolicyEvaluation:
             expired.append(exc)
             warnings.append(f"Exception for {exc.subject} ({exc.code}) expired on {exc.expires.isoformat()}")
 
+    graph_violations: list[GraphPolicyViolation] = []
+    if graph_snapshot and enforce_graph:
+        graph_violations = evaluate_graph_policies(graph_snapshot)
+        for violation in graph_violations:
+            entry = f"[graph:{violation.id}] {violation.message}"
+            if violation.severity.lower() == "error":
+                failures.append(entry)
+            else:
+                warnings.append(entry)
+
     return PolicyEvaluation(
         passed=not failures,
         failures=failures,
         warnings=warnings,
         used_exceptions=used_exceptions,
         expired_exceptions=expired,
+        graph_policy_violations=graph_violations,
     )
 
 
