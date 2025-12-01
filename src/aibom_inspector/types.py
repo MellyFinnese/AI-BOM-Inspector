@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
 
+from .policy_graph import GraphPolicyViolation, GraphSnapshot
+
 
 @dataclass
 class RiskSettings:
@@ -167,6 +169,8 @@ class Report:
     generated_at: datetime
     ai_summary: Optional[str] = None
     risk_settings: RiskSettings = field(default_factory=RiskSettings)
+    stack_snapshot: GraphSnapshot | None = None
+    graph_policy_violations: List[GraphPolicyViolation] = field(default_factory=list)
 
     @property
     def total_risk(self) -> int:

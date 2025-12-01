@@ -22,6 +22,10 @@
       "description": "Expected publisher or source string for specific dependencies",
       "additionalProperties": { "type": "string" }
     },
+    "enforce_graph_policies": {
+      "type": "boolean",
+      "description": "Whether to enforce default graph-based AI stack policies"
+    },
     "exceptions": {
       "type": "array",
       "items": {

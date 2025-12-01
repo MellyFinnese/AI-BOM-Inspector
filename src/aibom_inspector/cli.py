@@ -20,8 +20,10 @@ from .dependency_scanner import (
 )
 from .model_inspector import enrich_models_with_cves, scan_models_from_file, summarize_models
 from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_pack, write_github_check
+from .policy_graph import evaluate_graph_policies
 from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
 from .reporting import render_report, write_report
+from .stack_discovery import discover_stack
 from .tensor_fuzz import inspect_weight_files
 from .types import Report, RiskSettings
 
@@ -244,6 +246,26 @@ def main() -> None:
     help="Fail the scan if no dependencies or models are discovered.",
 )
 @click.option(
+    "--discover-stack/--skip-stack-discovery",
+    "discover_stack_flag",
+    default=True,
+    show_default=True,
+    help="Auto-detect agents, tools, providers, MCP configs, and env vars in the working tree.",
+)
+@click.option(
+    "--enforce-graph-policy/--no-enforce-graph-policy",
+    default=True,
+    show_default=True,
+    help="Enforce default graph-based guardrails (unpinned models in prod, unsafe tools, MCP write scopes).",
+)
+@click.option(
+    "--env",
+    type=click.Choice(["dev", "staging", "prod", "test"], case_sensitive=False),
+    default="dev",
+    show_default=True,
+    help="Environment context used for stack discovery and graph policy evaluation.",
+)
+@click.option(
     "--policy",
     type=click.Path(exists=True, dir_okay=False, path_type=str),
     help="Path to a policy-as-code YAML file for CI gating.",
@@ -296,6 +318,9 @@ def scan(
     shadow_uefi_timeout: Optional[float],
     shadow_uefi_repo: Optional[str],
     require_input: bool,
+    discover_stack_flag: bool,
+    enforce_graph_policy: bool,
+    env: str,
     policy: Optional[str],
     github_check_output: Optional[str],
     evidence_pack: Optional[str],
@@ -321,6 +346,12 @@ def scan(
         dependencies.extend(parse_sbom(Path(sbom)))
 
     models = _collect_models(models_file, model_id, offline)
+
+    stack_snapshot = None
+    if discover_stack_flag:
+        stack_snapshot = discover_stack(
+            Path("."), dependencies=dependencies, models=models, env=env
+        )
 
     if not dependencies and not models:
         click.echo("No dependencies or models detected; nothing to scan.", err=True)
@@ -360,6 +391,7 @@ def scan(
         generated_at=datetime.utcnow(),
         ai_summary=summary,
         risk_settings=risk_settings,
+        stack_snapshot=stack_snapshot,
     )
 
     rendered = render_report(report, fmt)
@@ -392,12 +424,25 @@ def scan(
         except Exception as exc:  # pragma: no cover - I/O heavy
             click.echo(f"Unable to diff with baseline report: {exc}", err=True)
 
+    graph_policy_requested = enforce_graph_policy
     if policy:
         policy_data = load_policy(Path(policy))
-        policy_evaluation = evaluate_policy(report, policy_data)
+        graph_policy_requested = graph_policy_requested or policy_data.enforce_graph_policies
+        policy_evaluation = evaluate_policy(
+            report,
+            policy_data,
+            graph_snapshot=stack_snapshot,
+            enforce_graph=graph_policy_requested,
+        )
+        report.graph_policy_violations = policy_evaluation.graph_policy_violations
         if github_check_output:
             write_github_check(Path(github_check_output), policy_evaluation, report)
         if not policy_evaluation.passed:
+            raise SystemExit(1)
+    elif graph_policy_requested and stack_snapshot:
+        violations = evaluate_graph_policies(stack_snapshot)
+        report.graph_policy_violations = violations
+        if any(v.severity.lower() == "error" for v in violations):
             raise SystemExit(1)
 
     if fail_on_score is not None:
