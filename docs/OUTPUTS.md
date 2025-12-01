@@ -57,7 +57,7 @@ This project emits JSON, SARIF, and CycloneDX/SPDX outputs so teams can plug the
 }
 ```
 - **Best for**: CI/CD integration with GitHub Advanced Security, Azure DevOps, or other SARIF consumers.
-- **Rendering**: `aibom scan --format sarif --output aibom-report.sarif`.
+- **Rendering**: `aibom scan --format sarif --output aibom-report.sarif` (add `--markdown-output aibom-report.md` to ship a human-readable copy from the same invocation).
 
 ### CycloneDX (AI-BOM aligned)
 ```json

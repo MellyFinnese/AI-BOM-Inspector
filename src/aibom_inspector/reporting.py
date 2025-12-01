@@ -308,6 +308,84 @@ def render_spdx(report: Report) -> str:
     return json.dumps(spdx, indent=2)
 
 
+def _sarif_level(severity: str) -> str:
+    match severity.lower():
+        case "high":
+            return "error"
+        case "low":
+            return "note"
+        case _:
+            return "warning"
+
+
+def _sarif_result(target: str, name: str, issue: dict) -> dict:
+    rule_id = (issue.get("code") or issue.get("message") or "AIBOM_ISSUE").replace(" ", "_")[:64]
+    return {
+        "ruleId": rule_id,
+        "level": _sarif_level(issue.get("severity", "warning")),
+        "message": {"text": issue.get("message", "AI-BOM Inspector finding")},
+        "locations": [
+            {
+                "physicalLocation": {
+                    "artifactLocation": {"uri": f"{target}:{name}"},
+                }
+            }
+        ],
+    }
+
+
+def render_sarif(report: Report) -> str:
+    results: list[dict] = []
+    rules: dict[str, dict] = {}
+
+    for row in _dependency_rows(report):
+        for issue in row["issue_details"]:
+            results.append(_sarif_result("dependency", row["name"], issue))
+            rule_id = (issue.get("code") or issue.get("message") or "AIBOM_ISSUE").replace(" ", "_")[:64]
+            rules.setdefault(
+                rule_id,
+                {
+                    "id": rule_id,
+                    "shortDescription": {"text": issue.get("message", "AI-BOM Inspector finding")},
+                    "properties": {"aibom:severity": issue.get("severity", "warning")},
+                },
+            )
+
+    for model in _model_rows(report):
+        for issue in model["issue_details"]:
+            results.append(_sarif_result("model", model["id"], issue))
+            rule_id = (issue.get("code") or issue.get("message") or "AIBOM_ISSUE").replace(" ", "_")[:64]
+            rules.setdefault(
+                rule_id,
+                {
+                    "id": rule_id,
+                    "shortDescription": {"text": issue.get("message", "AI-BOM Inspector finding")},
+                    "properties": {"aibom:severity": issue.get("severity", "warning")},
+                },
+            )
+
+    sarif = {
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [
+            {
+                "tool": {"driver": {"name": "aibom-inspector", "rules": list(rules.values())}},
+                "results": results,
+                "invocations": [
+                    {
+                        "executionSuccessful": True,
+                        "properties": {
+                            "aibom:stack_risk_score": report.stack_risk_score,
+                            "aibom:risk_breakdown": report.risk_breakdown,
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+    return json.dumps(sarif, indent=2)
+
+
 def render_report(report: Report, fmt: str) -> str:
     fmt = fmt.lower()
     if fmt == "json":
@@ -316,6 +394,8 @@ def render_report(report: Report, fmt: str) -> str:
         return render_markdown(report)
     if fmt == "html":
         return render_html(report)
+    if fmt == "sarif":
+        return render_sarif(report)
     if fmt == "cyclonedx":
         return render_cyclonedx(report)
     if fmt == "spdx":

@@ -128,7 +128,7 @@ def main() -> None:
 @click.option(
     "--format",
     "fmt",
-    type=click.Choice(["json", "markdown", "md", "html", "cyclonedx", "spdx"], case_sensitive=False),
+    type=click.Choice(["json", "markdown", "md", "html", "sarif", "cyclonedx", "spdx"], case_sensitive=False),
     default="markdown",
     show_default=True,
     help="Output format for the report.",
@@ -137,6 +137,16 @@ def main() -> None:
     "--output",
     type=click.Path(dir_okay=False, writable=True, path_type=str),
     help="Write the report to a file instead of stdout.",
+)
+@click.option(
+    "--markdown-output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Optionally emit a Markdown copy of the report alongside the primary format.",
+)
+@click.option(
+    "--sarif-output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Optionally emit a SARIF security report alongside the primary format.",
 )
 @click.option(
     "--sbom-output",
@@ -267,6 +277,8 @@ def scan(
     sbom_file: tuple[str, ...],
     fmt: str,
     output: Optional[str],
+    markdown_output: Optional[str],
+    sarif_output: Optional[str],
     sbom_output: Optional[str],
     ai_summary: bool,
     fail_on_score: Optional[int],
@@ -363,6 +375,12 @@ def scan(
         if not destination:
             report_path = Path(f"aibom-report.{fmt}")
             click.echo(rendered)
+
+    if markdown_output:
+        write_report(report, "markdown", Path(markdown_output))
+
+    if sarif_output:
+        write_report(report, "sarif", Path(sarif_output))
 
     policy_evaluation = None
     report_json = json.loads(render_report(report, "json"))

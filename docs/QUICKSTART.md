@@ -48,4 +48,5 @@ aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json
 ## Enforce in CI
 
 - Reuse the prebuilt workflow in `.github/workflows/scan-pr.yml` to comment on pull requests.
+- Emit SARIF for GitHub Advanced Security and a Markdown artifact in one call: `aibom scan --format sarif --output aibom-report.sarif --markdown-output aibom-report.md --fail-on-score 75`.
 - Add `--fail-on-score` to make CI fail when the stack score dips below your threshold (e.g., `--fail-on-score 70`).
