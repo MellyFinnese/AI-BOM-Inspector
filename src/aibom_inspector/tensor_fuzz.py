@@ -11,10 +11,25 @@ try:  # pragma: no cover - optional Rust acceleration
     from . import _tensor_fuzz  # type: ignore
 except Exception as exc:  # pragma: no cover - handled gracefully below
     _tensor_fuzz = None
+    _tensor_fuzz_error: Exception | None = exc
+else:  # pragma: no cover - executed when the extension is available
+    _tensor_fuzz_error = None
+
+_warned_tensor_fallback = False
+
+
+def _warn_tensor_fallback() -> None:
+    """Emit a single warning when the Rust extension is unavailable."""
+
+    global _warned_tensor_fallback
+    if _warned_tensor_fallback or _tensor_fuzz_error is None:
+        return
     warnings.warn(
-        f"Falling back to pure-Python tensor inspection because the Rust extension failed to load: {exc}",
+        f"Falling back to pure-Python tensor inspection because the Rust extension failed to load: {_tensor_fuzz_error}",
         RuntimeWarning,
+        stacklevel=2,
     )
+    _warned_tensor_fallback = True
 
 
 @dataclass
@@ -225,6 +240,7 @@ def inspect_weight_file(path: Path | str, sample_limit: int = 1_000_000) -> Weig
         raw = _tensor_fuzz.inspect_file(str(path), sample_limit)
         tensors = [TensorAnomaly.from_mapping(t) for t in raw.get("tensors", [])]
         return WeightScanResult(path=path, tensors=tensors, suspected=bool(raw.get("suspected")))
+    _warn_tensor_fallback()
     return _python_inspect(path, sample_limit=sample_limit)
 
 
