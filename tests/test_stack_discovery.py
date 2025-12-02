@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from aibom_inspector.stack_discovery import discover_stack
+from aibom_inspector.stack_discovery import discover_models, discover_stack
 from aibom_inspector.types import DependencyInfo
 
 
@@ -20,3 +20,17 @@ def test_discover_stack_surfaces_agents_models_and_env(tmp_path: Path) -> None:
     mcp_nodes = [node for node in snapshot.nodes if node.kind == "MCPServer"]
     assert mcp_nodes and "write" in mcp_nodes[0].metadata.get("permissions", [])
     assert snapshot.context.get("env") == "prod"
+
+
+def test_discover_models_picks_up_load_patterns(tmp_path: Path) -> None:
+    code = """
+from transformers import AutoModel
+model = AutoModel.from_pretrained("meta-llama/Llama-3-8B")
+"""
+    (tmp_path / "model.py").write_text(code)
+    deps = [DependencyInfo(name="transformers", version="4.0.0", source="requirements.txt", issues=[])]
+
+    models = discover_models(tmp_path, dependencies=deps)
+
+    assert any(model.identifier == "meta-llama/Llama-3-8B" for model in models)
+    assert any(model.source in {"huggingface", "meta"} for model in models)

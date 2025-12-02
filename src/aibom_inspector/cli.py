@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 import click
 
@@ -23,9 +23,9 @@ from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_p
 from .policy_graph import evaluate_graph_policies
 from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
 from .reporting import render_report, write_report
-from .stack_discovery import discover_stack
+from .stack_discovery import discover_models, discover_stack
 from .tensor_fuzz import inspect_weight_files
-from .types import Report, RiskSettings
+from .types import ModelInfo, Report, RiskSettings
 
 
 def _collect_dependencies(
@@ -87,6 +87,16 @@ def _collect_models(models_file: Optional[str], model_ids: tuple[str, ...], offl
     if model_ids:
         models.extend(summarize_models(list(model_ids), offline=offline))
     return models
+
+
+def _merge_models(primary: List[ModelInfo], secondary: List[ModelInfo]) -> List[ModelInfo]:
+    existing = {model.identifier for model in primary}
+    for model in secondary:
+        if model.identifier in existing:
+            continue
+        primary.append(model)
+        existing.add(model.identifier)
+    return primary
 
 
 @click.group()
@@ -347,11 +357,21 @@ def scan(
 
     models = _collect_models(models_file, model_id, offline)
 
+    auto_models = []
+    if discover_stack_flag:
+        auto_models = discover_models(Path("."), dependencies=dependencies)
+        models = _merge_models(models, auto_models)
+
     stack_snapshot = None
     if discover_stack_flag:
         stack_snapshot = discover_stack(
             Path("."), dependencies=dependencies, models=models, env=env
         )
+        if auto_models and not models_file and not model_id:
+            click.echo(
+                f"Auto-discovered {len(auto_models)} model reference(s); pass --models-file to override or enrich.",
+                err=True,
+            )
 
     if not dependencies and not models:
         click.echo("No dependencies or models detected; nothing to scan.", err=True)

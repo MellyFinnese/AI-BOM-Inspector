@@ -412,7 +412,12 @@ def render_sarif(report: Report) -> str:
                 rule_id,
                 {
                     "id": rule_id,
+                    "name": rule_id,
                     "shortDescription": {"text": issue.get("message", "AI-BOM Inspector finding")},
+                    "fullDescription": {
+                        "text": "Dependency policy finding produced by AI-BOM Inspector's guardrails.",
+                    },
+                    "helpUri": "https://github.com/aibom-inspector/AI-BOM-Inspector/blob/main/docs/POLICY_COOKBOOK.md",
                     "properties": {"aibom:severity": issue.get("severity", "warning")},
                 },
             )
@@ -425,7 +430,12 @@ def render_sarif(report: Report) -> str:
                 rule_id,
                 {
                     "id": rule_id,
+                    "name": rule_id,
                     "shortDescription": {"text": issue.get("message", "AI-BOM Inspector finding")},
+                    "fullDescription": {
+                        "text": "Model policy finding produced by AI-BOM Inspector's guardrails.",
+                    },
+                    "helpUri": "https://github.com/aibom-inspector/AI-BOM-Inspector/blob/main/docs/POLICY_COOKBOOK.md",
                     "properties": {"aibom:severity": issue.get("severity", "warning")},
                 },
             )
@@ -447,7 +457,12 @@ def render_sarif(report: Report) -> str:
             rule_id,
             {
                 "id": rule_id,
+                "name": rule_id,
                 "shortDescription": {"text": violation.message},
+                "fullDescription": {
+                    "text": "Graph policy guardrail violation (agents, tools, providers, MCP permissions).",
+                },
+                "helpUri": "https://github.com/aibom-inspector/AI-BOM-Inspector/blob/main/docs/POLICY.md",
                 "properties": {"aibom:severity": violation.severity},
             },
         )
