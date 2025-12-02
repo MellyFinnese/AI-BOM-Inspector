@@ -55,7 +55,7 @@ ai-bom-inspector/
 ## What it does
 - Parse dependency manifests across Python (`requirements.txt`, `pyproject.toml`), JavaScript (`package.json` / `package-lock.json`), Go (`go.mod`), and Java (`pom.xml`)
 - Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
-- Gather AI model metadata from JSON or explicit Hugging Face IDs (bring your own JSON or HF IDs; no automatic pipeline discovery)
+- Gather AI model metadata from JSON or explicit Hugging Face IDs and auto-discover model references (OpenAI/Anthropic calls, `from_pretrained` loads, pipeline configs) directly from your repo
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
 - Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics; the optional AI-summary hook is disabled by default and ready for teams to wire up their own LLM if they choose
 - Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --enable-shadow-uefi-intel` is used
@@ -77,17 +77,21 @@ The default reports only use the deterministic heuristics listed below; the "AI 
 Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_API_TIMEOUT` / `SHADOW_UEFI_INTEL_TIMEOUT` environment variables.
 
 ## Installation
-- **From source (current canonical path):**
+- **Pinned release from GitHub (current canonical path):**
+  ```bash
+  pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@main"
+  # Prefer a tagged release for CI:
+  pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v0.1.0"
+  ```
+- **Editable dev install:**
   ```bash
   pip install -e .[dev]
-  # Or install straight from GitHub without cloning:
-  pip install "git+https://github.com/aibom-inspector/AI-BOM-Inspector.git#egg=aibom-inspector"
-  # For fully pinned, reproducible envs (CI/audits):
-  pip install -r requirements.txt
   ```
+- **Wheels:** the Rust extension ships as a wheel when you build from source—`python -m build` will produce a `.whl` under `dist/` for airgapped installs.
+- **PyPI status:** publishing is planned; until then, prefer the GitHub release pins above to avoid `pip install aibom-inspector` confusion.
 
 ## Getting started
-1. Create a `models.json` file if you want to include model metadata. A ready-to-use sample lives in `examples/models.sample.json`:
+1. Create a `models.json` file if you want to include model metadata (auto-discovery will still pull model IDs out of your code/configs when this is omitted). A ready-to-use sample lives in `examples/models.sample.json`:
    ```json
    [
      {"id": "gpt2", "source": "huggingface", "license": "mit", "last_updated": "2024-01-01"},
@@ -170,6 +174,7 @@ CycloneDX and SPDX exports include AI-BOM extension data (e.g., `aibom:source`, 
 - **AI-BOM schema mapping**: `schemas/report.schema.json` tracks the AI-BOM JSON conventions and is structured to align with the TAIBOM-style trust/attestation fields emerging in the community (e.g., explicit model source, license, provenance, and risk signals).
 - **CycloneDX/SPDX bridges**: the CycloneDX/SPDX exporters project `aibom:*` properties into vendor-neutral fields so the output can slot into existing SBOM pipelines without custom parsers.
 - **Reference-first posture**: schema updates aim to follow the AI-BOM working drafts; additions are scoped so teams can diff their SBOMs against the schema and treat this project as a reference implementation rather than a one-off tool.
+- **Credibility pack**: `docs/credibility-pack/` ships SBOM slices, a repo list, and a scoreboard you can rerun to validate detection heuristics and false-positive rates.
 
 ### Output formats at a glance
 See `docs/OUTPUTS.md` for a side-by-side JSON, SARIF, and CycloneDX example plus guidance on when to use each.

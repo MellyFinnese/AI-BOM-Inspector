@@ -24,3 +24,9 @@ Reference: `policies/examples/default.yml`
 - **Model provenance**: require `source`, `sha256`, and `last_updated` in `models.json`; treat missing fields as failures.
 - **Allowlist enforcement**: only allow curated registries; fail on unverified sources and require `--require-input`.
 - **CVE + advisory checks**: encourage `--with-cves` and model advisories where available to keep audit trails complete.
+
+## Policy-forward CI gate (recommended default)
+- **Graph guardrails on**: keep `--enforce-graph-policy --env prod` enabled so auto-discovered tools/models/providers are blocked when they carry write scopes or unpinned sources.
+- **Readable failures**: wire `--github-check-output` to surface policy violations as PR comments plus SARIF upload for code scanning.
+- **Cookbook presets**: start from `policies/examples/strict.yml` and enable exceptions per team via `exceptions:` entries rather than editing the allowlist directly.
+- **Fail fast**: pair `--require-input` with `--fail-on-score 70` to avoid "green" runs that never scanned a dependency or model.

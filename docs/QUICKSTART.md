@@ -5,14 +5,16 @@ Follow these steps to run AI-BOM Inspector locally in offline mode, then layer i
 ## Install
 
 ```bash
+# Install from a tagged GitHub release (current canonical path)
+pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v0.1.0"
+
+# Or develop locally
 pip install -e .[dev]
-# Or use pinned dependencies for reproducible runs:
-pip install -r requirements.txt
 ```
 
 ## Create a models file
 
-Add model metadata when you want models scanned alongside dependencies. A ready-to-use sample lives at `examples/models.sample.json`:
+Add model metadata when you want models scanned alongside dependencies. Auto-discovery will still surface model IDs from code/configs (OpenAI/Anthropic calls, `from_pretrained` patterns) when this file is absent. A ready-to-use sample lives at `examples/models.sample.json`:
 
 ```json
 [

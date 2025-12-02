@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
@@ -12,7 +13,12 @@ except Exception:  # pragma: no cover - optional dependency
     yaml = None
 
 from .policy_graph import GraphEdge, GraphNode, GraphSnapshot
-from .types import DependencyInfo, ModelInfo
+from .types import (
+    DependencyInfo,
+    ModelInfo,
+    ModelIssue,
+    apply_license_category_model,
+)
 
 
 TEXT_EXTENSIONS = {
@@ -38,6 +44,14 @@ AGENT_DEPENDENCIES = {
     "crewai",
 }
 
+MODEL_HOST_DEPENDENCIES = {
+    "transformers": "huggingface",
+    "torch": "pytorch",
+    "tensorflow": "tensorflow",
+    "tf-nightly": "tensorflow",
+    "torchvision": "pytorch",
+}
+
 PROVIDER_DEPENDENCIES = {
     "openai": "openai",
     "anthropic": "anthropic",
@@ -47,6 +61,8 @@ PROVIDER_DEPENDENCIES = {
     "bedrock": "aws",
     "azure-ai-ml": "azure",
     "azure-core": "azure",
+    "langsmith": "langchain",
+    **MODEL_HOST_DEPENDENCIES,
 }
 
 ENV_VAR_CLUES = {
@@ -59,12 +75,25 @@ ENV_VAR_CLUES = {
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
     "MCP_CONFIG",
+    "OPENAI_MODEL",
+    "ANTHROPIC_MODEL",
+    "MODEL_ID",
+    "HF_HOME",
+    "TRANSFORMERS_CACHE",
 }
 
 MODEL_PATTERNS: List[Tuple[re.Pattern[str], str]] = [
     (re.compile(r"\b(gpt-[\w-]+)\b", re.IGNORECASE), "openai"),
     (re.compile(r"\bclaude[-\w]*\b", re.IGNORECASE), "anthropic"),
     (re.compile(r"\b(?:meta-)?llama[-/\w]*\b", re.IGNORECASE), "meta"),
+]
+
+MODEL_LOAD_PATTERNS: List[Tuple[re.Pattern[str], str | None]] = [
+    (re.compile(r"from_pretrained\(\s*[\"']([\w./:-]+)[\"']", re.IGNORECASE), "huggingface"),
+    (re.compile(r"pipeline\([^\)]*model\s*=\s*[\"']([\w./:-]+)[\"']", re.IGNORECASE), "huggingface"),
+    (re.compile(r"model_id\s*=\s*[\"']([\w./:-]+)[\"']"), None),
+    (re.compile(r"\"model\"\s*:\s*\"([^\"]+)\""), None),
+    (re.compile(r"model_name\s*=\s*[\"']([\w./:-]+)[\"']"), None),
 ]
 
 TOOL_CAPABILITY_PATTERNS: Dict[str, re.Pattern[str]] = {
@@ -122,6 +151,108 @@ def _model_version_hint(identifier: str) -> str:
     return ""
 
 
+def _infer_source(identifier: str, dependency_hint: str | None = None, explicit: str | None = None) -> str:
+    if explicit:
+        return explicit
+    lowered = identifier.lower()
+    if lowered.startswith("gpt") or lowered.startswith("o1"):
+        return "openai"
+    if lowered.startswith("claude"):
+        return "anthropic"
+    if "llama" in lowered:
+        return "meta"
+    if "/" in identifier or lowered.startswith("hf://"):
+        return "huggingface"
+    if dependency_hint:
+        return dependency_hint
+    return "inferred"
+
+
+def discover_models(
+    root: Path | str = Path("."), *, dependencies: Iterable[DependencyInfo] | None = None
+) -> list[ModelInfo]:
+    """Best-effort model autodiscovery from source/config files and dependency hints."""
+
+    root_path = Path(root)
+    discovered: dict[str, ModelInfo] = {}
+
+    provider_hints = {
+        dep.name.lower(): PROVIDER_DEPENDENCIES.get(dep.name.lower())
+        for dep in dependencies or []
+        if PROVIDER_DEPENDENCIES.get(dep.name.lower())
+    }
+    dependency_source_hint = next(iter(provider_hints.values())) if provider_hints else None
+
+    def _record(identifier: str, *, explicit_source: str | None, evidence: str) -> None:
+        if not identifier:
+            return
+        normalized = identifier.strip()
+        source = _infer_source(normalized, dependency_source_hint, explicit_source)
+        version_hint = _model_version_hint(normalized)
+
+        model = discovered.get(normalized)
+        if not model:
+            model = ModelInfo(
+                identifier=normalized,
+                source=source,
+                issues=[
+                    ModelIssue(
+                        "[UNKNOWN_LICENSE] Missing license information",
+                        severity="high",
+                        code="UNKNOWN_LICENSE",
+                    )
+                ],
+            )
+            apply_license_category_model(model)
+            model.trust_signals.append(
+                ModelIssue(
+                    "[INFERRED_MODEL] Model reference auto-discovered from project files",
+                    severity="low",
+                    code="INFERRED_MODEL",
+                )
+            )
+            discovered[normalized] = model
+
+        model.source = model.source or source
+        if version_hint and not model.last_updated:
+            try:
+                model.last_updated = datetime.fromisoformat(version_hint)
+            except Exception:
+                pass
+        metadata_source = model.trust_signals[0].message if model.trust_signals else ""
+        if evidence not in metadata_source:
+            model.trust_signals.append(
+                ModelIssue(
+                    f"[EVIDENCE] discovered in {evidence}", severity="low", code="EVIDENCE"
+                )
+            )
+
+    for path in root_path.rglob("*"):
+        if path.is_dir():
+            continue
+        if path.suffix.lower() not in TEXT_EXTENSIONS and path.name not in {".env", ".env.example"}:
+            continue
+        text = _safe_read(path)
+        if not text:
+            continue
+
+        for pattern, provider in MODEL_PATTERNS:
+            for match in pattern.findall(text):
+                identifier = match if isinstance(match, str) else match[0]
+                _record(identifier, explicit_source=provider, evidence=str(path))
+
+        for pattern, provider in MODEL_LOAD_PATTERNS:
+            for match in pattern.findall(text):
+                identifier = match if isinstance(match, str) else match[0]
+                _record(identifier, explicit_source=provider, evidence=str(path))
+
+    for dep in dependencies or []:
+        if dep.name.lower() in MODEL_HOST_DEPENDENCIES:
+            _record(dep.name, explicit_source=MODEL_HOST_DEPENDENCIES[dep.name.lower()], evidence=dep.source)
+
+    return list(discovered.values())
+
+
 def discover_stack(
     root: Path | str = Path("."),
     *,
@@ -135,6 +266,7 @@ def discover_stack(
     nodes: Dict[Tuple[str, str], GraphNode] = {}
     edges: list[GraphEdge] = []
 
+    provider_hint = None
     for dep in dependencies or []:
         normalized = dep.name.lower()
         if normalized in AGENT_DEPENDENCIES:
@@ -148,12 +280,22 @@ def discover_stack(
             )
         provider = PROVIDER_DEPENDENCIES.get(normalized)
         if provider:
+            provider_hint = provider
             _add_node(
                 nodes,
                 GraphNode(
                     id=provider,
                     kind="Provider",
                     metadata={"evidence": f"dependency:{dep.source}", "sdk": dep.name},
+                ),
+            )
+        if normalized in MODEL_HOST_DEPENDENCIES:
+            _add_node(
+                nodes,
+                GraphNode(
+                    id=dep.name,
+                    kind="ModelHost",
+                    metadata={"evidence": f"dependency:{dep.source}", "provider": MODEL_HOST_DEPENDENCIES[normalized]},
                 ),
             )
 
@@ -201,6 +343,19 @@ def discover_stack(
                         id=identifier,
                         kind="Model",
                         metadata={"provider": provider, "evidence": str(path)},
+                    ),
+                )
+
+        for pattern, provider in MODEL_LOAD_PATTERNS:
+            for match in pattern.findall(text):
+                identifier = match if isinstance(match, str) else match[0]
+                inferred_source = _infer_source(identifier, provider_hint, provider)
+                _add_node(
+                    nodes,
+                    GraphNode(
+                        id=identifier,
+                        kind="Model",
+                        metadata={"provider": inferred_source, "evidence": str(path)},
                     ),
                 )
 

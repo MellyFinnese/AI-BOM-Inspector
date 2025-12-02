@@ -142,3 +142,19 @@ def test_includes_shadow_repo_when_enabled(tmp_path: Path):
     payload = json.loads(result.output[result.output.find("{") :])
     names = [dep["name"] for dep in payload["dependencies"]]
     assert "Shadow-UEFI-Intel" in names
+
+
+def test_autodiscovery_surfaces_models(tmp_path: Path):
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path("requirements.txt").write_text("transformers==4.0.0\n")
+        Path("app.py").write_text(
+            "from transformers import AutoModel\nmodel = AutoModel.from_pretrained('gpt2')\n"
+        )
+
+        result = runner.invoke(main, ["scan", "--format", "json", "--offline"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output[result.output.find("{") :])
+    ids = [model["id"] for model in payload["models"]]
+    assert "gpt2" in ids

@@ -1,0 +1,13 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {"component": {"type": "library", "name": "langchain-ai/langchain", "version": "0.2.0"}},
+  "components": [
+    {"type": "library", "name": "langchain", "version": "0.2.0", "licenses": [{"license": {"id": "MIT"}}]},
+    {"type": "library", "name": "openai", "version": "1.35.0"},
+    {"type": "library", "name": "tiktoken", "version": "0.7.0"},
+    {"type": "library", "name": "pydantic", "version": "2.6.1"},
+    {"type": "application", "name": "openai:gpt-4o", "properties": [{"name": "aibom:source", "value": "openai"}]}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {"component": {"type": "library", "name": "huggingface/transformers", "version": "4.41.0"}},
+  "components": [
+    {"type": "library", "name": "transformers", "version": "4.41.0"},
+    {"type": "library", "name": "torch", "version": "2.2.1"},
+    {"type": "library", "name": "safetensors", "version": "0.4.2"},
+    {"type": "application", "name": "meta-llama/Llama-3-8B", "properties": [{"name": "aibom:source", "value": "huggingface"}]}
+  ]
+}
