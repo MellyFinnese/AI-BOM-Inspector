@@ -2,6 +2,22 @@
 
 Ship these features to make AI-BOM Inspector feel native in CI/CD and GitHub while tightening the policy UX.
 
+## Tiered upgrade plan (Perception + Authority → Market weapon)
+Prioritize these tiers in order to move from scanner utility to governance platform. Each tier builds on the last by adding compliance mapping, trust signals, and executive-ready risk framing.
+
+### Tier 1: Perception + Authority
+- **Framework mapping (huge ROI)**: map findings to governance frameworks such as **NIST AI RMF**, **ISO/IEC 42001**, **OWASP Top 10 for LLMs**, and (where applicable) **SOC 2 Trust Criteria**. Report entries should directly show mappings (e.g., “Finding X → NIST AI RMF 1.2, ISO 42001 A.5.3”). This turns results into compliance evidence, not just scanner output.
+- **Provenance & attestation (trust layer)**: hash inputs/outputs, tie findings to git commit SHA, support optional signing, and emit machine-readable attestation JSON. This positions the tool for SLSA/in-toto style workflows.
+- **Completeness & confidence scoring**: add coverage %, static vs runtime visibility flags, and an “unobservable areas” section (e.g., “78% static coverage; runtime model loading: unknown; env-based selection: unobservable”). This transparency builds auditor trust.
+
+### Tier 2: Technical maturity
+- **Runtime hooks / tracing (differentiator)**: optional Python import tracing, wrappers for model load calls, and LD_PRELOAD/monkeypatch style tracing to capture runtime-resolved models.
+- **Enterprise CI/CD modes**: provide hardened presets for GitHub Actions, GitLab CI, and Azure DevOps with policy-linked exit codes, artifact storage, and JSON outputs that plug into GRC tooling.
+
+### Tier 3: Market weapon
+- **Risk scoring that execs understand**: translate findings into Low/Medium/High governance risk, regulatory exposure, and supply-chain blast radius.
+- **SBOM + AI-BOM correlation**: connect traditional SBOMs (CycloneDX, SPDX) to AI-BOM artifacts to show “this vulnerable lib supports this model pipeline.”
+
 ## Feature: Auto-discover → enforce loop
 - **`aibom discover`**: crawl the repo to auto-detect dependency manifests, SBOMs, and model metadata files; emit a normalized AI-BOM that can be checked in or cached.
 - **`aibom enforce`**: regenerate the AI-BOM, apply policies, and surface pass/fail + diff against the previous run (or a stored baseline). Gate on score, issue codes, or policy allowlists.

@@ -41,6 +41,55 @@
         "cve_penalty": { "type": "integer" }
       }
     },
+    "provenance": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "runtime_trace": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["trace_mode", "captured_at", "command"],
+      "properties": {
+        "trace_mode": { "type": "string" },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "command": { "type": "array", "items": { "type": "string" } },
+        "imported_modules": { "type": "array", "items": { "type": "string" } },
+        "observed_models": { "type": "array", "items": { "type": "string" } },
+        "observed_dependencies": { "type": "array", "items": { "type": "string" } },
+        "observed_env": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "completeness": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["static_coverage_pct", "runtime_coverage_pct", "static_visibility", "runtime_visibility"],
+      "properties": {
+        "static_coverage_pct": { "type": "number" },
+        "runtime_coverage_pct": { "type": "number" },
+        "static_visibility": { "type": "boolean" },
+        "runtime_visibility": { "type": "boolean" },
+        "unobservable_areas": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "executive_summary": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["governance_risk", "regulatory_exposure", "supply_chain_blast_radius"],
+      "properties": {
+        "governance_risk": { "type": "string" },
+        "regulatory_exposure": { "type": "string" },
+        "supply_chain_blast_radius": { "type": "string" },
+        "rationale": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "sbom_correlations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
     "dependencies": {
       "type": "array",
       "items": {
@@ -66,7 +115,19 @@
               "properties": {
                 "message": { "type": "string" },
                 "severity": { "type": "string" },
-                "code": { "type": ["string", "null"] }
+                "code": { "type": ["string", "null"] },
+                "frameworks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["framework", "control"],
+                    "properties": {
+                      "framework": { "type": "string" },
+                      "control": { "type": "string" }
+                    }
+                  }
+                }
               }
             }
           },
@@ -113,7 +174,19 @@
               "properties": {
                 "message": { "type": "string" },
                 "severity": { "type": "string" },
-                "code": { "type": ["string", "null"] }
+                "code": { "type": ["string", "null"] },
+                "frameworks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["framework", "control"],
+                    "properties": {
+                      "framework": { "type": "string" },
+                      "control": { "type": "string" }
+                    }
+                  }
+                }
               }
             }
           },

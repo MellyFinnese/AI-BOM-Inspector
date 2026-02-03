@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import asdict
 from pathlib import Path
@@ -9,6 +8,8 @@ from uuid import uuid4
 
 from jinja2 import Environment, select_autoescape
 
+from .framework_mapping import framework_mappings_for_issue, serialize_mappings
+from .report_enrichment import build_sbom_correlations, serialize_dataclass
 from .stack_discovery import snapshot_as_dict
 from .types import Report
 
@@ -19,7 +20,15 @@ env = Environment(autoescape=select_autoescape(["html", "xml"]))
 def _dependency_rows(report: Report) -> Iterable[dict]:
     for dep in report.dependencies:
         issue_details = [
-            {"message": issue.message, "severity": issue.severity, "code": issue.code} for issue in dep.issues
+            {
+                "message": issue.message,
+                "severity": issue.severity,
+                "code": issue.code,
+                "frameworks": serialize_mappings(
+                    framework_mappings_for_issue(issue.code, issue.message)
+                ),
+            }
+            for issue in dep.issues
         ]
         yield {
             "name": dep.name,
@@ -41,7 +50,14 @@ def _dependency_rows(report: Report) -> Iterable[dict]:
 def _model_rows(report: Report) -> Iterable[dict]:
     for model in report.models:
         issue_details = [
-            {"message": issue.message, "severity": issue.severity, "code": issue.code}
+            {
+                "message": issue.message,
+                "severity": issue.severity,
+                "code": issue.code,
+                "frameworks": serialize_mappings(
+                    framework_mappings_for_issue(issue.code, issue.message)
+                ),
+            }
             for issue in model.issues
         ]
         yield {
@@ -69,6 +85,11 @@ def render_json(report: Report) -> str:
         "stack_risk_score": report.stack_risk_score,
         "risk_breakdown": report.risk_breakdown,
         "risk_settings": report.risk_settings.as_dict(),
+        "provenance": report.provenance,
+        "runtime_trace": serialize_dataclass(report.runtime_trace),
+        "completeness": serialize_dataclass(report.completeness),
+        "executive_summary": serialize_dataclass(report.executive_summary),
+        "sbom_correlations": build_sbom_correlations(report),
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
@@ -86,15 +107,76 @@ def render_markdown(report: Report) -> str:
         f"Generated at: {report.generated_at.isoformat()}",
         f"Stack Risk Score: {report.stack_risk_score}/{report.risk_settings.max_score}",
     ]
+    if report.executive_summary:
+        lines.append("\n## Executive risk summary\n")
+        lines.append(f"- Governance risk: **{report.executive_summary.governance_risk}**")
+        lines.append(
+            f"- Regulatory exposure: **{report.executive_summary.regulatory_exposure}**"
+        )
+        lines.append(
+            f"- Supply chain blast radius: **{report.executive_summary.supply_chain_blast_radius}**"
+        )
+        if report.executive_summary.rationale:
+            lines.append(f"- Rationale: {', '.join(report.executive_summary.rationale)}")
+
     if report.ai_summary:
         lines.append("\n## AI Summary\n")
         lines.append(report.ai_summary)
+
+    if report.provenance:
+        lines.append("\n## Provenance\n")
+        git_commit = report.provenance.get("git_commit")
+        if git_commit:
+            lines.append(f"- Git commit: `{git_commit}`")
+        inputs = report.provenance.get("inputs") or []
+        if inputs:
+            lines.append(f"- Hashed inputs: {len(inputs)} file(s)")
+
+    if report.completeness:
+        lines.append("\n## Completeness & confidence\n")
+        lines.append(f"- Static coverage: {report.completeness.static_coverage_pct:.1f}%")
+        lines.append(f"- Runtime coverage: {report.completeness.runtime_coverage_pct:.1f}%")
+        lines.append(
+            f"- Static visibility: {'yes' if report.completeness.static_visibility else 'no'}"
+        )
+        lines.append(
+            f"- Runtime visibility: {'yes' if report.completeness.runtime_visibility else 'no'}"
+        )
+        if report.completeness.unobservable_areas:
+            lines.append("- Unobservable areas:")
+            for entry in report.completeness.unobservable_areas:
+                lines.append(f"  - {entry}")
+
+    if report.runtime_trace:
+        lines.append("\n## Runtime observations\n")
+        lines.append(f"- Trace mode: {report.runtime_trace.trace_mode}")
+        lines.append(f"- Captured at: {report.runtime_trace.captured_at.isoformat()}")
+        if report.runtime_trace.observed_models:
+            lines.append(
+                f"- Observed models: {', '.join(report.runtime_trace.observed_models)}"
+            )
+        if report.runtime_trace.imported_modules:
+            lines.append(
+                f"- Observed imports: {', '.join(report.runtime_trace.imported_modules)}"
+            )
+        if report.runtime_trace.notes:
+            lines.append(f"- Notes: {'; '.join(report.runtime_trace.notes)}")
 
     lines.append("\n## Dependencies\n")
     lines.append("| Name | Version | Source | License | Risk | Trust | Issues |")
     lines.append("| --- | --- | --- | --- | --- | --- | --- |")
     for row in _dependency_rows(report):
-        issues = "; ".join(f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"])
+        issues = "; ".join(
+            f"{detail['message']} ({detail['severity']})"
+            + (
+                " [Mappings: "
+                + ", ".join(f"{m['framework']} {m['control']}" for m in detail["frameworks"])
+                + "]"
+                if detail.get("frameworks")
+                else ""
+            )
+            for detail in row["issue_details"]
+        )
         issues = issues or "None"
         lines.append(
             f"| {row['name']} | {row['version']} | {row['source']} | {row['license']} ({row['license_category']}) | {row['risk']} | {row['trust_score']} | {issues} |"
@@ -104,7 +186,17 @@ def render_markdown(report: Report) -> str:
     lines.append("| ID | Source | License | Last Updated | Risk | Trust | Issues |")
     lines.append("| --- | --- | --- | --- | --- | --- | --- |")
     for row in _model_rows(report):
-        issues = "; ".join(f"{detail['message']} ({detail['severity']})" for detail in row["issue_details"])
+        issues = "; ".join(
+            f"{detail['message']} ({detail['severity']})"
+            + (
+                " [Mappings: "
+                + ", ".join(f"{m['framework']} {m['control']}" for m in detail["frameworks"])
+                + "]"
+                if detail.get("frameworks")
+                else ""
+            )
+            for detail in row["issue_details"]
+        )
         issues = issues or "None"
         lines.append(
             f"| {row['id']} | {row['source']} | {row['license']} | {row['last_updated']} | {row['risk']} | {row['trust_score']} | {issues} |"
@@ -128,6 +220,18 @@ def render_markdown(report: Report) -> str:
             fixes = "; ".join(violation.suggested_fixes) if violation.suggested_fixes else "None"
             lines.append(
                 f"| {violation.id} | {violation.severity} | {violation.message} | {evidence} | {fixes} |"
+            )
+
+    correlations = build_sbom_correlations(report)
+    if correlations:
+        lines.append("\n## SBOM ↔ AI-BOM correlations\n")
+        lines.append("| Model | Source | Supporting dependencies | Notes |")
+        lines.append("| --- | --- | --- | --- |")
+        for entry in correlations:
+            deps = ", ".join(entry.get("supporting_dependencies", [])) or "None"
+            note = entry.get("note", "")
+            lines.append(
+                f"| {entry.get('model')} | {entry.get('source')} | {deps} | {note} |"
             )
 
     return "\n".join(lines)
@@ -162,10 +266,68 @@ def render_html(report: Report) -> str:
   <h1>AI-BOM Report</h1>
   <p>Generated at: {{ generated_at }}</p>
   <p>Stack Risk Score: <span class=\"badge {{ badge_class }}\">{{ stack_risk_score }} / {{ max_score }}</span></p>
+  {% if executive_summary %}
+  <section>
+    <h2>Executive risk summary</h2>
+    <ul>
+      <li>Governance risk: <strong>{{ executive_summary.governance_risk }}</strong></li>
+      <li>Regulatory exposure: <strong>{{ executive_summary.regulatory_exposure }}</strong></li>
+      <li>Supply chain blast radius: <strong>{{ executive_summary.supply_chain_blast_radius }}</strong></li>
+      {% if executive_summary.rationale %}
+      <li>Rationale: {{ ", ".join(executive_summary.rationale) }}</li>
+      {% endif %}
+    </ul>
+  </section>
+  {% endif %}
   {% if ai_summary %}
   <section>
     <h2>AI Summary</h2>
     <p>{{ ai_summary }}</p>
+  </section>
+  {% endif %}
+  {% if provenance %}
+  <section>
+    <h2>Provenance</h2>
+    <ul>
+      {% if provenance.git_commit %}
+      <li>Git commit: {{ provenance.git_commit }}</li>
+      {% endif %}
+      {% if provenance.inputs %}
+      <li>Hashed inputs: {{ provenance.inputs | length }} file(s)</li>
+      {% endif %}
+    </ul>
+  </section>
+  {% endif %}
+  {% if completeness %}
+  <section>
+    <h2>Completeness &amp; confidence</h2>
+    <ul>
+      <li>Static coverage: {{ completeness.static_coverage_pct }}%</li>
+      <li>Runtime coverage: {{ completeness.runtime_coverage_pct }}%</li>
+      <li>Static visibility: {{ "yes" if completeness.static_visibility else "no" }}</li>
+      <li>Runtime visibility: {{ "yes" if completeness.runtime_visibility else "no" }}</li>
+      {% if completeness.unobservable_areas %}
+      <li>Unobservable areas: {{ "; ".join(completeness.unobservable_areas) }}</li>
+      {% endif %}
+    </ul>
+  </section>
+  {% endif %}
+  {% if runtime_trace %}
+  <section>
+    <h2>Runtime observations</h2>
+    <ul>
+      <li>Trace mode: {{ runtime_trace.trace_mode }}</li>
+      <li>Captured at: {{ runtime_trace.captured_at }}</li>
+      {% if runtime_trace.observed_models %}
+      <li>Observed models: {{ ", ".join(runtime_trace.observed_models) }}</li>
+      {% endif %}
+      {% if runtime_trace.imported_modules %}
+      <li>Observed imports: {{ ", ".join(runtime_trace.imported_modules) }}</li>
+      {% endif %}
+      {% if runtime_trace.notes %}
+      <li>Notes: {{ "; ".join(runtime_trace.notes) }}</li>
+      {% endif %}
+    </ul>
   </section>
   {% endif %}
   {% if stack %}
@@ -204,6 +366,9 @@ def render_html(report: Report) -> str:
               {% for issue in row.issue_details %}
                 <span class=\"badge sev-{{ issue.severity }}\">{{ issue.severity.title() }}</span>
                 <span class=\"issue-text\">{{ issue.message }}</span>{% if not loop.last %}<br />{% endif %}
+                {% if issue.frameworks %}
+                <div class=\"issue-text\">Mappings: {{ issue.frameworks | map(attribute='framework') | list | join(', ') }}</div>
+                {% endif %}
               {% endfor %}
             {% else %}
               None
@@ -232,6 +397,9 @@ def render_html(report: Report) -> str:
               {% for issue in row.issue_details %}
                 <span class=\"badge sev-{{ issue.severity }}\">{{ issue.severity.title() }}</span>
                 <span class=\"issue-text\">{{ issue.message }}</span>{% if not loop.last %}<br />{% endif %}
+                {% if issue.frameworks %}
+                <div class=\"issue-text\">Mappings: {{ issue.frameworks | map(attribute='framework') | list | join(', ') }}</div>
+                {% endif %}
               {% endfor %}
             {% else %}
               None
@@ -261,6 +429,24 @@ def render_html(report: Report) -> str:
     </table>
   </section>
   {% endif %}
+  {% if correlations %}
+  <section>
+    <h2>SBOM ↔ AI-BOM correlations</h2>
+    <table>
+      <thead><tr><th>Model</th><th>Source</th><th>Supporting dependencies</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for entry in correlations %}
+        <tr>
+          <td>{{ entry.model }}</td>
+          <td>{{ entry.source }}</td>
+          <td>{{ ", ".join(entry.supporting_dependencies) if entry.supporting_dependencies else "None" }}</td>
+          <td>{{ entry.note if entry.note else "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
 </body>
 </html>
 """
@@ -269,6 +455,7 @@ def render_html(report: Report) -> str:
     return template.render(
         generated_at=report.generated_at.isoformat(),
         ai_summary=report.ai_summary,
+        provenance=report.provenance,
         stack_risk_score=report.stack_risk_score,
         badge_class=(
             "bad"
@@ -291,6 +478,10 @@ def render_html(report: Report) -> str:
         models=list(_model_rows(report)),
         stack=snapshot_as_dict(report.stack_snapshot) if report.stack_snapshot else None,
         graph_violations=[asdict(v) for v in report.graph_policy_violations],
+        completeness=serialize_dataclass(report.completeness),
+        runtime_trace=serialize_dataclass(report.runtime_trace),
+        executive_summary=serialize_dataclass(report.executive_summary),
+        correlations=build_sbom_correlations(report),
     )
 
 
