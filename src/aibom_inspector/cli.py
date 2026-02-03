@@ -15,6 +15,7 @@ from .attestation import (
     current_git_commit,
     write_attestation,
 )
+from .feedback import FeedbackEntry, append_feedback
 from .dependency_scanner import (
     enrich_with_osv,
     fetch_shadow_uefi_intel_dependency,
@@ -33,9 +34,11 @@ from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
 from .report_enrichment import build_completeness, build_executive_summary
 from .reporting import render_report, write_report
 from .runtime_trace import load_runtime_trace, trace_python
+from .trust_root import create_trust_root, load_trust_root, sign_payload, verify_payload, write_trust_root
 from .stack_discovery import discover_models, discover_stack
 from .tensor_fuzz import inspect_weight_files
 from .types import ModelInfo, Report, RiskSettings, RuntimeTrace
+from .framework_mapping import framework_mapping_metadata
 
 
 def _collect_dependencies(
@@ -306,6 +309,11 @@ def main() -> None:
     help="Emit a SHA256 signature alongside the rendered report for tamper evidence.",
 )
 @click.option(
+    "--trust-root",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Path to a trust root JSON for signing/verifying attestations.",
+)
+@click.option(
     "--attestation-output",
     type=click.Path(dir_okay=False, writable=True, path_type=str),
     help="Write a machine-readable provenance attestation JSON file.",
@@ -355,6 +363,7 @@ def scan(
     github_check_output: Optional[str],
     evidence_pack: Optional[str],
     sign_report: bool,
+    trust_root: Optional[str],
     attestation_output: Optional[str],
     runtime_trace: Optional[str],
     baseline_report: Optional[str],
@@ -475,6 +484,7 @@ def scan(
         completeness=completeness,
     )
     report.executive_summary = build_executive_summary(report)
+    report.framework_mapping = framework_mapping_metadata()
 
     rendered = render_report(report, fmt)
     destination = Path(output) if output else None
@@ -563,6 +573,14 @@ def scan(
             signature=signature_text,
             metadata={"runtime_trace": bool(runtime_trace_data)},
         )
+        if trust_root:
+            root = load_trust_root(Path(trust_root))
+            signature = sign_payload(attestation_payload, root)
+            attestation_payload["attestation_signature"] = {
+                "key_id": root.key_id,
+                "algorithm": root.algorithm,
+                "value": signature,
+            }
         write_attestation(attestation_path, attestation_payload)
 
     if evidence_pack:
@@ -596,6 +614,109 @@ def trace(script: str, args: tuple[str, ...], output: str) -> None:
     Path(output).parent.mkdir(parents=True, exist_ok=True)
     Path(output).write_text(json.dumps(payload, indent=2))
     click.echo(f"Wrote runtime trace to {output}")
+
+
+@main.command("trust-root")
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    default="aibom-trust-root.json",
+    show_default=True,
+    help="Write a new trust root JSON file.",
+)
+def trust_root(output: str) -> None:
+    """Generate a new trust root for signing attestations."""
+
+    root = create_trust_root()
+    write_trust_root(Path(output), root)
+    click.echo(f"Wrote trust root to {output}")
+
+
+@main.command("verify-attestation")
+@click.option(
+    "--attestation",
+    "attestation_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Path to attestation JSON to verify.",
+)
+@click.option(
+    "--trust-root",
+    "trust_root_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Trust root JSON used for verification.",
+)
+def verify_attestation(attestation_path: str, trust_root_path: str) -> None:
+    """Verify an attestation signature against a trust root."""
+
+    payload = json.loads(Path(attestation_path).read_text())
+    signature = payload.pop("attestation_signature", None) or payload.pop("signature", None)
+    if not signature or not signature.get("value"):
+        click.echo("Attestation missing signature.", err=True)
+        raise SystemExit(1)
+    root = load_trust_root(Path(trust_root_path))
+    if signature.get("key_id") != root.key_id:
+        click.echo("Signature key_id does not match trust root.", err=True)
+        raise SystemExit(1)
+    valid = verify_payload(payload, signature["value"], root)
+    if not valid:
+        click.echo("Attestation signature invalid.", err=True)
+        raise SystemExit(1)
+    click.echo("Attestation signature verified.")
+
+
+@main.command()
+@click.option("--summary", required=True, help="Short summary of the feedback.")
+@click.option(
+    "--category",
+    required=True,
+    type=click.Choice(["bug", "feature", "ux", "governance", "integration", "other"]),
+    help="Feedback category.",
+)
+@click.option(
+    "--priority",
+    required=True,
+    type=click.Choice(["low", "medium", "high", "urgent"]),
+    help="Priority level.",
+)
+@click.option("--finding-code", help="Related issue or finding code.")
+@click.option("--organization", help="Customer organization.")
+@click.option("--contact", help="Contact email or handle.")
+@click.option("--workflow-stage", help="Workflow stage (e.g., onboarding, audit, CI gate).")
+@click.option("--notes", help="Additional notes.")
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    default="aibom-feedback.json",
+    show_default=True,
+    help="Feedback JSON store.",
+)
+def feedback(
+    summary: str,
+    category: str,
+    priority: str,
+    finding_code: Optional[str],
+    organization: Optional[str],
+    contact: Optional[str],
+    workflow_stage: Optional[str],
+    notes: Optional[str],
+    output: str,
+) -> None:
+    """Capture customer feedback into a structured JSON log."""
+
+    entry = FeedbackEntry(
+        summary=summary,
+        category=category,
+        priority=priority,
+        finding_code=finding_code,
+        organization=organization,
+        contact=contact,
+        workflow_stage=workflow_stage,
+        notes=notes,
+    )
+    append_feedback(Path(output), entry)
+    click.echo(f"Saved feedback to {output}")
 
 
 @main.command()

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable
 
 
@@ -10,7 +12,7 @@ class FrameworkMapping:
     control: str
 
 
-_BASE_MAPPINGS: dict[str, list[FrameworkMapping]] = {
+_BUILTIN_MAPPINGS: dict[str, list[FrameworkMapping]] = {
     "MISSING_PIN": [
         FrameworkMapping("NIST AI RMF", "GOVERN 1.6"),
         FrameworkMapping("ISO/IEC 42001", "A.5.3"),
@@ -67,6 +69,37 @@ _BASE_MAPPINGS: dict[str, list[FrameworkMapping]] = {
     ],
 }
 
+_MAPPING_VERSION = "builtin"
+_MAPPING_SOURCE = "builtin"
+
+
+def _load_owned_mappings() -> dict[str, list[FrameworkMapping]] | None:
+    global _MAPPING_VERSION, _MAPPING_SOURCE
+    candidate = Path(__file__).resolve().parents[2] / "policies" / "framework_mappings.json"
+    if not candidate.exists():
+        return None
+    try:
+        data = json.loads(candidate.read_text())
+    except Exception:
+        return None
+    mappings = {}
+    raw_mappings = data.get("mappings", {})
+    for code, entries in raw_mappings.items():
+        mappings[str(code).upper()] = [
+            FrameworkMapping(framework=entry["framework"], control=entry["control"])
+            for entry in entries
+        ]
+    _MAPPING_VERSION = str(data.get("version", "owned"))
+    _MAPPING_SOURCE = str(candidate)
+    return mappings
+
+
+_OWNED_MAPPINGS = _load_owned_mappings()
+
+
+def framework_mapping_metadata() -> dict[str, str]:
+    return {"version": _MAPPING_VERSION, "source": _MAPPING_SOURCE}
+
 
 def _normalize_code(code: str | None, message: str | None) -> str:
     if code:
@@ -80,12 +113,13 @@ def framework_mappings_for_issue(code: str | None, message: str | None) -> list[
     token = _normalize_code(code, message)
     mappings: list[FrameworkMapping] = []
 
-    for key, values in _BASE_MAPPINGS.items():
+    mappings_table = _OWNED_MAPPINGS or _BUILTIN_MAPPINGS
+    for key, values in mappings_table.items():
         if key in token:
             mappings.extend(values)
 
     if "CVE" in token and not any(mapping.framework == "NIST AI RMF" for mapping in mappings):
-        mappings.extend(_BASE_MAPPINGS["CVE"])
+        mappings.extend(mappings_table.get("CVE", []))
 
     unique: dict[tuple[str, str], FrameworkMapping] = {}
     for mapping in mappings:

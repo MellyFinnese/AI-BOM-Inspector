@@ -8,7 +8,11 @@ from uuid import uuid4
 
 from jinja2 import Environment, select_autoescape
 
-from .framework_mapping import framework_mappings_for_issue, serialize_mappings
+from .framework_mapping import (
+    framework_mapping_metadata,
+    framework_mappings_for_issue,
+    serialize_mappings,
+)
 from .report_enrichment import build_sbom_correlations, serialize_dataclass
 from .stack_discovery import snapshot_as_dict
 from .types import Report
@@ -89,6 +93,7 @@ def render_json(report: Report) -> str:
         "runtime_trace": serialize_dataclass(report.runtime_trace),
         "completeness": serialize_dataclass(report.completeness),
         "executive_summary": serialize_dataclass(report.executive_summary),
+        "framework_mapping": report.framework_mapping or framework_mapping_metadata(),
         "sbom_correlations": build_sbom_correlations(report),
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
@@ -131,6 +136,11 @@ def render_markdown(report: Report) -> str:
         inputs = report.provenance.get("inputs") or []
         if inputs:
             lines.append(f"- Hashed inputs: {len(inputs)} file(s)")
+
+    if report.framework_mapping:
+        lines.append("\n## Framework mapping\n")
+        lines.append(f"- Mapping version: {report.framework_mapping.get('version', 'unknown')}")
+        lines.append(f"- Mapping source: {report.framework_mapping.get('source', 'unknown')}")
 
     if report.completeness:
         lines.append("\n## Completeness & confidence\n")
@@ -298,6 +308,15 @@ def render_html(report: Report) -> str:
     </ul>
   </section>
   {% endif %}
+  {% if framework_mapping %}
+  <section>
+    <h2>Framework mapping</h2>
+    <ul>
+      <li>Mapping version: {{ framework_mapping.version }}</li>
+      <li>Mapping source: {{ framework_mapping.source }}</li>
+    </ul>
+  </section>
+  {% endif %}
   {% if completeness %}
   <section>
     <h2>Completeness &amp; confidence</h2>
@@ -456,6 +475,7 @@ def render_html(report: Report) -> str:
         generated_at=report.generated_at.isoformat(),
         ai_summary=report.ai_summary,
         provenance=report.provenance,
+        framework_mapping=report.framework_mapping or framework_mapping_metadata(),
         stack_risk_score=report.stack_risk_score,
         badge_class=(
             "bad"

@@ -112,12 +112,28 @@ aibom scan --format json --output aibom-report.json --attestation-output aibom-a
 
 The attestation JSON includes input/output hashes and the resolved git commit, making it easy to integrate with SLSA or in-toto workflows.
 
+## Trust root signing + verification
+To own the trust root for attestation signing, generate a local trust root and use it to sign reports:
+
+```bash
+aibom trust-root --output aibom-trust-root.json
+aibom scan --format json --output aibom-report.json --attestation-output aibom-attestation.json --trust-root aibom-trust-root.json
+aibom verify-attestation --attestation aibom-attestation.json --trust-root aibom-trust-root.json
+```
+
 ## Runtime tracing
 Use the built-in runtime tracer to observe model loads or imports that static scanning can miss:
 
 ```bash
 aibom trace scripts/run_inference.py --output aibom-runtime-trace.json
 aibom scan --runtime-trace aibom-runtime-trace.json --format json --output aibom-report.json
+```
+
+## Customer feedback workflow
+Capture structured customer feedback to feed roadmap and governance workflows:
+
+```bash
+aibom feedback --summary "Need SOC 2 mapping detail" --category governance --priority high --organization "Acme AI" --workflow-stage audit
 ```
 
 ## Choosing the right format

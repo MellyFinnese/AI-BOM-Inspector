@@ -23,6 +23,7 @@ class Report:
     runtime_trace: "RuntimeTrace | None" = None
     completeness: "CompletenessSummary | None" = None
     executive_summary: "ExecutiveRiskSummary | None" = None
+    framework_mapping: dict | None = None
 
     @property
     def total_risk(self) -> int:

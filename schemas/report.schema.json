@@ -83,6 +83,15 @@
         "rationale": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "framework_mapping": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["version", "source"],
+      "properties": {
+        "version": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
     "sbom_correlations": {
       "type": "array",
       "items": {
