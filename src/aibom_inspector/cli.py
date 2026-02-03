@@ -37,6 +37,7 @@ from .runtime_trace import load_runtime_trace, trace_python
 from .audit_log import append_audit_log, build_audit_entry, verify_audit_log
 from .evidence_export import write_evidence_export
 from .integrity import compute_file_sha256, enforce_lockfile_checksums, verify_expected_hashes
+from .ip_protection import protect_ip
 from .trust_root import (
     create_trust_root,
     load_trust_root,
@@ -934,6 +935,59 @@ def export_evidence(report_path: str, output_path: str) -> None:
 
     write_evidence_export(Path(report_path), Path(output_path))
     click.echo(f"Wrote evidence export to {output_path}")
+
+
+@main.command("ip-protect")
+@click.option(
+    "--obfuscate",
+    "obfuscate_paths",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Python files to obfuscate (repeatable).",
+)
+@click.option(
+    "--strip-symbols",
+    "strip_paths",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Binary files to strip symbols from (repeatable).",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False, path_type=str),
+    default="ip-protection",
+    show_default=True,
+    help="Directory for obfuscated/stripped outputs.",
+)
+@click.option(
+    "--strip-tool",
+    type=str,
+    help="Override strip tool path (defaults to `strip` in PATH).",
+)
+def ip_protect(
+    obfuscate_paths: tuple[str, ...],
+    strip_paths: tuple[str, ...],
+    output_dir: str,
+    strip_tool: Optional[str],
+) -> None:
+    """Apply selective obfuscation and symbol stripping for IP protection."""
+
+    if not obfuscate_paths and not strip_paths:
+        click.echo("No IP protection targets supplied.", err=True)
+        raise SystemExit(1)
+    results = protect_ip(
+        obfuscate_paths=[Path(path) for path in obfuscate_paths],
+        strip_paths=[Path(path) for path in strip_paths],
+        output_dir=Path(output_dir),
+        strip_tool=strip_tool,
+    )
+    failures = [result for result in results if result.status != "ok"]
+    for result in results:
+        status = "ok" if result.status == "ok" else "error"
+        message = f" ({result.message})" if result.message else ""
+        click.echo(f"[{status}] {result.action}: {result.path} -> {result.output_path}{message}")
+    if failures:
+        raise SystemExit(1)
 
 
 @main.command()

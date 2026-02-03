@@ -139,6 +139,13 @@ aibom verify-audit-log --audit-log aibom-audit.jsonl
 aibom export-evidence --report aibom-report.json --output aibom-evidence.json
 ```
 
+## IP protection outputs
+Apply selective obfuscation and strip symbols from production binaries:
+
+```bash
+aibom ip-protect --obfuscate src/proprietary_logic.py --strip-symbols dist/agent.bin --output-dir ip-protection
+```
+
 ## Runtime tracing
 Use the built-in runtime tracer to observe model loads or imports that static scanning can miss:
 
