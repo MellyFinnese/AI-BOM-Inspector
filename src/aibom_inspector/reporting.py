@@ -90,6 +90,7 @@ def render_json(report: Report) -> str:
         "risk_breakdown": report.risk_breakdown,
         "risk_settings": report.risk_settings.as_dict(),
         "provenance": report.provenance,
+        "approvals": report.approvals,
         "runtime_trace": serialize_dataclass(report.runtime_trace),
         "completeness": serialize_dataclass(report.completeness),
         "executive_summary": serialize_dataclass(report.executive_summary),
@@ -98,6 +99,8 @@ def render_json(report: Report) -> str:
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
+    if report.integrity_findings:
+        payload["integrity_findings"] = [asdict(finding) for finding in report.integrity_findings]
     if report.stack_snapshot:
         payload["stack"] = snapshot_as_dict(report.stack_snapshot)
     if report.graph_policy_violations:
@@ -137,6 +140,11 @@ def render_markdown(report: Report) -> str:
         if inputs:
             lines.append(f"- Hashed inputs: {len(inputs)} file(s)")
 
+    if report.approvals:
+        lines.append("\n## Approvals\n")
+        for approval in report.approvals:
+            lines.append(f"- {approval}")
+
     if report.framework_mapping:
         lines.append("\n## Framework mapping\n")
         lines.append(f"- Mapping version: {report.framework_mapping.get('version', 'unknown')}")
@@ -171,6 +179,15 @@ def render_markdown(report: Report) -> str:
             )
         if report.runtime_trace.notes:
             lines.append(f"- Notes: {'; '.join(report.runtime_trace.notes)}")
+
+    if report.integrity_findings:
+        lines.append("\n## Integrity checks\n")
+        lines.append("| Kind | Path | Severity | Message |")
+        lines.append("| --- | --- | --- | --- |")
+        for finding in report.integrity_findings:
+            lines.append(
+                f"| {finding.kind} | {finding.path} | {finding.severity} | {finding.message} |"
+            )
 
     lines.append("\n## Dependencies\n")
     lines.append("| Name | Version | Source | License | Risk | Trust | Issues |")
@@ -308,6 +325,16 @@ def render_html(report: Report) -> str:
     </ul>
   </section>
   {% endif %}
+  {% if approvals %}
+  <section>
+    <h2>Approvals</h2>
+    <ul>
+      {% for approval in approvals %}
+      <li>{{ approval }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
   {% if framework_mapping %}
   <section>
     <h2>Framework mapping</h2>
@@ -347,6 +374,24 @@ def render_html(report: Report) -> str:
       <li>Notes: {{ "; ".join(runtime_trace.notes) }}</li>
       {% endif %}
     </ul>
+  </section>
+  {% endif %}
+  {% if integrity_findings %}
+  <section>
+    <h2>Integrity checks</h2>
+    <table>
+      <thead><tr><th>Kind</th><th>Path</th><th>Severity</th><th>Message</th></tr></thead>
+      <tbody>
+        {% for finding in integrity_findings %}
+        <tr>
+          <td>{{ finding.kind }}</td>
+          <td>{{ finding.path }}</td>
+          <td>{{ finding.severity }}</td>
+          <td>{{ finding.message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </section>
   {% endif %}
   {% if stack %}
@@ -475,6 +520,7 @@ def render_html(report: Report) -> str:
         generated_at=report.generated_at.isoformat(),
         ai_summary=report.ai_summary,
         provenance=report.provenance,
+        approvals=report.approvals,
         framework_mapping=report.framework_mapping or framework_mapping_metadata(),
         stack_risk_score=report.stack_risk_score,
         badge_class=(
@@ -502,6 +548,7 @@ def render_html(report: Report) -> str:
         runtime_trace=serialize_dataclass(report.runtime_trace),
         executive_summary=serialize_dataclass(report.executive_summary),
         correlations=build_sbom_correlations(report),
+        integrity_findings=[asdict(finding) for finding in report.integrity_findings],
     )
 
 
@@ -675,6 +722,26 @@ def render_sarif(report: Report) -> str:
                 },
                 "helpUri": "https://github.com/aibom-inspector/AI-BOM-Inspector/blob/main/docs/POLICY.md",
                 "properties": {"aibom:severity": violation.severity},
+            },
+        )
+
+    for finding in report.integrity_findings:
+        issue = {
+            "message": finding.message,
+            "severity": finding.severity,
+            "code": finding.code or finding.kind,
+        }
+        results.append(_sarif_result("integrity", finding.path, issue))
+        rule_id = (issue.get("code") or issue.get("message") or "AIBOM_INTEGRITY").replace(" ", "_")[:64]
+        rules.setdefault(
+            rule_id,
+            {
+                "id": rule_id,
+                "name": rule_id,
+                "shortDescription": {"text": issue.get("message", "Integrity finding")},
+                "fullDescription": {"text": "Artifact integrity or policy checksum enforcement finding."},
+                "helpUri": "https://github.com/aibom-inspector/AI-BOM-Inspector/blob/main/docs/POLICY.md",
+                "properties": {"aibom:severity": issue.get("severity", "warning")},
             },
         )
 

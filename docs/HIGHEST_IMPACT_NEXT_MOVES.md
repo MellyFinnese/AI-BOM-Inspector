@@ -14,6 +14,47 @@ Prioritize these tiers in order to move from scanner utility to governance platf
 - **Runtime hooks / tracing (differentiator)**: optional Python import tracing, wrappers for model load calls, and LD_PRELOAD/monkeypatch style tracing to capture runtime-resolved models.
 - **Enterprise CI/CD modes**: provide hardened presets for GitHub Actions, GitLab CI, and Azure DevOps with policy-linked exit codes, artifact storage, and JSON outputs that plug into GRC tooling.
 
+## Enterprise trust baseline (non-negotiables)
+These controls are the deal-makers for regulated and enterprise buyers. See `docs/ENTERPRISE_TRUST_BASELINE.md` for the full checklist and rationale.
+
+### Provenance & signing
+- Cosign-signed releases and build attestations.
+- SLSA-aligned CI pipeline support.
+- Reproducible builds for independent verification.
+
+### Artifact integrity
+- Runtime hash verification for reports/attestations.
+- Signed plugins/extensions.
+- Config + ruleset integrity checks.
+
+### Dependency trust enforcement
+- Signature verification on dependencies.
+- Trusted registry allowlists.
+- Dependency confusion detection.
+- Lockfile checksum enforcement.
+
+### Audit & compliance controls
+- Immutable audit logs.
+- Evidence export with SOC 2 / ISO / NIST mappings.
+- Policy-as-code with versioned approvals and waivers.
+- Tamper-evident log chains.
+
+### Enterprise access controls
+- RBAC for scan, policy, and evidence access.
+- Org + project isolation for multi-tenant rollouts.
+- Approval workflows for exceptions and critical releases.
+- Least-privilege enforcement for integrations.
+
+### IP protection (selective + clean)
+- Selective obfuscation to protect proprietary logic only.
+- Strip symbols from production artifacts.
+- Protect algorithms without breaking auditability.
+
+### Licensing & entitlements
+- Feature gating for enterprise-only capabilities.
+- Server-side entitlements for license validation.
+- License enforcement in build/runtime checks.
+
 ### Tier 3: Market weapon
 - **Risk scoring that execs understand**: translate findings into Low/Medium/High governance risk, regulatory exposure, and supply-chain blast radius.
 - **SBOM + AI-BOM correlation**: connect traditional SBOMs (CycloneDX, SPDX) to AI-BOM artifacts to show “this vulnerable lib supports this model pipeline.”

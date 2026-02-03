@@ -10,7 +10,13 @@ paths stable.
 
 from .types_dependencies import DependencyInfo, DependencyIssue, apply_license_category_dependency
 from .types_models import ModelInfo, ModelIssue, apply_license_category_model
-from .types_report import CompletenessSummary, ExecutiveRiskSummary, Report, RuntimeTrace
+from .types_report import (
+    CompletenessSummary,
+    ExecutiveRiskSummary,
+    IntegrityFinding,
+    Report,
+    RuntimeTrace,
+)
 from .types_risk import LICENSE_CATEGORIES, RiskSettings, categorize_license
 
 __all__ = [
@@ -22,6 +28,7 @@ __all__ = [
     "RuntimeTrace",
     "CompletenessSummary",
     "ExecutiveRiskSummary",
+    "IntegrityFinding",
     "RiskSettings",
     "LICENSE_CATEGORIES",
     "apply_license_category_dependency",

@@ -122,6 +122,23 @@ aibom verify-attestation --attestation aibom-attestation.json --trust-root aibom
 aibom verify-trust-root --trust-root aibom-trust-root.json
 ```
 
+## Runtime hash verification
+Validate report integrity at consumption time using the SHA256 sidecar or attestation metadata:
+
+```bash
+aibom verify-report --report aibom-report.json --sha256 aibom-report.json.sha256
+aibom verify-report --report aibom-report.json --attestation aibom-attestation.json
+```
+
+## Audit logs + evidence export
+Record tamper-evident audit logs and export compliance evidence with framework mappings:
+
+```bash
+aibom scan --format json --output aibom-report.json --audit-log aibom-audit.jsonl --audit-actor \"ci@acme\"
+aibom verify-audit-log --audit-log aibom-audit.jsonl
+aibom export-evidence --report aibom-report.json --output aibom-evidence.json
+```
+
 ## Runtime tracing
 Use the built-in runtime tracer to observe model loads or imports that static scanning can miss:
 

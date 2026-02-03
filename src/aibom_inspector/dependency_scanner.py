@@ -57,6 +57,49 @@ COMMON_CANONICAL_PACKAGES = {
     "fastapi",
 }
 
+DEFAULT_REGISTRY_BY_SOURCE = {
+    "requirements.txt": "pypi",
+    "pyproject.toml": "pypi",
+    "package.json": "npm",
+    "package-lock.json": "npm",
+    "go.mod": "go",
+    "pom.xml": "maven",
+    "cyclonedx": "sbom",
+    "spdx": "sbom",
+}
+
+
+def _infer_registry(dep: DependencyInfo) -> str | None:
+    if dep.source.startswith("http"):
+        try:
+            from urllib.parse import urlparse
+
+            parsed = urlparse(dep.source)
+            return parsed.netloc or dep.source
+        except Exception:
+            return dep.source
+    return DEFAULT_REGISTRY_BY_SOURCE.get(dep.source)
+
+
+def _truthy_value(raw: str | None) -> bool:
+    if raw is None:
+        return False
+    return str(raw).strip().lower() in {"true", "yes", "1", "signed", "verified"}
+
+
+def _signature_from_properties(properties: list[dict] | None) -> bool | None:
+    if not properties:
+        return None
+    signature_hint = None
+    for entry in properties:
+        name = str(entry.get("name", "")).lower()
+        value = str(entry.get("value", "")).strip()
+        if "signature_verified" in name:
+            signature_hint = _truthy_value(value)
+        elif "signature" in name:
+            signature_hint = _truthy_value(value) or signature_hint or True
+    return signature_hint
+
 
 def _apply_trust_heuristics(dep: DependencyInfo) -> None:
     normalized_name = dep.name.lower()
@@ -199,6 +242,7 @@ def parse_requirement_line(line: str, source: str = "requirements.txt") -> Depen
     dep = DependencyInfo(name=req.name, version=resolved_version, source=source, issues=issues)
     apply_license_category_dependency(dep)
     _apply_trust_heuristics(dep)
+    dep.registry = _infer_registry(dep)
     return dep
 
 
@@ -259,12 +303,14 @@ def fetch_shadow_uefi_intel_dependency(
                 code="SHADOW_UEFI_INTEL_OFFLINE",
             )
         )
-        return DependencyInfo(
+        dep = DependencyInfo(
             name="Shadow-UEFI-Intel",
             version=None,
             source=repo_url,
             issues=issues,
         )
+        dep.registry = _infer_registry(dep)
+        return dep
 
     try:
         response = requests.get(api_url, timeout=timeout)
@@ -276,12 +322,14 @@ def fetch_shadow_uefi_intel_dependency(
                 code="SHADOW_UEFI_INTEL_UNAVAILABLE",
             )
         )
-        return DependencyInfo(
+        dep = DependencyInfo(
             name="Shadow-UEFI-Intel",
             version=None,
             source=repo_url,
             issues=issues,
         )
+        dep.registry = _infer_registry(dep)
+        return dep
 
     if response.status_code != 200:
         issues.append(
@@ -291,12 +339,14 @@ def fetch_shadow_uefi_intel_dependency(
                 code="SHADOW_UEFI_INTEL_UNAVAILABLE",
             )
         )
-        return DependencyInfo(
+        dep = DependencyInfo(
             name="Shadow-UEFI-Intel",
             version=None,
             source=repo_url,
             issues=issues,
         )
+        dep.registry = _infer_registry(dep)
+        return dep
 
     payload = response.json()
     latest_ref = payload.get("default_branch") or payload.get("pushed_at")
@@ -313,6 +363,7 @@ def fetch_shadow_uefi_intel_dependency(
     )
     apply_license_category_dependency(dep)
     _apply_trust_heuristics(dep)
+    dep.registry = _infer_registry(dep)
     return dep
 
 
@@ -343,6 +394,7 @@ def scan_package_json(path: Path) -> List[DependencyInfo]:
             )
             apply_license_category_dependency(dep)
             _apply_trust_heuristics(dep)
+            dep.registry = _infer_registry(dep)
             dependencies.append(dep)
 
     _parse_block(data.get("dependencies"))
@@ -370,6 +422,7 @@ def scan_package_lock(path: Path) -> List[DependencyInfo]:
         )
         apply_license_category_dependency(dep)
         _apply_trust_heuristics(dep)
+        dep.registry = _infer_registry(dep)
         deps.append(dep)
     return deps
 
@@ -392,6 +445,7 @@ def _parse_go_list_output(output: str) -> List[DependencyInfo]:
         dep = DependencyInfo(name=path, version=version, source="go.mod", issues=issues)
         apply_license_category_dependency(dep)
         _apply_trust_heuristics(dep)
+        dep.registry = _infer_registry(dep)
         deps.append(dep)
     return deps
 
@@ -451,6 +505,7 @@ def scan_go_mod(path: Path) -> List[DependencyInfo]:
             dep = DependencyInfo(name=name, version=version, source="go.mod", issues=issues)
             apply_license_category_dependency(dep)
             _apply_trust_heuristics(dep)
+            dep.registry = _infer_registry(dep)
             dependencies.append(dep)
     return dependencies
 
@@ -490,6 +545,7 @@ def scan_pom(path: Path) -> List[DependencyInfo]:
         dep = DependencyInfo(name=name, version=version_cleaned, source="pom.xml", issues=issues)
         apply_license_category_dependency(dep)
         _apply_trust_heuristics(dep)
+        dep.registry = _infer_registry(dep)
         deps.append(dep)
     return deps
 
@@ -640,10 +696,12 @@ def parse_sbom(path: Path) -> List[DependencyInfo]:
                 version=comp.get("version"),
                 source="cyclonedx",
                 license=license_value,
+                signature_verified=_signature_from_properties(comp.get("properties")),
                 issues=_issue_for_specifier("==", comp.get("version")),
             )
             apply_license_category_dependency(dep)
             _apply_trust_heuristics(dep)
+            dep.registry = _infer_registry(dep)
             deps.append(dep)
         return deps
 
@@ -660,6 +718,7 @@ def parse_sbom(path: Path) -> List[DependencyInfo]:
             )
             apply_license_category_dependency(dep)
             _apply_trust_heuristics(dep)
+            dep.registry = _infer_registry(dep)
             deps.append(dep)
         return deps
 
