@@ -17,6 +17,42 @@ jobs:
 
 The workflow `.github/workflows/scan-pr.yml` wires this action up for `pull_request` events by default.
 
+## Hardened mode (policy gating + attestations)
+
+For enterprise CI/CD, emit JSON, SARIF, and a provenance attestation while gating on a minimum score:
+
+```yaml
+name: ai-bom-hardened
+on: [pull_request]
+jobs:
+  scan:
+    permissions:
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install AI-BOM Inspector
+        run: pip install aibom-inspector
+      - name: Scan with attestation
+        run: >-
+          aibom scan --format json --output aibom-report.json
+          --sarif-output aibom-report.sarif
+          --attestation-output aibom-attestation.json
+          --fail-on-score 75 --require-input --online
+      - name: Upload SARIF to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: aibom-report.sarif
+      - name: Upload AI-BOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aibom-report
+          path: |
+            aibom-report.json
+            aibom-attestation.json
+```
+
 ## Example: upload SARIF + Markdown in one call
 
 When you want findings in the GitHub Security tab **and** a human-friendly artifact, emit both formats from a single scan step:

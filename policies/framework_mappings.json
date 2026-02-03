@@ -1,0 +1,59 @@
+{
+  "version": "2024.09-owned",
+  "mappings": {
+    "MISSING_PIN": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.6" },
+      { "framework": "ISO/IEC 42001", "control": "A.5.3" },
+      { "framework": "SOC 2", "control": "CC8.1" }
+    ],
+    "LOOSE_PIN": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.6" },
+      { "framework": "ISO/IEC 42001", "control": "A.5.3" },
+      { "framework": "SOC 2", "control": "CC8.1" }
+    ],
+    "UNVERIFIED_SOURCE": [
+      { "framework": "NIST AI RMF", "control": "MAP 1.4" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.7" },
+      { "framework": "OWASP LLM Top 10", "control": "LLM05" },
+      { "framework": "SOC 2", "control": "CC5.2" }
+    ],
+    "UNKNOWN_LICENSE": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.2" },
+      { "framework": "ISO/IEC 42001", "control": "A.5.2" },
+      { "framework": "SOC 2", "control": "CC1.2" }
+    ],
+    "STALE_MODEL": [
+      { "framework": "NIST AI RMF", "control": "MEASURE 2.2" },
+      { "framework": "ISO/IEC 42001", "control": "A.7.4" },
+      { "framework": "OWASP LLM Top 10", "control": "LLM09" }
+    ],
+    "KNOWN_VULN": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.6" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.8" },
+      { "framework": "OWASP LLM Top 10", "control": "LLM06" },
+      { "framework": "SOC 2", "control": "CC7.1" }
+    ],
+    "CVE": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.6" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.8" },
+      { "framework": "OWASP LLM Top 10", "control": "LLM06" },
+      { "framework": "SOC 2", "control": "CC7.1" }
+    ],
+    "TYPOSQUAT_SUSPECT": [
+      { "framework": "NIST AI RMF", "control": "MAP 1.3" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.4" },
+      { "framework": "OWASP LLM Top 10", "control": "LLM05" },
+      { "framework": "SOC 2", "control": "CC5.2" }
+    ],
+    "SUSPICIOUS_RELEASE": [
+      { "framework": "NIST AI RMF", "control": "MAP 1.4" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.4" },
+      { "framework": "SOC 2", "control": "CC5.2" }
+    ],
+    "REPO_MISMATCH": [
+      { "framework": "NIST AI RMF", "control": "MAP 1.4" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.4" },
+      { "framework": "SOC 2", "control": "CC5.2" }
+    ]
+  }
+}

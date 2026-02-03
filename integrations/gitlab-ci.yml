@@ -1,0 +1,16 @@
+stages:
+  - security
+
+aibom_scan:
+  image: python:3.11
+  stage: security
+  script:
+    - pip install aibom-inspector
+    - aibom scan --format json --output aibom-report.json --sarif-output aibom-report.sarif --attestation-output aibom-attestation.json --fail-on-score 75 --require-input --online
+  artifacts:
+    when: always
+    paths:
+      - aibom-report.json
+      - aibom-report.sarif
+      - aibom-attestation.json
+  allow_failure: false
