@@ -1,0 +1,21 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: "ubuntu-latest"
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "3.11"
+  - script: |
+      pip install aibom-inspector
+      aibom scan --format json --output aibom-report.json --sarif-output aibom-report.sarif --attestation-output aibom-attestation.json --fail-on-score 75 --require-input --online
+    displayName: "Run AI-BOM Inspector"
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: "$(System.DefaultWorkingDirectory)"
+      artifactName: "aibom-report"
+      publishLocation: "Container"
