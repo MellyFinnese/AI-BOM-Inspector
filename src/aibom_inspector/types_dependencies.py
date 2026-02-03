@@ -19,6 +19,8 @@ class DependencyInfo:
     version: Optional[str]
     source: str
     license: Optional[str] = None
+    registry: Optional[str] = None
+    signature_verified: Optional[bool] = None
     issues: List[DependencyIssue] = field(default_factory=list)
     license_category: str | None = None
     trust_signals: List[DependencyIssue] = field(default_factory=list)

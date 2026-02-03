@@ -34,6 +34,7 @@ from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
 from .report_enrichment import build_completeness, build_executive_summary
 from .reporting import render_report, write_report
 from .runtime_trace import load_runtime_trace, trace_python
+from .integrity import compute_file_sha256, enforce_lockfile_checksums, verify_expected_hashes
 from .trust_root import (
     create_trust_root,
     load_trust_root,
@@ -45,6 +46,7 @@ from .trust_root import (
 )
 from .stack_discovery import discover_models, discover_stack
 from .tensor_fuzz import inspect_weight_files
+from .trust_enforcement import TrustEnforcementConfig, apply_dependency_trust_enforcement
 from .types import ModelInfo, Report, RiskSettings, RuntimeTrace
 from .framework_mapping import framework_mapping_metadata
 
@@ -118,6 +120,17 @@ def _merge_models(primary: List[ModelInfo], secondary: List[ModelInfo]) -> List[
         primary.append(model)
         existing.add(model.identifier)
     return primary
+
+
+def _parse_hash_entries(entries: tuple[str, ...], label: str) -> dict[Path, str]:
+    parsed: dict[Path, str] = {}
+    for entry in entries:
+        if ":" not in entry:
+            raise click.BadParameter(f"{label} must be in PATH:SHA256 format")
+        path_text, hash_value = entry.rsplit(":", 1)
+        path = Path(path_text)
+        parsed[path] = hash_value.strip()
+    return parsed
 
 
 @click.group()
@@ -277,6 +290,46 @@ def main() -> None:
     help="Fail the scan if no dependencies or models are discovered.",
 )
 @click.option(
+    "--registry-allowlist",
+    multiple=True,
+    help="Allowed dependency registries (repeatable, e.g., pypi, npm, internal.host).",
+)
+@click.option(
+    "--protected-namespace",
+    multiple=True,
+    help="Namespace prefixes reserved for internal packages to detect dependency confusion.",
+)
+@click.option(
+    "--require-dependency-signatures",
+    is_flag=True,
+    help="Require signature metadata on dependencies when available.",
+)
+@click.option(
+    "--lockfile-checksum",
+    multiple=True,
+    help="Expected lockfile checksum in PATH:SHA256 format (repeatable).",
+)
+@click.option(
+    "--enforce-lockfile-checksums",
+    is_flag=True,
+    help="Require checksums for all detected lockfiles.",
+)
+@click.option(
+    "--config-checksum",
+    multiple=True,
+    help="Expected config checksum in PATH:SHA256 format (repeatable).",
+)
+@click.option(
+    "--ruleset-checksum",
+    multiple=True,
+    help="Expected ruleset checksum in PATH:SHA256 format (repeatable).",
+)
+@click.option(
+    "--plugin-signature",
+    multiple=True,
+    help="Expected plugin signature in PATH:SHA256 format (repeatable).",
+)
+@click.option(
     "--discover-stack/--skip-stack-discovery",
     "discover_stack_flag",
     default=True,
@@ -364,6 +417,14 @@ def scan(
     shadow_uefi_timeout: Optional[float],
     shadow_uefi_repo: Optional[str],
     require_input: bool,
+    registry_allowlist: tuple[str, ...],
+    protected_namespace: tuple[str, ...],
+    require_dependency_signatures: bool,
+    lockfile_checksum: tuple[str, ...],
+    enforce_lockfile_checksums: bool,
+    config_checksum: tuple[str, ...],
+    ruleset_checksum: tuple[str, ...],
+    plugin_signature: tuple[str, ...],
     discover_stack_flag: bool,
     enforce_graph_policy: bool,
     env: str,
@@ -421,6 +482,26 @@ def scan(
         dependencies = enrich_with_osv(dependencies, offline=offline, osv_url=osv_url, timeout=osv_timeout)
 
     models = enrich_models_with_cves(models)
+
+    policy_data = load_policy(Path(policy)) if policy else None
+
+    trusted_registries = list(
+        {*(policy_data.trusted_registries if policy_data else []), *registry_allowlist}
+    )
+    protected_namespaces = list(
+        {*(policy_data.protected_namespaces if policy_data else []), *protected_namespace}
+    )
+    require_signatures = require_dependency_signatures or (
+        policy_data.require_dependency_signatures if policy_data else False
+    )
+    apply_dependency_trust_enforcement(
+        dependencies,
+        TrustEnforcementConfig(
+            trusted_registries=trusted_registries,
+            protected_namespaces=protected_namespaces,
+            require_dependency_signatures=require_signatures,
+        ),
+    )
 
     runtime_trace_data: RuntimeTrace | None = None
     if runtime_trace:
@@ -480,6 +561,40 @@ def scan(
         env_vars=env_vars,
     )
 
+    lockfile_checksums = {
+        Path(path): value for path, value in (policy_data.lockfile_checksums.items() if policy_data else {})
+    }
+    lockfile_checksums.update(_parse_hash_entries(lockfile_checksum, "lockfile-checksum"))
+    config_checksums = {
+        Path(path): value for path, value in (policy_data.config_checksums.items() if policy_data else {})
+    }
+    config_checksums.update(_parse_hash_entries(config_checksum, "config-checksum"))
+    ruleset_checksums = {
+        Path(path): value for path, value in (policy_data.ruleset_checksums.items() if policy_data else {})
+    }
+    ruleset_checksums.update(_parse_hash_entries(ruleset_checksum, "ruleset-checksum"))
+    plugin_signatures = {
+        Path(path): value for path, value in (policy_data.plugin_signatures.items() if policy_data else {})
+    }
+    plugin_signatures.update(_parse_hash_entries(plugin_signature, "plugin-signature"))
+
+    integrity_findings = []
+    integrity_findings.extend(
+        enforce_lockfile_checksums(
+            Path("."),
+            lockfile_checksums,
+            require_all=enforce_lockfile_checksums
+            or (policy_data.require_lockfile_checksums if policy_data else False),
+        )
+    )
+    integrity_findings.extend(verify_expected_hashes(config_checksums, kind="config", code_prefix="CONFIG"))
+    integrity_findings.extend(
+        verify_expected_hashes(ruleset_checksums, kind="ruleset", code_prefix="RULESET")
+    )
+    integrity_findings.extend(
+        verify_expected_hashes(plugin_signatures, kind="plugin", code_prefix="PLUGIN_SIGNATURE")
+    )
+
     report = Report(
         dependencies=dependencies,
         models=models,
@@ -488,6 +603,7 @@ def scan(
         risk_settings=risk_settings,
         stack_snapshot=stack_snapshot,
         provenance=provenance,
+        integrity_findings=integrity_findings,
         runtime_trace=runtime_trace_data,
         completeness=completeness,
     )
@@ -527,8 +643,7 @@ def scan(
             click.echo(f"Unable to diff with baseline report: {exc}", err=True)
 
     graph_policy_requested = enforce_graph_policy
-    if policy:
-        policy_data = load_policy(Path(policy))
+    if policy_data:
         graph_policy_requested = graph_policy_requested or policy_data.enforce_graph_policies
         policy_evaluation = evaluate_policy(
             report,
@@ -692,6 +807,57 @@ def verify_trust_root_cmd(trust_root_path: str) -> None:
         click.echo("Trust root signature invalid or missing.", err=True)
         raise SystemExit(1)
     click.echo("Trust root signature verified.")
+
+
+@main.command("verify-report")
+@click.option(
+    "--report",
+    "report_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Report file to verify.",
+)
+@click.option(
+    "--sha256",
+    "sha256_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Path to the .sha256 file produced by --sign-report.",
+)
+@click.option(
+    "--attestation",
+    "attestation_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Attestation JSON containing the report hash.",
+)
+def verify_report(report_path: str, sha256_path: Optional[str], attestation_path: Optional[str]) -> None:
+    """Verify report hashes against a .sha256 file or attestation payload."""
+
+    if not sha256_path and not attestation_path:
+        click.echo("Provide --sha256 and/or --attestation to verify report integrity.", err=True)
+        raise SystemExit(1)
+
+    report_hash = compute_file_sha256(Path(report_path))
+    failures = []
+
+    if sha256_path:
+        expected = Path(sha256_path).read_text().strip().split()[0]
+        if report_hash != expected:
+            failures.append("SHA256 file hash mismatch.")
+
+    if attestation_path:
+        payload = json.loads(Path(attestation_path).read_text())
+        expected = (payload.get("report") or {}).get("sha256")
+        if not expected:
+            failures.append("Attestation missing report SHA256.")
+        elif report_hash != expected:
+            failures.append("Attestation report hash mismatch.")
+
+    if failures:
+        for failure in failures:
+            click.echo(failure, err=True)
+        raise SystemExit(1)
+
+    click.echo("Report hash verified.")
 
 
 @main.command()

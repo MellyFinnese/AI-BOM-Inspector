@@ -9,6 +9,14 @@ Policies let teams codify their risk appetite for dependencies and models. They 
 - `disallow`/`blocklist` – issue codes that should immediately fail policy checks (e.g., `MISSING_PIN`, `UNVERIFIED_SOURCE`).
 - `min_trust_score` – minimum trust score for dependencies/models (0–100).
 - `publisher_expectations` – map of component names to expected publishers or sources.
+- `trusted_registries` – allowlist of dependency registries (e.g., `pypi`, `npm`, `maven`, internal hosts).
+- `protected_namespaces` – reserved package name prefixes to detect dependency confusion.
+- `require_dependency_signatures` – require signature metadata on dependencies (SBOM-provided).
+- `lockfile_checksums` – map of lockfile paths to expected SHA256 hashes.
+- `require_lockfile_checksums` – require checksums for all detected lockfiles.
+- `config_checksums` – map of config file paths to expected SHA256 hashes.
+- `ruleset_checksums` – map of ruleset file paths to expected SHA256 hashes.
+- `plugin_signatures` – map of plugin/extension paths to expected SHA256 signatures.
 - `exceptions` – allowlist entries that can soften strict rules with optional expiration timestamps.
 - `enforce_graph_policies` – enable high-signal stack graph guardrails (MCP write scopes in prod, shell tools wired to agents in prod, unpinned models in prod, and broad filesystem writes).
 

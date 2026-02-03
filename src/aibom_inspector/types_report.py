@@ -11,6 +11,15 @@ from .types_risk import RiskSettings
 
 
 @dataclass
+class IntegrityFinding:
+    kind: str
+    path: str
+    message: str
+    severity: str = "high"
+    code: str | None = None
+
+
+@dataclass
 class Report:
     dependencies: list[DependencyInfo]
     models: list[ModelInfo]
@@ -20,6 +29,7 @@ class Report:
     stack_snapshot: GraphSnapshot | None = None
     graph_policy_violations: list[GraphPolicyViolation] = field(default_factory=list)
     provenance: dict | None = None
+    integrity_findings: list[IntegrityFinding] = field(default_factory=list)
     runtime_trace: "RuntimeTrace | None" = None
     completeness: "CompletenessSummary | None" = None
     executive_summary: "ExecutiveRiskSummary | None" = None
