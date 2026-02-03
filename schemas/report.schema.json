@@ -45,6 +45,21 @@
       "type": ["object", "null"],
       "additionalProperties": true
     },
+    "integrity_findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "path", "message", "severity"],
+        "properties": {
+          "kind": { "type": "string" },
+          "path": { "type": "string" },
+          "message": { "type": "string" },
+          "severity": { "type": "string" },
+          "code": { "type": ["string", "null"] }
+        }
+      }
+    },
     "runtime_trace": {
       "type": ["object", "null"],
       "additionalProperties": false,

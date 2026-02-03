@@ -31,6 +31,14 @@ class Policy:
     disallow: List[str] = field(default_factory=list)
     min_trust_score: Optional[int] = None
     publisher_expectations: dict[str, str] = field(default_factory=dict)
+    trusted_registries: List[str] = field(default_factory=list)
+    protected_namespaces: List[str] = field(default_factory=list)
+    require_dependency_signatures: bool = False
+    lockfile_checksums: dict[str, str] = field(default_factory=dict)
+    require_lockfile_checksums: bool = False
+    config_checksums: dict[str, str] = field(default_factory=dict)
+    ruleset_checksums: dict[str, str] = field(default_factory=dict)
+    plugin_signatures: dict[str, str] = field(default_factory=dict)
     exceptions: List[PolicyException] = field(default_factory=list)
     enforce_graph_policies: bool = False
 
@@ -115,6 +123,14 @@ def load_policy(path: Path) -> Policy:
         disallow=raw.get("disallow") or raw.get("blocklist") or [],
         min_trust_score=raw.get("min_trust_score"),
         publisher_expectations=raw.get("publisher_expectations") or {},
+        trusted_registries=raw.get("trusted_registries") or [],
+        protected_namespaces=raw.get("protected_namespaces") or [],
+        require_dependency_signatures=bool(raw.get("require_dependency_signatures", False)),
+        lockfile_checksums=raw.get("lockfile_checksums") or {},
+        require_lockfile_checksums=bool(raw.get("require_lockfile_checksums", False)),
+        config_checksums=raw.get("config_checksums") or {},
+        ruleset_checksums=raw.get("ruleset_checksums") or {},
+        plugin_signatures=raw.get("plugin_signatures") or {},
         exceptions=exceptions,
         enforce_graph_policies=bool(raw.get("enforce_graph_policies", False)),
     )
@@ -182,6 +198,13 @@ def evaluate_policy(
 
     for model in report.models:
         _check_subject(model.identifier, model.issues + model.trust_signals, model.trust_score)
+
+    for finding in report.integrity_findings:
+        entry = f"[integrity:{finding.code or finding.kind}] {finding.message}"
+        if finding.severity.lower() == "high":
+            failures.append(entry)
+        else:
+            warnings.append(entry)
 
     for exc in policy.exceptions:
         if exc.expires and exc.expires < now:

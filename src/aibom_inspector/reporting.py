@@ -98,6 +98,8 @@ def render_json(report: Report) -> str:
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
+    if report.integrity_findings:
+        payload["integrity_findings"] = [asdict(finding) for finding in report.integrity_findings]
     if report.stack_snapshot:
         payload["stack"] = snapshot_as_dict(report.stack_snapshot)
     if report.graph_policy_violations:
@@ -171,6 +173,15 @@ def render_markdown(report: Report) -> str:
             )
         if report.runtime_trace.notes:
             lines.append(f"- Notes: {'; '.join(report.runtime_trace.notes)}")
+
+    if report.integrity_findings:
+        lines.append("\n## Integrity checks\n")
+        lines.append("| Kind | Path | Severity | Message |")
+        lines.append("| --- | --- | --- | --- |")
+        for finding in report.integrity_findings:
+            lines.append(
+                f"| {finding.kind} | {finding.path} | {finding.severity} | {finding.message} |"
+            )
 
     lines.append("\n## Dependencies\n")
     lines.append("| Name | Version | Source | License | Risk | Trust | Issues |")
@@ -349,6 +360,24 @@ def render_html(report: Report) -> str:
     </ul>
   </section>
   {% endif %}
+  {% if integrity_findings %}
+  <section>
+    <h2>Integrity checks</h2>
+    <table>
+      <thead><tr><th>Kind</th><th>Path</th><th>Severity</th><th>Message</th></tr></thead>
+      <tbody>
+        {% for finding in integrity_findings %}
+        <tr>
+          <td>{{ finding.kind }}</td>
+          <td>{{ finding.path }}</td>
+          <td>{{ finding.severity }}</td>
+          <td>{{ finding.message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
   {% if stack %}
   <section>
     <h2>Stack discovery</h2>
@@ -502,6 +531,7 @@ def render_html(report: Report) -> str:
         runtime_trace=serialize_dataclass(report.runtime_trace),
         executive_summary=serialize_dataclass(report.executive_summary),
         correlations=build_sbom_correlations(report),
+        integrity_findings=[asdict(finding) for finding in report.integrity_findings],
     )
 
 
@@ -675,6 +705,26 @@ def render_sarif(report: Report) -> str:
                 },
                 "helpUri": "https://github.com/aibom-inspector/AI-BOM-Inspector/blob/main/docs/POLICY.md",
                 "properties": {"aibom:severity": violation.severity},
+            },
+        )
+
+    for finding in report.integrity_findings:
+        issue = {
+            "message": finding.message,
+            "severity": finding.severity,
+            "code": finding.code or finding.kind,
+        }
+        results.append(_sarif_result("integrity", finding.path, issue))
+        rule_id = (issue.get("code") or issue.get("message") or "AIBOM_INTEGRITY").replace(" ", "_")[:64]
+        rules.setdefault(
+            rule_id,
+            {
+                "id": rule_id,
+                "name": rule_id,
+                "shortDescription": {"text": issue.get("message", "Integrity finding")},
+                "fullDescription": {"text": "Artifact integrity or policy checksum enforcement finding."},
+                "helpUri": "https://github.com/aibom-inspector/AI-BOM-Inspector/blob/main/docs/POLICY.md",
+                "properties": {"aibom:severity": issue.get("severity", "warning")},
             },
         )
 
