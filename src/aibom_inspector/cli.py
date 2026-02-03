@@ -2,11 +2,20 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
 import click
 
+from .attestation import (
+    build_attestation,
+    collect_input_hashes,
+    compute_output_hash,
+    current_git_commit,
+    write_attestation,
+)
+from .feedback import FeedbackEntry, append_feedback, load_feedback, summarize_feedback
 from .dependency_scanner import (
     enrich_with_osv,
     fetch_shadow_uefi_intel_dependency,
@@ -22,10 +31,22 @@ from .model_inspector import enrich_models_with_cves, scan_models_from_file, sum
 from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_pack, write_github_check
 from .policy_graph import evaluate_graph_policies
 from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
+from .report_enrichment import build_completeness, build_executive_summary
 from .reporting import render_report, write_report
+from .runtime_trace import load_runtime_trace, trace_python
+from .trust_root import (
+    create_trust_root,
+    load_trust_root,
+    sign_payload,
+    trust_root_fingerprint,
+    verify_payload,
+    verify_trust_root,
+    write_trust_root,
+)
 from .stack_discovery import discover_models, discover_stack
 from .tensor_fuzz import inspect_weight_files
-from .types import ModelInfo, Report, RiskSettings
+from .types import ModelInfo, Report, RiskSettings, RuntimeTrace
+from .framework_mapping import framework_mapping_metadata
 
 
 def _collect_dependencies(
@@ -296,6 +317,21 @@ def main() -> None:
     help="Emit a SHA256 signature alongside the rendered report for tamper evidence.",
 )
 @click.option(
+    "--trust-root",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Path to a trust root JSON for signing/verifying attestations.",
+)
+@click.option(
+    "--attestation-output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Write a machine-readable provenance attestation JSON file.",
+)
+@click.option(
+    "--runtime-trace",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Optional runtime trace JSON captured via `aibom trace`.",
+)
+@click.option(
     "--baseline-report",
     type=click.Path(exists=True, dir_okay=False, path_type=str),
     help="Previous JSON report to diff against for change detection.",
@@ -335,6 +371,9 @@ def scan(
     github_check_output: Optional[str],
     evidence_pack: Optional[str],
     sign_report: bool,
+    trust_root: Optional[str],
+    attestation_output: Optional[str],
+    runtime_trace: Optional[str],
     baseline_report: Optional[str],
 ) -> None:
     """Scan dependencies, models, and produce a report."""
@@ -383,6 +422,14 @@ def scan(
 
     models = enrich_models_with_cves(models)
 
+    runtime_trace_data: RuntimeTrace | None = None
+    if runtime_trace:
+        runtime_trace_data = load_runtime_trace(Path(runtime_trace))
+
+    env_vars = None
+    if stack_snapshot:
+        env_vars = [node.id for node in stack_snapshot.nodes if node.kind == "EnvVar"]
+
     base_settings = RiskSettings()
     severity_penalties = dict(base_settings.severity_penalties)
     if risk_penalty_high is not None:
@@ -405,6 +452,34 @@ def scan(
     if ai_summary:
         summary = "AI summarization is disabled by default. Provide an LLM backend to enable rich summaries."
 
+    input_paths = [
+        Path(path)
+        for path in [
+            requirements_path,
+            pyproject_path,
+            *(list(manifest) if manifest else []),
+            *(list(sbom_file) if sbom_file else []),
+            models_file,
+            policy,
+            baseline_report,
+            runtime_trace,
+        ]
+        if path
+    ]
+    input_hashes = collect_input_hashes(input_paths)
+    git_commit = current_git_commit(Path("."))
+    provenance = {
+        "git_commit": git_commit,
+        "inputs": [entry.__dict__ for entry in input_hashes],
+    }
+
+    completeness = build_completeness(
+        len(dependencies),
+        len(models),
+        runtime_trace_data,
+        env_vars=env_vars,
+    )
+
     report = Report(
         dependencies=dependencies,
         models=models,
@@ -412,7 +487,12 @@ def scan(
         ai_summary=summary,
         risk_settings=risk_settings,
         stack_snapshot=stack_snapshot,
+        provenance=provenance,
+        runtime_trace=runtime_trace_data,
+        completeness=completeness,
     )
+    report.executive_summary = build_executive_summary(report)
+    report.framework_mapping = framework_mapping_metadata()
 
     rendered = render_report(report, fmt)
     destination = Path(output) if output else None
@@ -428,11 +508,13 @@ def scan(
             report_path = Path(f"aibom-report.{fmt}")
             click.echo(rendered)
 
+    markdown_payload = None
     if markdown_output:
-        write_report(report, "markdown", Path(markdown_output))
+        markdown_payload = write_report(report, "markdown", Path(markdown_output))
 
+    sarif_payload = None
     if sarif_output:
-        write_report(report, "sarif", Path(sarif_output))
+        sarif_payload = write_report(report, "sarif", Path(sarif_output))
 
     policy_evaluation = None
     report_json = json.loads(render_report(report, "json"))
@@ -479,6 +561,37 @@ def scan(
         sig_path.write_text(digest)
         signature_text = digest
 
+    output_hashes: dict[str, str] = {}
+    report_hash = compute_output_hash(rendered)
+    output_hashes[str(report_path or Path(f"aibom-report.{fmt}"))] = report_hash
+    if markdown_output and markdown_payload is not None:
+        output_hashes[str(Path(markdown_output))] = compute_output_hash(markdown_payload)
+    if sarif_output and sarif_payload is not None:
+        output_hashes[str(Path(sarif_output))] = compute_output_hash(sarif_payload)
+
+    if attestation_output or evidence_pack:
+        attestation_path = Path(attestation_output) if attestation_output else Path(evidence_pack) / "attestation.json"
+        attestation_payload = build_attestation(
+            inputs=input_hashes,
+            report_hash=report_hash,
+            report_path=report_path or Path(f"aibom-report.{fmt}"),
+            report_format=fmt,
+            output_hashes=output_hashes,
+            git_commit=git_commit,
+            signature=signature_text,
+            metadata={"runtime_trace": bool(runtime_trace_data)},
+        )
+        if trust_root:
+            root = load_trust_root(Path(trust_root))
+            signature = sign_payload(attestation_payload, root)
+            attestation_payload["attestation_signature"] = {
+                "key_id": root.key_id,
+                "algorithm": root.algorithm,
+                "value": signature,
+                "fingerprint": trust_root_fingerprint(root),
+            }
+        write_attestation(attestation_path, attestation_payload)
+
     if evidence_pack:
         write_evidence_pack(
             Path(evidence_pack),
@@ -489,6 +602,177 @@ def scan(
             baseline_diff,
             signature_text,
         )
+
+
+@main.command()
+@click.argument("script", type=click.Path(exists=True, dir_okay=False, path_type=str))
+@click.argument("args", nargs=-1)
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    default="aibom-runtime-trace.json",
+    show_default=True,
+    help="Path to write the runtime trace JSON.",
+)
+def trace(script: str, args: tuple[str, ...], output: str) -> None:
+    """Run a Python script with import/model-load tracing enabled."""
+
+    result = trace_python(Path(script), args)
+    payload = asdict(result)
+    payload["captured_at"] = result.captured_at.isoformat()
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    Path(output).write_text(json.dumps(payload, indent=2))
+    click.echo(f"Wrote runtime trace to {output}")
+
+
+@main.command("trust-root")
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    default="aibom-trust-root.json",
+    show_default=True,
+    help="Write a new trust root JSON file.",
+)
+def trust_root(output: str) -> None:
+    """Generate a new trust root for signing attestations."""
+
+    root = create_trust_root()
+    write_trust_root(Path(output), root)
+    click.echo(f"Wrote trust root to {output}")
+    click.echo(f"Trust root fingerprint: {trust_root_fingerprint(root)}")
+
+
+@main.command("verify-attestation")
+@click.option(
+    "--attestation",
+    "attestation_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Path to attestation JSON to verify.",
+)
+@click.option(
+    "--trust-root",
+    "trust_root_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Trust root JSON used for verification.",
+)
+def verify_attestation(attestation_path: str, trust_root_path: str) -> None:
+    """Verify an attestation signature against a trust root."""
+
+    payload = json.loads(Path(attestation_path).read_text())
+    signature = payload.pop("attestation_signature", None) or payload.pop("signature", None)
+    if not signature or not signature.get("value"):
+        click.echo("Attestation missing signature.", err=True)
+        raise SystemExit(1)
+    root = load_trust_root(Path(trust_root_path))
+    if signature.get("key_id") != root.key_id:
+        click.echo("Signature key_id does not match trust root.", err=True)
+        raise SystemExit(1)
+    valid = verify_payload(payload, signature["value"], root)
+    if not valid:
+        click.echo("Attestation signature invalid.", err=True)
+        raise SystemExit(1)
+    click.echo("Attestation signature verified.")
+
+
+@main.command("verify-trust-root")
+@click.option(
+    "--trust-root",
+    "trust_root_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Trust root JSON to verify.",
+)
+def verify_trust_root_cmd(trust_root_path: str) -> None:
+    """Verify the trust root signature for auditability."""
+
+    root = load_trust_root(Path(trust_root_path))
+    if not verify_trust_root(root):
+        click.echo("Trust root signature invalid or missing.", err=True)
+        raise SystemExit(1)
+    click.echo("Trust root signature verified.")
+
+
+@main.command()
+@click.option("--summary", required=True, help="Short summary of the feedback.")
+@click.option(
+    "--category",
+    required=True,
+    type=click.Choice(["bug", "feature", "ux", "governance", "integration", "other"]),
+    help="Feedback category.",
+)
+@click.option(
+    "--priority",
+    required=True,
+    type=click.Choice(["low", "medium", "high", "urgent"]),
+    help="Priority level.",
+)
+@click.option("--finding-code", help="Related issue or finding code.")
+@click.option("--organization", help="Customer organization.")
+@click.option("--contact", help="Contact email or handle.")
+@click.option("--workflow-stage", help="Workflow stage (e.g., onboarding, audit, CI gate).")
+@click.option("--notes", help="Additional notes.")
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    default="aibom-feedback.json",
+    show_default=True,
+    help="Feedback JSON store.",
+)
+def feedback(
+    summary: str,
+    category: str,
+    priority: str,
+    finding_code: Optional[str],
+    organization: Optional[str],
+    contact: Optional[str],
+    workflow_stage: Optional[str],
+    notes: Optional[str],
+    output: str,
+) -> None:
+    """Capture customer feedback into a structured JSON log."""
+
+    entry = FeedbackEntry(
+        summary=summary,
+        category=category,
+        priority=priority,
+        finding_code=finding_code,
+        organization=organization,
+        contact=contact,
+        workflow_stage=workflow_stage,
+        notes=notes,
+    )
+    append_feedback(Path(output), entry)
+    click.echo(f"Saved feedback to {output}")
+
+
+@main.command("feedback-metrics")
+@click.option(
+    "--input",
+    "input_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    default="aibom-feedback.json",
+    show_default=True,
+    help="Feedback JSON store to summarize.",
+)
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Optional path to write summary JSON.",
+)
+def feedback_metrics(input_path: str, output: Optional[str]) -> None:
+    """Summarize feedback for dashboards and workflow adoption metrics."""
+
+    entries = load_feedback(Path(input_path))
+    summary = summarize_feedback(entries)
+    payload = json.dumps(summary, indent=2)
+    if output:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        Path(output).write_text(payload)
+        click.echo(f"Wrote feedback metrics to {output}")
+    else:
+        click.echo(payload)
 
 
 @main.command()

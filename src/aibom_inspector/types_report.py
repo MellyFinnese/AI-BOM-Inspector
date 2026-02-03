@@ -19,6 +19,11 @@ class Report:
     risk_settings: RiskSettings = field(default_factory=RiskSettings)
     stack_snapshot: GraphSnapshot | None = None
     graph_policy_violations: list[GraphPolicyViolation] = field(default_factory=list)
+    provenance: dict | None = None
+    runtime_trace: "RuntimeTrace | None" = None
+    completeness: "CompletenessSummary | None" = None
+    executive_summary: "ExecutiveRiskSummary | None" = None
+    framework_mapping: dict | None = None
 
     @property
     def total_risk(self) -> int:
@@ -88,3 +93,32 @@ class Report:
                 buckets["unknown_licenses"] += 1
 
         return buckets
+
+
+@dataclass
+class RuntimeTrace:
+    trace_mode: str
+    captured_at: datetime
+    command: list[str]
+    imported_modules: list[str] = field(default_factory=list)
+    observed_models: list[str] = field(default_factory=list)
+    observed_dependencies: list[str] = field(default_factory=list)
+    observed_env: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CompletenessSummary:
+    static_coverage_pct: float
+    runtime_coverage_pct: float
+    static_visibility: bool
+    runtime_visibility: bool
+    unobservable_areas: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ExecutiveRiskSummary:
+    governance_risk: str
+    regulatory_exposure: str
+    supply_chain_blast_radius: str
+    rationale: list[str] = field(default_factory=list)

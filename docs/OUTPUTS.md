@@ -1,6 +1,6 @@
 # Output formats
 
-This project emits JSON, SARIF, and CycloneDX/SPDX outputs so teams can plug the scanner into security workflows without custom glue. Below is a single scan represented in three formats.
+This project emits JSON, SARIF, CycloneDX/SPDX, and provenance attestations so teams can plug the scanner into security workflows without custom glue. Below is a single scan represented in three formats.
 
 ## Side-by-side example
 
@@ -8,7 +8,19 @@ This project emits JSON, SARIF, and CycloneDX/SPDX outputs so teams can plug the
 ```json
 {
   "stack_risk_score": 82,
-  "risk_breakdown": {"unpinned_deps": 1, "unknown_licenses": 0, "stale_models": 0, "cve_hits": 0},
+  "executive_summary": {
+    "governance_risk": "Medium",
+    "regulatory_exposure": "Low",
+    "supply_chain_blast_radius": "Low"
+  },
+  "completeness": {
+    "static_coverage_pct": 100,
+    "runtime_coverage_pct": 0,
+    "static_visibility": true,
+    "runtime_visibility": false,
+    "unobservable_areas": ["Runtime model loading: unknown (no runtime trace supplied)"]
+  },
+  "risk_breakdown": {"unpinned_deps": 1, "unknown_licenses": 0, "stale_models": 0, "cves": 0},
   "dependencies": [
     {
       "name": "urllib3",
@@ -29,6 +41,7 @@ This project emits JSON, SARIF, and CycloneDX/SPDX outputs so teams can plug the
 ```
 - **Best for**: programmatic consumption, `aibom diff`, and feeding into dashboards.
 - **Schema**: enforced by `schemas/report.schema.json`.
+- **Framework mappings**: each issue detail now includes NIST AI RMF / ISO 42001 / OWASP LLM / SOC 2 crosswalks for governance-ready reports.
 
 ### SARIF (security findings)
 ```json
@@ -89,6 +102,41 @@ This project emits JSON, SARIF, and CycloneDX/SPDX outputs so teams can plug the
 ```
 - **Best for**: downstream SBOM workflows, policy engines, and procurement reviews.
 - **Rendering**: `aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json` (or `--format spdx`).
+
+## Provenance attestation (machine-readable)
+To capture hashes, git commit SHAs, and optional signatures, emit a provenance attestation alongside the report:
+
+```bash
+aibom scan --format json --output aibom-report.json --attestation-output aibom-attestation.json
+```
+
+The attestation JSON includes input/output hashes and the resolved git commit, making it easy to integrate with SLSA or in-toto workflows.
+
+## Trust root signing + verification
+To own the trust root for attestation signing, generate a local trust root and use it to sign reports:
+
+```bash
+aibom trust-root --output aibom-trust-root.json
+aibom scan --format json --output aibom-report.json --attestation-output aibom-attestation.json --trust-root aibom-trust-root.json
+aibom verify-attestation --attestation aibom-attestation.json --trust-root aibom-trust-root.json
+aibom verify-trust-root --trust-root aibom-trust-root.json
+```
+
+## Runtime tracing
+Use the built-in runtime tracer to observe model loads or imports that static scanning can miss:
+
+```bash
+aibom trace scripts/run_inference.py --output aibom-runtime-trace.json
+aibom scan --runtime-trace aibom-runtime-trace.json --format json --output aibom-report.json
+```
+
+## Customer feedback workflow
+Capture structured customer feedback to feed roadmap and governance workflows:
+
+```bash
+aibom feedback --summary "Need SOC 2 mapping detail" --category governance --priority high --organization "Acme AI" --workflow-stage audit
+aibom feedback-metrics --input aibom-feedback.json --output aibom-feedback-metrics.json
+```
 
 ## Choosing the right format
 - Start with **JSON** for automation and diffing.
