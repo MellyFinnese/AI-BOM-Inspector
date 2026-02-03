@@ -31,6 +31,16 @@ These are the non-negotiable controls that make AI-BOM Inspector a go/no-go deci
 - **Approval workflows**: human approvals for policy exceptions and critical releases.
 - **Least-privilege enforcement**: scoped permissions for scanners, agents, and integrations.
 
+## 6) IP protection (selective + clean)
+- **Selective obfuscation (clean)**: obfuscate only proprietary logic while keeping compliance data readable.
+- **Strip symbols in prod**: remove symbols and debug metadata from production artifacts.
+- **Protect algorithms, not everything**: avoid blanket obfuscation that blocks auditability.
+
+## 7) Licensing & entitlements
+- **Feature gating**: enable enterprise-only capabilities through controlled flags.
+- **Server-side entitlements**: validate licenses against centralized entitlements.
+- **License enforcement**: enforce licensing terms during build and runtime checks.
+
 ## Operational outcomes
 - **Procurement credibility**: trust signals (signatures + attestations) in every release.
 - **CI/CD gating**: enforce verification before a build can ship.

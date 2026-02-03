@@ -45,6 +45,16 @@ These controls are the deal-makers for regulated and enterprise buyers. See `doc
 - Approval workflows for exceptions and critical releases.
 - Least-privilege enforcement for integrations.
 
+### IP protection (selective + clean)
+- Selective obfuscation to protect proprietary logic only.
+- Strip symbols from production artifacts.
+- Protect algorithms without breaking auditability.
+
+### Licensing & entitlements
+- Feature gating for enterprise-only capabilities.
+- Server-side entitlements for license validation.
+- License enforcement in build/runtime checks.
+
 ### Tier 3: Market weapon
 - **Risk scoring that execs understand**: translate findings into Low/Medium/High governance risk, regulatory exposure, and supply-chain blast radius.
 - **SBOM + AI-BOM correlation**: connect traditional SBOMs (CycloneDX, SPDX) to AI-BOM artifacts to show “this vulnerable lib supports this model pipeline.”
