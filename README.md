@@ -155,6 +155,9 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 ## Highest-impact feature bets
 See [docs/HIGHEST_IMPACT_NEXT_MOVES.md](docs/HIGHEST_IMPACT_NEXT_MOVES.md) for the feature bets that enable the end-to-end `discover → enforce` loop, policy-as-code UX, and GitHub-native SARIF outputs.
 
+## Enterprise trust baseline
+See [docs/ENTERPRISE_TRUST_BASELINE.md](docs/ENTERPRISE_TRUST_BASELINE.md) for the deal-maker controls around provenance/signing, artifact integrity, and dependency trust enforcement that enterprises expect in CI/CD rollouts.
+
 ### 30-second sample report (before vs. after)
 - **Input SBOM**: lightweight CycloneDX with a few Python and npm components plus a Hugging Face model ID.
 - **Before (messy state)**:
