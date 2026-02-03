@@ -33,6 +33,18 @@ These controls are the deal-makers for regulated and enterprise buyers. See `doc
 - Dependency confusion detection.
 - Lockfile checksum enforcement.
 
+### Audit & compliance controls
+- Immutable audit logs.
+- Evidence export with SOC 2 / ISO / NIST mappings.
+- Policy-as-code with versioned approvals and waivers.
+- Tamper-evident log chains.
+
+### Enterprise access controls
+- RBAC for scan, policy, and evidence access.
+- Org + project isolation for multi-tenant rollouts.
+- Approval workflows for exceptions and critical releases.
+- Least-privilege enforcement for integrations.
+
 ### Tier 3: Market weapon
 - **Risk scoring that execs understand**: translate findings into Low/Medium/High governance risk, regulatory exposure, and supply-chain blast radius.
 - **SBOM + AI-BOM correlation**: connect traditional SBOMs (CycloneDX, SPDX) to AI-BOM artifacts to show “this vulnerable lib supports this model pipeline.”

@@ -19,6 +19,18 @@ These are the non-negotiable controls that make AI-BOM Inspector a go/no-go deci
 - **Dependency confusion detection**: flag packages that could shadow internal names.
 - **Lockfile checksum enforcement**: verify lockfile checksums to prevent stealthy changes.
 
+## 4) Audit & compliance controls (governance ready)
+- **Immutable audit logs**: append-only event streams for scans, policies, and approvals.
+- **Evidence export (SOC 2 / ISO / NIST mapping)**: export attestations and findings with framework mappings for audit packets.
+- **Policy-as-code**: versioned policies with approvals, waivers, and expiry tracking.
+- **Tamper-evident log chains**: chained hashes so audit logs can be independently verified.
+
+## 5) Enterprise access controls (least privilege by default)
+- **RBAC**: role-based access to scans, policies, and evidence packs.
+- **Org + project isolation**: hard boundaries for multi-tenant deployments.
+- **Approval workflows**: human approvals for policy exceptions and critical releases.
+- **Least-privilege enforcement**: scoped permissions for scanners, agents, and integrations.
+
 ## Operational outcomes
 - **Procurement credibility**: trust signals (signatures + attestations) in every release.
 - **CI/CD gating**: enforce verification before a build can ship.
