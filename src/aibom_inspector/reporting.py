@@ -90,6 +90,7 @@ def render_json(report: Report) -> str:
         "risk_breakdown": report.risk_breakdown,
         "risk_settings": report.risk_settings.as_dict(),
         "provenance": report.provenance,
+        "approvals": report.approvals,
         "runtime_trace": serialize_dataclass(report.runtime_trace),
         "completeness": serialize_dataclass(report.completeness),
         "executive_summary": serialize_dataclass(report.executive_summary),
@@ -138,6 +139,11 @@ def render_markdown(report: Report) -> str:
         inputs = report.provenance.get("inputs") or []
         if inputs:
             lines.append(f"- Hashed inputs: {len(inputs)} file(s)")
+
+    if report.approvals:
+        lines.append("\n## Approvals\n")
+        for approval in report.approvals:
+            lines.append(f"- {approval}")
 
     if report.framework_mapping:
         lines.append("\n## Framework mapping\n")
@@ -316,6 +322,16 @@ def render_html(report: Report) -> str:
       {% if provenance.inputs %}
       <li>Hashed inputs: {{ provenance.inputs | length }} file(s)</li>
       {% endif %}
+    </ul>
+  </section>
+  {% endif %}
+  {% if approvals %}
+  <section>
+    <h2>Approvals</h2>
+    <ul>
+      {% for approval in approvals %}
+      <li>{{ approval }}</li>
+      {% endfor %}
     </ul>
   </section>
   {% endif %}
@@ -504,6 +520,7 @@ def render_html(report: Report) -> str:
         generated_at=report.generated_at.isoformat(),
         ai_summary=report.ai_summary,
         provenance=report.provenance,
+        approvals=report.approvals,
         framework_mapping=report.framework_mapping or framework_mapping_metadata(),
         stack_risk_score=report.stack_risk_score,
         badge_class=(

@@ -34,6 +34,8 @@ from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
 from .report_enrichment import build_completeness, build_executive_summary
 from .reporting import render_report, write_report
 from .runtime_trace import load_runtime_trace, trace_python
+from .audit_log import append_audit_log, build_audit_entry, verify_audit_log
+from .evidence_export import write_evidence_export
 from .integrity import compute_file_sha256, enforce_lockfile_checksums, verify_expected_hashes
 from .trust_root import (
     create_trust_root,
@@ -290,6 +292,21 @@ def main() -> None:
     help="Fail the scan if no dependencies or models are discovered.",
 )
 @click.option(
+    "--approval",
+    multiple=True,
+    help="Approval tags for policy compliance (repeatable).",
+)
+@click.option(
+    "--audit-log",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Append a tamper-evident audit log entry for the scan.",
+)
+@click.option(
+    "--audit-actor",
+    type=str,
+    help="Optional actor identifier for audit logging.",
+)
+@click.option(
     "--registry-allowlist",
     multiple=True,
     help="Allowed dependency registries (repeatable, e.g., pypi, npm, internal.host).",
@@ -417,6 +434,9 @@ def scan(
     shadow_uefi_timeout: Optional[float],
     shadow_uefi_repo: Optional[str],
     require_input: bool,
+    approval: tuple[str, ...],
+    audit_log: Optional[str],
+    audit_actor: Optional[str],
     registry_allowlist: tuple[str, ...],
     protected_namespace: tuple[str, ...],
     require_dependency_signatures: bool,
@@ -484,6 +504,7 @@ def scan(
     models = enrich_models_with_cves(models)
 
     policy_data = load_policy(Path(policy)) if policy else None
+    approvals = list(approval)
 
     trusted_registries = list(
         {*(policy_data.trusted_registries if policy_data else []), *registry_allowlist}
@@ -604,6 +625,7 @@ def scan(
         stack_snapshot=stack_snapshot,
         provenance=provenance,
         integrity_findings=integrity_findings,
+        approvals=approvals,
         runtime_trace=runtime_trace_data,
         completeness=completeness,
     )
@@ -706,6 +728,19 @@ def scan(
                 "fingerprint": trust_root_fingerprint(root),
             }
         write_attestation(attestation_path, attestation_payload)
+
+    if audit_log:
+        entry = build_audit_entry(
+            action="scan",
+            actor=audit_actor,
+            report_path=report_path or Path(f"aibom-report.{fmt}"),
+            report_sha256=report_hash,
+            attestation_path=Path(attestation_output) if attestation_output else None,
+            policy_path=Path(policy) if policy else None,
+            approvals=approvals,
+            metadata={"format": fmt, "offline": offline},
+        )
+        append_audit_log(Path(audit_log), entry)
 
     if evidence_pack:
         write_evidence_pack(
@@ -858,6 +893,47 @@ def verify_report(report_path: str, sha256_path: Optional[str], attestation_path
         raise SystemExit(1)
 
     click.echo("Report hash verified.")
+
+
+@main.command("verify-audit-log")
+@click.option(
+    "--audit-log",
+    "audit_log_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Audit log JSONL file to verify.",
+)
+def verify_audit_log_cmd(audit_log_path: str) -> None:
+    """Verify the tamper-evident audit log hash chain."""
+
+    errors = verify_audit_log(Path(audit_log_path))
+    if errors:
+        for error in errors:
+            click.echo(error, err=True)
+        raise SystemExit(1)
+    click.echo("Audit log verified.")
+
+
+@main.command("export-evidence")
+@click.option(
+    "--report",
+    "report_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="JSON report file to export evidence from.",
+)
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    required=True,
+    help="Output path for the evidence export JSON.",
+)
+def export_evidence(report_path: str, output_path: str) -> None:
+    """Export compliance evidence with framework mappings."""
+
+    write_evidence_export(Path(report_path), Path(output_path))
+    click.echo(f"Wrote evidence export to {output_path}")
 
 
 @main.command()

@@ -34,6 +34,7 @@ class Policy:
     trusted_registries: List[str] = field(default_factory=list)
     protected_namespaces: List[str] = field(default_factory=list)
     require_dependency_signatures: bool = False
+    required_approvals: List[str] = field(default_factory=list)
     lockfile_checksums: dict[str, str] = field(default_factory=dict)
     require_lockfile_checksums: bool = False
     config_checksums: dict[str, str] = field(default_factory=dict)
@@ -126,6 +127,7 @@ def load_policy(path: Path) -> Policy:
         trusted_registries=raw.get("trusted_registries") or [],
         protected_namespaces=raw.get("protected_namespaces") or [],
         require_dependency_signatures=bool(raw.get("require_dependency_signatures", False)),
+        required_approvals=raw.get("required_approvals") or [],
         lockfile_checksums=raw.get("lockfile_checksums") or {},
         require_lockfile_checksums=bool(raw.get("require_lockfile_checksums", False)),
         config_checksums=raw.get("config_checksums") or {},
@@ -171,6 +173,14 @@ def evaluate_policy(
         cve_hits = report.risk_breakdown.get("cves", 0)
         if cve_hits > policy.max_cves:
             failures.append(f"Detected {cve_hits} CVE/advisory hits (max allowed {policy.max_cves})")
+
+    if policy.required_approvals:
+        approvals = {approval.lower() for approval in report.approvals}
+        required = {approval.lower() for approval in policy.required_approvals}
+        if not approvals.intersection(required):
+            failures.append(
+                f"Missing required approvals: {', '.join(sorted(policy.required_approvals))}"
+            )
 
     def _check_subject(
         subject: str, issues: Iterable[DependencyIssue | ModelIssue], trust_score: int

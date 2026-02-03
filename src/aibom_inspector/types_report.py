@@ -30,6 +30,7 @@ class Report:
     graph_policy_violations: list[GraphPolicyViolation] = field(default_factory=list)
     provenance: dict | None = None
     integrity_findings: list[IntegrityFinding] = field(default_factory=list)
+    approvals: list[str] = field(default_factory=list)
     runtime_trace: "RuntimeTrace | None" = None
     completeness: "CompletenessSummary | None" = None
     executive_summary: "ExecutiveRiskSummary | None" = None

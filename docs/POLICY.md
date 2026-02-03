@@ -12,6 +12,7 @@ Policies let teams codify their risk appetite for dependencies and models. They 
 - `trusted_registries` – allowlist of dependency registries (e.g., `pypi`, `npm`, `maven`, internal hosts).
 - `protected_namespaces` – reserved package name prefixes to detect dependency confusion.
 - `require_dependency_signatures` – require signature metadata on dependencies (SBOM-provided).
+- `required_approvals` – approval tags required for policy compliance (e.g., security, compliance).
 - `lockfile_checksums` – map of lockfile paths to expected SHA256 hashes.
 - `require_lockfile_checksums` – require checksums for all detected lockfiles.
 - `config_checksums` – map of config file paths to expected SHA256 hashes.

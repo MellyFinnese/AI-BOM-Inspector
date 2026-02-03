@@ -36,6 +36,11 @@
       "type": "boolean",
       "description": "Require signature metadata on dependencies when available"
     },
+    "required_approvals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Approval tags required for policy compliance (e.g., security, compliance)"
+    },
     "lockfile_checksums": {
       "type": "object",
       "description": "Expected SHA256 checksums for lockfiles (path -> sha256)",
