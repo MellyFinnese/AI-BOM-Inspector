@@ -33,3 +33,28 @@ def append_feedback(path: Path, entry: FeedbackEntry) -> None:
     items.append(entry.as_dict())
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(items, indent=2))
+
+
+def summarize_feedback(entries: list[dict]) -> dict:
+    categories: dict[str, int] = {}
+    priorities: dict[str, int] = {}
+    workflow_stages: dict[str, int] = {}
+    organizations: dict[str, int] = {}
+
+    for entry in entries:
+        category = entry.get("category") or "unknown"
+        priority = entry.get("priority") or "unknown"
+        workflow = entry.get("workflow_stage") or "unspecified"
+        org = entry.get("organization") or "unspecified"
+        categories[category] = categories.get(category, 0) + 1
+        priorities[priority] = priorities.get(priority, 0) + 1
+        workflow_stages[workflow] = workflow_stages.get(workflow, 0) + 1
+        organizations[org] = organizations.get(org, 0) + 1
+
+    return {
+        "total": len(entries),
+        "by_category": dict(sorted(categories.items())),
+        "by_priority": dict(sorted(priorities.items())),
+        "by_workflow_stage": dict(sorted(workflow_stages.items())),
+        "by_organization": dict(sorted(organizations.items())),
+    }

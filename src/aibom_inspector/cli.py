@@ -15,7 +15,7 @@ from .attestation import (
     current_git_commit,
     write_attestation,
 )
-from .feedback import FeedbackEntry, append_feedback
+from .feedback import FeedbackEntry, append_feedback, load_feedback, summarize_feedback
 from .dependency_scanner import (
     enrich_with_osv,
     fetch_shadow_uefi_intel_dependency,
@@ -34,7 +34,15 @@ from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
 from .report_enrichment import build_completeness, build_executive_summary
 from .reporting import render_report, write_report
 from .runtime_trace import load_runtime_trace, trace_python
-from .trust_root import create_trust_root, load_trust_root, sign_payload, verify_payload, write_trust_root
+from .trust_root import (
+    create_trust_root,
+    load_trust_root,
+    sign_payload,
+    trust_root_fingerprint,
+    verify_payload,
+    verify_trust_root,
+    write_trust_root,
+)
 from .stack_discovery import discover_models, discover_stack
 from .tensor_fuzz import inspect_weight_files
 from .types import ModelInfo, Report, RiskSettings, RuntimeTrace
@@ -580,6 +588,7 @@ def scan(
                 "key_id": root.key_id,
                 "algorithm": root.algorithm,
                 "value": signature,
+                "fingerprint": trust_root_fingerprint(root),
             }
         write_attestation(attestation_path, attestation_payload)
 
@@ -630,6 +639,7 @@ def trust_root(output: str) -> None:
     root = create_trust_root()
     write_trust_root(Path(output), root)
     click.echo(f"Wrote trust root to {output}")
+    click.echo(f"Trust root fingerprint: {trust_root_fingerprint(root)}")
 
 
 @main.command("verify-attestation")
@@ -664,6 +674,24 @@ def verify_attestation(attestation_path: str, trust_root_path: str) -> None:
         click.echo("Attestation signature invalid.", err=True)
         raise SystemExit(1)
     click.echo("Attestation signature verified.")
+
+
+@main.command("verify-trust-root")
+@click.option(
+    "--trust-root",
+    "trust_root_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Trust root JSON to verify.",
+)
+def verify_trust_root_cmd(trust_root_path: str) -> None:
+    """Verify the trust root signature for auditability."""
+
+    root = load_trust_root(Path(trust_root_path))
+    if not verify_trust_root(root):
+        click.echo("Trust root signature invalid or missing.", err=True)
+        raise SystemExit(1)
+    click.echo("Trust root signature verified.")
 
 
 @main.command()
@@ -717,6 +745,34 @@ def feedback(
     )
     append_feedback(Path(output), entry)
     click.echo(f"Saved feedback to {output}")
+
+
+@main.command("feedback-metrics")
+@click.option(
+    "--input",
+    "input_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    default="aibom-feedback.json",
+    show_default=True,
+    help="Feedback JSON store to summarize.",
+)
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Optional path to write summary JSON.",
+)
+def feedback_metrics(input_path: str, output: Optional[str]) -> None:
+    """Summarize feedback for dashboards and workflow adoption metrics."""
+
+    entries = load_feedback(Path(input_path))
+    summary = summarize_feedback(entries)
+    payload = json.dumps(summary, indent=2)
+    if output:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        Path(output).write_text(payload)
+        click.echo(f"Wrote feedback metrics to {output}")
+    else:
+        click.echo(payload)
 
 
 @main.command()

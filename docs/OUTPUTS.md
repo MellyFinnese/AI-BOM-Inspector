@@ -119,6 +119,7 @@ To own the trust root for attestation signing, generate a local trust root and u
 aibom trust-root --output aibom-trust-root.json
 aibom scan --format json --output aibom-report.json --attestation-output aibom-attestation.json --trust-root aibom-trust-root.json
 aibom verify-attestation --attestation aibom-attestation.json --trust-root aibom-trust-root.json
+aibom verify-trust-root --trust-root aibom-trust-root.json
 ```
 
 ## Runtime tracing
@@ -134,6 +135,7 @@ Capture structured customer feedback to feed roadmap and governance workflows:
 
 ```bash
 aibom feedback --summary "Need SOC 2 mapping detail" --category governance --priority high --organization "Acme AI" --workflow-stage audit
+aibom feedback-metrics --input aibom-feedback.json --output aibom-feedback-metrics.json
 ```
 
 ## Choosing the right format

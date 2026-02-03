@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI-BOM Feedback Metrics",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["total", "by_category", "by_priority", "by_workflow_stage", "by_organization"],
+  "properties": {
+    "total": { "type": "integer", "minimum": 0 },
+    "by_category": { "type": "object", "additionalProperties": { "type": "integer" } },
+    "by_priority": { "type": "object", "additionalProperties": { "type": "integer" } },
+    "by_workflow_stage": { "type": "object", "additionalProperties": { "type": "integer" } },
+    "by_organization": { "type": "object", "additionalProperties": { "type": "integer" } }
+  }
+}
