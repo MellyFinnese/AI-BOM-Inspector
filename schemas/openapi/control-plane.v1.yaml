@@ -194,6 +194,133 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditList'
+  /v1/sso/providers:
+    post:
+      summary: Create SSO provider
+      operationId: createSsoProvider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderCreate'
+      responses:
+        '201':
+          description: SSO provider created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoProvider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      summary: List SSO providers
+      operationId: listSsoProviders
+      responses:
+        '200':
+          description: SSO provider list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoProviderList'
+  /v1/roles:
+    post:
+      summary: Create role
+      operationId: createRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreate'
+      responses:
+        '201':
+          description: Role created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+    get:
+      summary: List roles
+      operationId: listRoles
+      responses:
+        '200':
+          description: Role list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleList'
+  /v1/role-assignments:
+    post:
+      summary: Assign role
+      operationId: createRoleAssignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleAssignmentCreate'
+      responses:
+        '201':
+          description: Role assignment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleAssignment'
+  /v1/policy-packs:
+    post:
+      summary: Create policy pack
+      operationId: createPolicyPack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyPackCreate'
+      responses:
+        '201':
+          description: Policy pack created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPack'
+    get:
+      summary: List policy packs
+      operationId: listPolicyPacks
+      responses:
+        '200':
+          description: Policy pack list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPackList'
+  /v1/compliance/reports:
+    post:
+      summary: Create compliance report
+      operationId: createComplianceReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComplianceReportCreate'
+      responses:
+        '201':
+          description: Compliance report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceReport'
+    get:
+      summary: List compliance reports
+      operationId: listComplianceReports
+      responses:
+        '200':
+          description: Compliance report list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceReportList'
 components:
   securitySchemes:
     bearerAuth:
@@ -427,3 +554,168 @@ components:
           type: string
         code:
           type: string
+    SsoProviderCreate:
+      type: object
+      required: [name, type, metadata]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [oidc, saml]
+        metadata:
+          type: object
+          additionalProperties: true
+    SsoProvider:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    SsoProviderList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SsoProvider'
+    RoleCreate:
+      type: object
+      required: [name, permissions]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+    RoleList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+    RoleAssignmentCreate:
+      type: object
+      required: [principal_id, role_id]
+      properties:
+        principal_id:
+          type: string
+        role_id:
+          type: string
+        scope:
+          type: string
+    RoleAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+        principal_id:
+          type: string
+        role_id:
+          type: string
+        scope:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    PolicyPackCreate:
+      type: object
+      required: [name, policies]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        policies:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    PolicyPack:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        policies:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    PolicyPackList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyPack'
+    ComplianceReportCreate:
+      type: object
+      required: [framework, scope]
+      properties:
+        framework:
+          type: string
+          enum: [soc2, iso27001]
+        scope:
+          type: object
+          additionalProperties: true
+        format:
+          type: string
+          enum: [pdf, csv, json]
+    ComplianceReport:
+      type: object
+      properties:
+        id:
+          type: string
+        framework:
+          type: string
+        status:
+          type: string
+          enum: [pending, ready, failed]
+        report_uri:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ComplianceReportList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceReport'

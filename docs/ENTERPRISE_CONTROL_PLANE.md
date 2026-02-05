@@ -9,6 +9,10 @@ AI-BOM Inspector's enterprise platform turns inspection output into enforceable 
 - Immutable, append-only evidence storage.
 - CI/CD enforcement gates for releases.
 - Role-based access control (RBAC) with OIDC integration.
+- Enterprise SSO and identity federation.
+- Control Plane UI for governance workflows.
+- Policy packs to standardize guardrails across teams.
+- Compliance reporting for audit readiness.
 
 ## High-level flow
 
@@ -38,6 +42,30 @@ AI-BOM Inspector's enterprise platform turns inspection output into enforceable 
 - `POST /v1/evidence` (Control Plane bundle ingestion)
 - `GET /v1/evidence?asset_id=...`
 - `GET /v1/audit` (RBAC-guarded)
+
+### Identity, RBAC, and SSO (aspirational)
+- `POST /v1/sso/providers`
+- `GET /v1/sso/providers`
+- `POST /v1/roles`
+- `GET /v1/roles`
+- `POST /v1/role-assignments`
+
+### Policy packs (aspirational)
+- `POST /v1/policy-packs`
+- `GET /v1/policy-packs`
+
+### Compliance reports (aspirational)
+- `POST /v1/compliance/reports`
+- `GET /v1/compliance/reports`
+
+## Control Plane UI (aspirational)
+
+The Control Plane UI is the primary workflow surface for governance teams:
+
+- Policy authoring, approvals, and version history.
+- Evidence bundle review and exception management.
+- Role assignments, SSO configuration, and access reviews.
+- Compliance report generation (SOC 2 / ISO 27001 mapping).
 
 ## Data model (MVP)
 
@@ -85,3 +113,5 @@ The bundle includes:
 - Runtime signal ingestion for model usage metadata.
 - OPA/Rego compatibility layer (future).
 - Risk trend analytics dashboard.
+- Policy packs marketplace + curated baselines.
+- Compliance report exports (PDF/CSV/JSON) with evidence links.

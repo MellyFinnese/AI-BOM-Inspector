@@ -2,6 +2,11 @@
 
 This document maps AI-BOM Inspector capabilities to SOC 2 and ISO/IEC 27001 controls. It is aspirational and intended for roadmap alignment rather than audit evidence.
 
+## Compliance reporting (aspirational)
+
+- **Compliance reports** aggregate policy decisions, evidence bundles, and audit events into a mapped control narrative.
+- **Policy packs** provide standardized baselines (SOC 2 / ISO 27001) for consistent enforcement across teams.
+
 ## SOC 2 (Trust Services Criteria)
 
 | SOC 2 Criteria | Control intent | AI-BOM Inspector alignment (aspirational) |

@@ -13,6 +13,7 @@ This document defines the formal API contract strategy for AI-BOM Inspector and 
 - **Spec location**: `schemas/openapi/control-plane.v1.yaml`
 - **Primary consumers**: Control Plane API clients, SDK generators, documentation.
 - **Versioning**: SemVer at the contract level (v1.x). Breaking changes require a new `v2` file and `/v2/...` base path.
+- **Coverage**: Tenancy, assets, policies, evidence, RBAC, SSO, policy packs, and compliance reports.
 
 ## Event contract (AsyncAPI)
 
@@ -32,3 +33,8 @@ This document defines the formal API contract strategy for AI-BOM Inspector and 
 - OpenAPI validation gates for Control Plane client libraries.
 - AsyncAPI validation for event payloads in CI.
 - JSON schema validation for evidence bundles and policy artifacts during ingestion.
+
+## UI contract notes (aspirational)
+
+- The Control Plane UI consumes the OpenAPI contract as the backend source of truth.
+- UI-driven compliance report exports should map to `/v1/compliance/reports` responses.

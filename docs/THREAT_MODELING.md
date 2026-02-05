@@ -22,6 +22,7 @@ This document complements the AI supply chain threat taxonomy with a system-leve
 | --- | --- |
 | CLI / CI Integrations | Emits signed AI-BOM artifacts and Control Plane bundles. |
 | API Layer / Control Plane | REST/gRPC surface for tenancy, assets, policies, evidence, and audit. |
+| Control Plane UI | Web UI for governance workflows, policy approvals, and reporting. |
 | Policy Engine | Evaluates AI-BOM + policies and produces decisions. |
 | Evidence Store | Append-only storage for decision bundles and audit artifacts. |
 | Database | Multi-tenant metadata store for orgs, projects, policies, assets. |
@@ -33,10 +34,11 @@ This document complements the AI supply chain threat taxonomy with a system-leve
 
 1. **Client boundary**: CI/CD systems and CLI clients interact with the Control Plane API over the public network.
 2. **Service boundary**: Control Plane ↔ Policy Engine ↔ Evidence Store communication (mTLS + service identity).
-3. **Data boundary**: Control Plane services ↔ Database (row-level or physical isolation by tenant).
-4. **Artifact boundary**: Control Plane services ↔ Object Storage (signed bundle ingestion and immutable retention).
-5. **Identity boundary**: Control Plane services ↔ OIDC provider (token issuance and role claims).
-6. **Key boundary**: Control Plane services ↔ KMS/Vault (signing + encryption keys).
+3. **UI boundary**: Browser-based Control Plane UI ↔ API Layer (OIDC + RBAC enforcement).
+4. **Data boundary**: Control Plane services ↔ Database (row-level or physical isolation by tenant).
+5. **Artifact boundary**: Control Plane services ↔ Object Storage (signed bundle ingestion and immutable retention).
+6. **Identity boundary**: Control Plane services ↔ OIDC provider (token issuance and role claims).
+7. **Key boundary**: Control Plane services ↔ KMS/Vault (signing + encryption keys).
 
 ## STRIDE analysis per component
 
@@ -63,6 +65,17 @@ The matrix below highlights representative threats per component. Items are prio
 | Information disclosure | Cross-tenant data leakage. | Row-level security, tenant-scoped queries, encryption. |
 | Denial of service | API abuse, heavy query load. | Rate limiting, caching, request validation. |
 | Elevation of privilege | Privilege escalation via mis-scoped roles. | Least-privilege roles, policy reviews, regression tests. |
+
+### Control Plane UI
+
+| STRIDE | Threat | Primary mitigations |
+| --- | --- | --- |
+| Spoofing | Phishing or fake UI endpoints. | SSO enforcement, strict domain controls, MFA. |
+| Tampering | UI config altered to bypass approvals. | Signed UI config, server-side validation. |
+| Repudiation | Users deny UI actions. | Audit logs with actor IDs and timestamps. |
+| Information disclosure | UI leaks sensitive evidence data. | RBAC checks on every request, data minimization. |
+| Denial of service | UI traffic overwhelms API. | Rate limits, caching, WAF. |
+| Elevation of privilege | UI permissions misapplied. | Server-side RBAC, access reviews. |
 
 ### Policy Engine
 

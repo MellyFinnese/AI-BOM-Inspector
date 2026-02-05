@@ -25,6 +25,26 @@ channels:
     publish:
       message:
         $ref: '#/components/messages/AuditEventCreated'
+  sso.provider.configured:
+    description: SSO provider configured or updated.
+    publish:
+      message:
+        $ref: '#/components/messages/SsoProviderConfigured'
+  rbac.role.assigned:
+    description: Role assigned to a principal.
+    publish:
+      message:
+        $ref: '#/components/messages/RoleAssigned'
+  policy.pack.published:
+    description: Policy pack published or updated.
+    publish:
+      message:
+        $ref: '#/components/messages/PolicyPackPublished'
+  compliance.report.generated:
+    description: Compliance report generated or updated.
+    publish:
+      message:
+        $ref: '#/components/messages/ComplianceReportGenerated'
 components:
   messages:
     EvidenceIngested:
@@ -39,6 +59,22 @@ components:
       name: AuditEventCreated
       payload:
         $ref: '#/components/schemas/AuditEvent'
+    SsoProviderConfigured:
+      name: SsoProviderConfigured
+      payload:
+        $ref: '#/components/schemas/SsoProviderEvent'
+    RoleAssigned:
+      name: RoleAssigned
+      payload:
+        $ref: '#/components/schemas/RoleAssignmentEvent'
+    PolicyPackPublished:
+      name: PolicyPackPublished
+      payload:
+        $ref: '#/components/schemas/PolicyPackEvent'
+    ComplianceReportGenerated:
+      name: ComplianceReportGenerated
+      payload:
+        $ref: '#/components/schemas/ComplianceReportEvent'
   schemas:
     EvidenceEvent:
       type: object
@@ -86,6 +122,71 @@ components:
         metadata:
           type: object
           additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    SsoProviderEvent:
+      type: object
+      required: [event_id, org_id, provider_id, provider_type, created_at]
+      properties:
+        event_id:
+          type: string
+        org_id:
+          type: string
+        provider_id:
+          type: string
+        provider_type:
+          type: string
+          enum: [oidc, saml]
+        created_at:
+          type: string
+          format: date-time
+    RoleAssignmentEvent:
+      type: object
+      required: [event_id, org_id, principal_id, role_id, created_at]
+      properties:
+        event_id:
+          type: string
+        org_id:
+          type: string
+        principal_id:
+          type: string
+        role_id:
+          type: string
+        scope:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    PolicyPackEvent:
+      type: object
+      required: [event_id, org_id, pack_id, created_at]
+      properties:
+        event_id:
+          type: string
+        org_id:
+          type: string
+        pack_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ComplianceReportEvent:
+      type: object
+      required: [event_id, org_id, report_id, framework, status, created_at]
+      properties:
+        event_id:
+          type: string
+        org_id:
+          type: string
+        report_id:
+          type: string
+        framework:
+          type: string
+          enum: [soc2, iso27001]
+        status:
+          type: string
+          enum: [pending, ready, failed]
         created_at:
           type: string
           format: date-time
