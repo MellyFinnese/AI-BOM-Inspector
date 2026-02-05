@@ -1,0 +1,29 @@
+{
+  "version": "2024.10",
+  "fingerprints": [
+    {
+      "pattern": "common crawl",
+      "risk": "high",
+      "signal": "DATASET_CONTAMINATION_RISK",
+      "note": "Broad web crawl may include copyrighted or sensitive content."
+    },
+    {
+      "pattern": "web crawl",
+      "risk": "high",
+      "signal": "DATASET_CONTAMINATION_RISK",
+      "note": "Uncurated web crawls can carry sensitive or toxic data."
+    },
+    {
+      "pattern": "reddit",
+      "risk": "medium",
+      "signal": "TRAINING_SOURCE_RISK",
+      "note": "User-generated content requires additional policy review."
+    },
+    {
+      "pattern": "synthetic",
+      "risk": "low",
+      "signal": "TRAINING_SOURCE_RISK",
+      "note": "Synthetic data should be validated for drift and bias."
+    }
+  ]
+}

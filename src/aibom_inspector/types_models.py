@@ -21,6 +21,10 @@ class ModelInfo:
     license: Optional[str] = None
     last_updated: Optional[datetime] = None
     license_category: str | None = None
+    base_models: List[str] = field(default_factory=list)
+    fine_tuned_from: List[str] = field(default_factory=list)
+    training_sources: List[str] = field(default_factory=list)
+    hashes: List[str] = field(default_factory=list)
     issues: List[ModelIssue] = field(default_factory=list)
     trust_signals: List[ModelIssue] = field(default_factory=list)
 
