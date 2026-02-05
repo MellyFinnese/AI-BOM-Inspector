@@ -46,17 +46,34 @@ AI-BOM Inspector's enterprise platform turns inspection output into enforceable 
 ### Identity, RBAC, and SSO (aspirational)
 - `POST /v1/sso/providers`
 - `GET /v1/sso/providers`
+- `GET /v1/sso/providers/{provider_id}`
+- `PATCH /v1/sso/providers/{provider_id}`
+- `DELETE /v1/sso/providers/{provider_id}`
 - `POST /v1/roles`
 - `GET /v1/roles`
+- `GET /v1/roles/{role_id}`
+- `PATCH /v1/roles/{role_id}`
+- `DELETE /v1/roles/{role_id}`
 - `POST /v1/role-assignments`
+- `GET /v1/role-assignments`
+- `DELETE /v1/role-assignments/{assignment_id}`
 
 ### Policy packs (aspirational)
 - `POST /v1/policy-packs`
 - `GET /v1/policy-packs`
+- `GET /v1/policy-packs/{pack_id}`
+- `PATCH /v1/policy-packs/{pack_id}`
+- `DELETE /v1/policy-packs/{pack_id}`
 
 ### Compliance reports (aspirational)
 - `POST /v1/compliance/reports`
 - `GET /v1/compliance/reports`
+- `GET /v1/compliance/reports/{report_id}`
+- `GET /v1/compliance/reports/{report_id}/download`
+
+### Control Plane UI support (aspirational)
+- `POST /v1/ui/session`
+- `GET /v1/ui/overview`
 
 ## Control Plane UI (aspirational)
 
@@ -119,3 +136,4 @@ The bundle includes:
 - Compliance report exports (PDF/CSV/JSON) with evidence links.
 - Phase 2 (strong signal): threat model refresh (UI + SSO), API fuzzing + schema validation, policy engine test harness.
 - Phase 3 (enterprise polish): evidence artifacts for compliance, report integrity guarantees, tamper resistance on audit logs.
+- Detailed hardening plan: `docs/HARDENING_PLAN.md`.

@@ -35,6 +35,11 @@ This document defines the formal API contract strategy for AI-BOM Inspector and 
 - JSON schema validation for evidence bundles and policy artifacts during ingestion.
 - API fuzzing against the OpenAPI contract with negative test cases.
 
+## Supporting JSON schemas
+
+- Audit log entry schema: `schemas/audit_log_entry.schema.json`.
+- Compliance report artifact schema: `schemas/compliance_report.schema.json`.
+
 ## UI contract notes (aspirational)
 
 - The Control Plane UI consumes the OpenAPI contract as the backend source of truth.

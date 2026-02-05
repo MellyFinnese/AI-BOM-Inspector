@@ -30,21 +30,46 @@ channels:
     publish:
       message:
         $ref: '#/components/messages/SsoProviderConfigured'
+  sso.provider.deleted:
+    description: SSO provider deleted.
+    publish:
+      message:
+        $ref: '#/components/messages/SsoProviderDeleted'
   rbac.role.assigned:
     description: Role assigned to a principal.
     publish:
       message:
         $ref: '#/components/messages/RoleAssigned'
+  rbac.role.revoked:
+    description: Role assignment revoked for a principal.
+    publish:
+      message:
+        $ref: '#/components/messages/RoleRevoked'
+  rbac.role.updated:
+    description: Role updated or deleted.
+    publish:
+      message:
+        $ref: '#/components/messages/RoleUpdated'
   policy.pack.published:
     description: Policy pack published or updated.
     publish:
       message:
         $ref: '#/components/messages/PolicyPackPublished'
+  policy.pack.deleted:
+    description: Policy pack deleted.
+    publish:
+      message:
+        $ref: '#/components/messages/PolicyPackDeleted'
   compliance.report.generated:
     description: Compliance report generated or updated.
     publish:
       message:
         $ref: '#/components/messages/ComplianceReportGenerated'
+  compliance.report.signed:
+    description: Compliance report signed and integrity sealed.
+    publish:
+      message:
+        $ref: '#/components/messages/ComplianceReportSigned'
 components:
   messages:
     EvidenceIngested:
@@ -63,16 +88,36 @@ components:
       name: SsoProviderConfigured
       payload:
         $ref: '#/components/schemas/SsoProviderEvent'
+    SsoProviderDeleted:
+      name: SsoProviderDeleted
+      payload:
+        $ref: '#/components/schemas/SsoProviderEvent'
     RoleAssigned:
       name: RoleAssigned
       payload:
         $ref: '#/components/schemas/RoleAssignmentEvent'
+    RoleRevoked:
+      name: RoleRevoked
+      payload:
+        $ref: '#/components/schemas/RoleAssignmentEvent'
+    RoleUpdated:
+      name: RoleUpdated
+      payload:
+        $ref: '#/components/schemas/RoleEvent'
     PolicyPackPublished:
       name: PolicyPackPublished
       payload:
         $ref: '#/components/schemas/PolicyPackEvent'
+    PolicyPackDeleted:
+      name: PolicyPackDeleted
+      payload:
+        $ref: '#/components/schemas/PolicyPackEvent'
     ComplianceReportGenerated:
       name: ComplianceReportGenerated
+      payload:
+        $ref: '#/components/schemas/ComplianceReportEvent'
+    ComplianceReportSigned:
+      name: ComplianceReportSigned
       payload:
         $ref: '#/components/schemas/ComplianceReportEvent'
   schemas:
@@ -158,6 +203,22 @@ components:
         created_at:
           type: string
           format: date-time
+    RoleEvent:
+      type: object
+      required: [event_id, org_id, role_id, action, created_at]
+      properties:
+        event_id:
+          type: string
+        org_id:
+          type: string
+        role_id:
+          type: string
+        action:
+          type: string
+          enum: [updated, deleted]
+        created_at:
+          type: string
+          format: date-time
     PolicyPackEvent:
       type: object
       required: [event_id, org_id, pack_id, created_at]
@@ -187,6 +248,8 @@ components:
         status:
           type: string
           enum: [pending, ready, failed]
+        integrity_hash:
+          type: string
         created_at:
           type: string
           format: date-time

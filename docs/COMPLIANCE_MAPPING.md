@@ -50,3 +50,5 @@ This document maps AI-BOM Inspector capabilities to SOC 2 and ISO/IEC 27001 cont
 - Schema validation reports for Control Plane bundles.
 - Compliance report evidence artifacts (mapped control narrative + links).
 - Tamper-evident audit log exports for integrity verification.
+- Compliance report schema: `schemas/compliance_report.schema.json`.
+- Audit log entry schema: `schemas/audit_log_entry.schema.json`.

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Compliance Report",
+  "type": "object",
+  "required": ["schema_version", "report_id", "framework", "generated_at", "status"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "report_id": {"type": "string"},
+    "framework": {"type": "string", "enum": ["soc2", "iso27001"]},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "status": {"type": "string", "enum": ["pending", "ready", "failed"]},
+    "summary": {"type": "string"},
+    "control_mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["control_id", "status"],
+        "properties": {
+          "control_id": {"type": "string"},
+          "status": {"type": "string"},
+          "evidence": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "evidence_uris": {"type": "array", "items": {"type": "string"}},
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "hash": {"type": "string"},
+        "algorithm": {"type": "string"},
+        "signature_uri": {"type": "string"}
+      }
+    }
+  }
+}
