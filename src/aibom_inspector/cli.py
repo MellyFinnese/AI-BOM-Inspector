@@ -32,6 +32,7 @@ from .model_risk_db import (
     set_model_advisory_db_path,
     set_model_hash_db_path,
     set_threat_taxonomy_db_path,
+    set_training_source_db_path,
 )
 from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_pack, write_github_check
 from .policy_graph import evaluate_graph_policies
@@ -301,6 +302,11 @@ def main() -> None:
     help="Path to a license risk override database (JSON).",
 )
 @click.option(
+    "--training-source-db",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    help="Path to a training source fingerprint database (JSON).",
+)
+@click.option(
     "--shadow-uefi-timeout",
     type=float,
     help="HTTP timeout (seconds) for fetching Shadow-UEFI-Intel metadata; defaults to SHADOW_UEFI_INTEL_TIMEOUT or 8s.",
@@ -463,6 +469,7 @@ def scan(
     model_hash_db: Optional[str],
     threat_taxonomy_db: Optional[str],
     license_risk_db: Optional[str],
+    training_source_db: Optional[str],
     shadow_uefi_timeout: Optional[float],
     shadow_uefi_repo: Optional[str],
     require_input: bool,
@@ -503,6 +510,8 @@ def scan(
         set_model_hash_db_path(Path(model_hash_db))
     if threat_taxonomy_db:
         set_threat_taxonomy_db_path(Path(threat_taxonomy_db))
+    if training_source_db:
+        set_training_source_db_path(Path(training_source_db))
 
     dependencies = _collect_dependencies(
         requirements_path,
@@ -610,6 +619,7 @@ def scan(
             model_hash_db,
             threat_taxonomy_db,
             license_risk_db,
+            training_source_db,
         ]
         if path
     ]

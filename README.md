@@ -58,7 +58,7 @@ ai-bom-inspector/
 - Gather AI model metadata from JSON or explicit Hugging Face IDs and auto-discover model references (OpenAI/Anthropic calls, `from_pretrained` loads, pipeline configs) directly from your repo
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
 - Inspect model artifacts (safetensors/pickle checkpoints) for poisoned weights or unsafe globals and compute hashes for reputation checks
-- Cross-check models against local vulnerability/advisory feeds and map findings to STRIDE + MITRE ATLAS categories
+- Cross-check models against local vulnerability/advisory feeds, training source fingerprints, and map findings to STRIDE + MITRE ATLAS categories
 - Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics; the optional AI-summary hook is disabled by default and ready for teams to wire up their own LLM if they choose
 - Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --enable-shadow-uefi-intel` is used
 
@@ -147,6 +147,7 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 - Specify models inline: `aibom scan --online --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
 - Enrich CVEs during the scan: `aibom scan --online --with-cves --format json`
 - Use local model advisory and hash feeds: `aibom scan --models-file models.json --model-advisory-db feeds/model_vulnerability_db.json --model-hash-db feeds/model_hash_reputation.json`
+- Apply training source fingerprints: `aibom scan --models-file models.json --training-source-db feeds/training_source_fingerprints.json`
 - Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
 - Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html --output merged-report.html`
 - Run fully offline (no OSV/HF calls): `aibom scan --format markdown`
@@ -194,7 +195,7 @@ See `docs/OUTPUTS.md` for a side-by-side JSON, SARIF, and CycloneDX example plus
 Configuration tips:
 
 - OSV enrichment uses the public API by default; override with `--osv-url` or `OSV_API_URL` and adjust the HTTP timeout via `--osv-timeout` or `OSV_API_TIMEOUT`.
-- Model risk databases can be swapped via `--model-advisory-db`, `--model-hash-db`, and `--license-risk-db` when you want to point at internal mirrors or curated feeds.
+- Model risk databases can be swapped via `--model-advisory-db`, `--model-hash-db`, `--license-risk-db`, and `--training-source-db` when you want to point at internal mirrors or curated feeds.
 
 ## Heuristics & Risk Signals
 AI-BOM Inspector ships with lightweight, explainable checks that map to common AI supply-chain issues:
@@ -207,6 +208,7 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `KNOWN_VULN` / `CVE` | Known vulnerable versions (built-in heuristics + optional OSV lookup; recommends safer versions when known) | High |
 | `LICENSE_RISK` | Copyleft / reciprocal terms detected for a model | Medium |
 | `MODEL_LICENSE_RESTRICTED` | Restricted or custom model license detected (OpenRAIL, research-only, etc.) | Medium |
+| `PROPRIETARY_AI_RISK` | Proprietary model license may limit auditability or reuse | Medium |
 | `UNKNOWN_LICENSE` | Model or SBOM component lacks license metadata | High |
 | `STALE_MODEL` | Model metadata older than ~9 months | Medium |
 | `UNVERIFIED_SOURCE` | Non-standard model source value | Medium |
@@ -214,6 +216,12 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `MODEL_HASH_MALICIOUS` | Model hash matches a malicious fingerprint | High |
 | `MODEL_WEIGHT_ANOMALY` | Safetensors inspection detected poisoned/steganographic weights | High |
 | `PICKLE_DANGEROUS_GLOBALS` | Pickle checkpoint references dangerous globals | High |
+| `MODEL_LINEAGE_RISK` | Base model lineage contains license or vulnerability risk | Medium |
+| `MODEL_LINEAGE_UNKNOWN` | Base model lineage not present in scan context | Medium |
+| `FINE_TUNE_INHERITANCE_RISK` | Fine-tune inherits high-risk findings from base model | High |
+| `DATASET_CONTAMINATION_RISK` | Training sources suggest contamination or policy exposure | High |
+| `TRAINING_SOURCE_RISK` | Training source requires additional governance review | Medium |
+| `SUPPLY_CHAIN_ANOMALY` | Model hash mismatch or artifact integrity anomaly detected | High |
 | `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED` | Scan ran offline or without network dependencies; no remote enrichment performed | Low |
 | `METADATA_UNAVAILABLE` | Model registry/API could not be reached; metadata reused from cache with a warning | Low |
 | `INVALID_SBOM` | SBOM could not be parsed; flagged as an issue instead of crashing the scan | Medium |
@@ -246,7 +254,7 @@ The report shows a `stack_risk_score` (0–100, higher is healthier) and a `risk
 AI-BOM Inspector attaches explicit AI threat categories and STRIDE classifications to model findings. Mappings are surfaced in the report framework section and can be tailored via a local taxonomy file:
 - Default taxonomy: `src/aibom_inspector/data/ai_threat_taxonomy.json`
 - Override: `aibom scan --threat-taxonomy-db path/to/ai_threat_taxonomy.json`
-- MITRE ATLAS controls appear alongside NIST AI RMF, ISO/IEC 42001, OWASP LLM Top 10, and SOC 2 mappings.
+- MITRE ATLAS controls appear alongside NIST AI RMF, ISO/IEC 42001, OWASP LLM Top 10, SOC 2, and EU AI Act mappings.
 See `docs/THREAT_TAXONOMY.md` for the default taxonomy and extension guidance.
 
 ### Model risk databases
@@ -254,6 +262,7 @@ Model risk intelligence is local-first. You can ship curated JSON feeds in-repo 
 - **Model vulnerability DB:** `model_vulnerability_db.json` (use `--model-advisory-db` to override)
 - **Model hash reputation DB:** `model_hash_reputation.json` (use `--model-hash-db` to override)
 - **License risk DB:** `license_risk_db.json` (use `--license-risk-db` to override)
+- **Training source fingerprints:** `training_source_fingerprints.json` (use `--training-source-db` to override)
 
 ### Before vs. after hardening
 
@@ -274,7 +283,7 @@ Baseline timings below were captured on the included demo project to give teams 
 
 | Scenario | Command | Result |
 | --- | --- | --- |
-| Demo project scan | `PYTHONPATH=src python -m aibom_inspector.cli scan --requirements examples/demo/requirements.txt --pyproject examples/demo/pyproject.toml --manifest examples/demo/package-lock.json --manifest examples/demo/go.mod --models-file examples/demo/models.json --format json --output /tmp/aibom-report.json` | 2.15s real (container, Python 3.10.19) |
+| Demo project scan | `PYTHONPATH=src python -m aibom_inspector.cli scan --requirements examples/demo/requirements.txt --pyproject examples/demo/pyproject.toml --manifest examples/demo/package-lock.json --manifest examples/demo/go.mod --models-file examples/demo/models.json --format json --output /tmp/aibom-report.json` | 2.23s real (container, Python 3.10.19) |
 
 Use `/usr/bin/time -p` or your CI timing metrics to capture project-specific numbers (dependency count, model count, and total runtime).
 

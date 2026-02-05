@@ -80,6 +80,48 @@ _BUILTIN_MAPPINGS: dict[str, list[FrameworkMapping]] = {
         FrameworkMapping("ISO/IEC 42001", "A.5.2"),
         FrameworkMapping("SOC 2", "CC1.2"),
     ],
+    "PROPRIETARY_AI_RISK": [
+        FrameworkMapping("NIST AI RMF", "GOVERN 1.2"),
+        FrameworkMapping("ISO/IEC 42001", "A.5.2"),
+        FrameworkMapping("SOC 2", "CC1.2"),
+        FrameworkMapping("EU AI Act", "Transparency"),
+    ],
+    "MODEL_LINEAGE_RISK": [
+        FrameworkMapping("NIST AI RMF", "MAP 1.4"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.4"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+        FrameworkMapping("EU AI Act", "Risk management"),
+    ],
+    "MODEL_LINEAGE_UNKNOWN": [
+        FrameworkMapping("NIST AI RMF", "MAP 1.4"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.4"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+        FrameworkMapping("EU AI Act", "Data governance"),
+    ],
+    "FINE_TUNE_INHERITANCE_RISK": [
+        FrameworkMapping("NIST AI RMF", "MEASURE 2.2"),
+        FrameworkMapping("ISO/IEC 42001", "A.7.4"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+        FrameworkMapping("EU AI Act", "Risk management"),
+    ],
+    "DATASET_CONTAMINATION_RISK": [
+        FrameworkMapping("NIST AI RMF", "MAP 1.3"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.6"),
+        FrameworkMapping("SOC 2", "CC7.2"),
+        FrameworkMapping("EU AI Act", "Data governance"),
+    ],
+    "TRAINING_SOURCE_RISK": [
+        FrameworkMapping("NIST AI RMF", "MAP 1.3"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.6"),
+        FrameworkMapping("SOC 2", "CC7.2"),
+        FrameworkMapping("EU AI Act", "Data governance"),
+    ],
+    "SUPPLY_CHAIN_ANOMALY": [
+        FrameworkMapping("NIST AI RMF", "GOVERN 1.6"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.8"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+        FrameworkMapping("EU AI Act", "Risk management"),
+    ],
     "TYPOSQUAT_SUSPECT": [
         FrameworkMapping("NIST AI RMF", "MAP 1.3"),
         FrameworkMapping("ISO/IEC 42001", "A.6.4"),

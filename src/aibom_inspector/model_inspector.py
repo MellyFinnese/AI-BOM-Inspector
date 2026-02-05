@@ -6,7 +6,12 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .integrity import compute_file_sha256
-from .model_risk_db import load_model_advisory_db, load_model_hash_db, load_threat_taxonomy_db
+from .model_risk_db import (
+    load_model_advisory_db,
+    load_model_hash_db,
+    load_threat_taxonomy_db,
+    load_training_source_db,
+)
 from .pickle_inspector import PickleScanError, inspect_pickle_file
 from .tensor_fuzz import SafetensorsDataError, SafetensorsHeaderError, inspect_weight_files
 from .types import ModelInfo, ModelIssue, apply_license_category_model, categorize_license
@@ -80,6 +85,34 @@ def _coerce_artifacts(entry: dict) -> list[dict]:
     return normalized
 
 
+def _coerce_strings(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str)]
+    if isinstance(value, dict):
+        return [item for item in value.values() if isinstance(item, str)]
+    return []
+
+
+def _collect_training_sources(entry: dict) -> list[str]:
+    sources: list[str] = []
+    for key in ("training_sources", "training_source", "datasets", "data_sources", "training_data"):
+        sources.extend(_coerce_strings(entry.get(key)))
+    return sorted({source for source in sources if source})
+
+
+def _collect_lineage(entry: dict) -> tuple[list[str], list[str]]:
+    base_models: list[str] = []
+    fine_tuned: list[str] = []
+    for key in ("base_model", "base_models", "lineage", "derived_from", "parent_model"):
+        base_models.extend(_coerce_strings(entry.get(key)))
+    fine_tuned.extend(_coerce_strings(entry.get("fine_tuned_from")))
+    for key in ("fine_tune_base", "fine_tuned_base"):
+        fine_tuned.extend(_coerce_strings(entry.get(key)))
+    return sorted({value for value in base_models if value}), sorted({value for value in fine_tuned if value})
+
+
 def _detect_artifact_kind(path: Path, declared_kind: Optional[str]) -> str:
     if declared_kind:
         return declared_kind.lower()
@@ -91,7 +124,10 @@ def _detect_artifact_kind(path: Path, declared_kind: Optional[str]) -> str:
     return "unknown"
 
 
-def _analyze_artifacts(artifacts: list[dict]) -> tuple[list[str], list[ModelIssue], list[ModelIssue]]:
+def _analyze_artifacts(
+    artifacts: list[dict],
+    declared_hashes: list[str],
+) -> tuple[list[str], list[ModelIssue], list[ModelIssue]]:
     hashes: list[str] = []
     issues: list[ModelIssue] = []
     trust_signals: list[ModelIssue] = []
@@ -112,7 +148,16 @@ def _analyze_artifacts(artifacts: list[dict]) -> tuple[list[str], list[ModelIssu
             continue
 
         try:
-            hashes.append(compute_file_sha256(path))
+            artifact_hash = compute_file_sha256(path)
+            hashes.append(artifact_hash)
+            if declared_hashes and artifact_hash not in declared_hashes:
+                issues.append(
+                    ModelIssue(
+                        f"[MODEL_HASH_MISMATCH] {path} hash does not match declared fingerprints",
+                        severity="high",
+                        code="SUPPLY_CHAIN_ANOMALY",
+                    )
+                )
         except Exception as exc:
             issues.append(
                 ModelIssue(
@@ -191,6 +236,15 @@ def _analyze_artifacts(artifacts: list[dict]) -> tuple[list[str], list[ModelIssu
                 )
             )
 
+    if declared_hashes and artifacts and not hashes:
+        issues.append(
+            ModelIssue(
+                "[MODEL_HASH_UNVERIFIED] Declared hashes could not be verified against artifacts",
+                severity="medium",
+                code="SUPPLY_CHAIN_ANOMALY",
+            )
+        )
+
     return hashes, issues, trust_signals
 
 
@@ -246,6 +300,8 @@ def parse_model_entry(entry: dict) -> ModelInfo:
     issues: List[ModelIssue] = []
     trust_signals: List[ModelIssue] = []
     hashes: list[str] = _collect_declared_hashes(entry)
+    training_sources = _collect_training_sources(entry)
+    base_models, fine_tuned_from = _collect_lineage(entry)
 
     if entry.get("offline"):
         issues.append(
@@ -291,6 +347,14 @@ def parse_model_entry(entry: dict) -> ModelInfo:
                     code="MODEL_LICENSE_RESTRICTED",
                 )
             )
+            if category == "proprietary":
+                issues.append(
+                    ModelIssue(
+                        "[PROPRIETARY_AI_RISK] Proprietary model license may limit auditability or reuse",
+                        severity="medium",
+                        code="PROPRIETARY_AI_RISK",
+                    )
+                )
         elif category == "unknown":
             issues.append(
                 ModelIssue(
@@ -318,16 +382,24 @@ def parse_model_entry(entry: dict) -> ModelInfo:
             )
         )
 
-    artifact_hashes, artifact_issues, artifact_trust = _analyze_artifacts(_coerce_artifacts(entry))
+    artifact_hashes, artifact_issues, artifact_trust = _analyze_artifacts(
+        _coerce_artifacts(entry),
+        hashes,
+    )
     hashes.extend(artifact_hashes)
     issues.extend(artifact_issues)
     trust_signals.extend(artifact_trust)
+
+    issues.extend(_assess_training_sources(training_sources))
 
     model = ModelInfo(
         identifier=identifier,
         source=source,
         license=license_name,
         last_updated=last_updated,
+        base_models=base_models,
+        fine_tuned_from=fine_tuned_from,
+        training_sources=training_sources,
         hashes=sorted({value for value in hashes if value}),
         issues=issues,
         trust_signals=trust_signals,
@@ -430,9 +502,78 @@ def _apply_model_advisories(models: List[ModelInfo], advisory_db: dict) -> None:
                 )
 
 
+def _assess_training_sources(sources: list[str]) -> list[ModelIssue]:
+    if not sources:
+        return []
+
+    db = load_training_source_db()
+    fingerprints = db.get("fingerprints") or []
+    issues: list[ModelIssue] = []
+    for source in sources:
+        source_l = source.lower()
+        for entry in fingerprints:
+            if not isinstance(entry, dict):
+                continue
+            pattern = str(entry.get("pattern", "")).lower()
+            if not pattern or pattern not in source_l:
+                continue
+            risk = str(entry.get("risk", "medium")).lower()
+            severity = "high" if risk == "high" else "low" if risk == "low" else "medium"
+            signal = str(entry.get("signal", "TRAINING_SOURCE_RISK")).upper()
+            note = entry.get("note") or entry.get("description") or ""
+            message = f"[{signal}] Training source '{source}' flagged"
+            if note:
+                message = f"{message}: {note}"
+            issues.append(
+                ModelIssue(
+                    f"{message}{_taxonomy_context(signal)}",
+                    severity=severity,
+                    code=signal,
+                )
+            )
+    return issues
+
+
+def _apply_lineage_risks(models: List[ModelInfo]) -> None:
+    index = {model.identifier: model for model in models}
+    for model in models:
+        lineage = sorted({*model.base_models, *model.fine_tuned_from})
+        if not lineage:
+            continue
+        for base_id in lineage:
+            base = index.get(base_id)
+            if not base:
+                model.issues.append(
+                    ModelIssue(
+                        f"[MODEL_LINEAGE_UNKNOWN] Base model '{base_id}' not found in scan context",
+                        severity="medium",
+                        code="MODEL_LINEAGE_UNKNOWN",
+                    )
+                )
+                continue
+            if base.license_category in {"unknown", "restricted", "proprietary"}:
+                model.issues.append(
+                    ModelIssue(
+                        f"[MODEL_LINEAGE_RISK] Base model '{base_id}' has license risk ({base.license_category})",
+                        severity="medium",
+                        code="MODEL_LINEAGE_RISK",
+                    )
+                )
+            high_issues = [issue for issue in base.issues if issue.severity == "high"]
+            if high_issues:
+                model.issues.append(
+                    ModelIssue(
+                        f"[FINE_TUNE_INHERITANCE_RISK] Base model '{base_id}' carries high-risk findings",
+                        severity="high",
+                        code="FINE_TUNE_INHERITANCE_RISK",
+                    )
+                )
+
+
 def enrich_models_with_cves(models: List[ModelInfo]) -> List[ModelInfo]:
     """Cross-check model identifiers and hashes against advisory feeds."""
 
     _apply_model_advisories(models, load_model_advisory_db())
     _apply_hash_reputation(models, load_model_hash_db())
+    _apply_lineage_risks(models)
     return models
