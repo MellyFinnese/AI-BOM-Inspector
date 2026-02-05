@@ -118,6 +118,35 @@
         "additionalProperties": true
       }
     },
+    "threat_summary": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["version", "findings", "threat_counts"],
+      "properties": {
+        "version": { "type": "string" },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["subject", "subject_type", "issue_code", "severity", "threats", "stride", "mitre_atlas"],
+            "properties": {
+              "subject": { "type": "string" },
+              "subject_type": { "type": "string" },
+              "issue_code": { "type": "string" },
+              "severity": { "type": "string" },
+              "threats": { "type": "array", "items": { "type": "string" } },
+              "stride": { "type": "array", "items": { "type": "string" } },
+              "mitre_atlas": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "threat_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        }
+      }
+    },
     "dependencies": {
       "type": "array",
       "items": {

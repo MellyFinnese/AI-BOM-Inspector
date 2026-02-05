@@ -44,6 +44,7 @@ from .audit_log import append_audit_log, build_audit_entry, verify_audit_log
 from .evidence_export import write_evidence_export
 from .integrity import compute_file_sha256, enforce_lockfile_checksums, verify_expected_hashes
 from .ip_protection import protect_ip
+from .control_plane import build_control_plane_bundle, write_control_plane_bundle
 from .trust_root import (
     create_trust_root,
     load_trust_root,
@@ -140,6 +141,16 @@ def _parse_hash_entries(entries: tuple[str, ...], label: str) -> dict[Path, str]
         path_text, hash_value = entry.rsplit(":", 1)
         path = Path(path_text)
         parsed[path] = hash_value.strip()
+    return parsed
+
+
+def _parse_metadata_entries(entries: tuple[str, ...], label: str) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for entry in entries:
+        if ":" not in entry:
+            raise click.BadParameter(f"{label} must be in KEY:VALUE format")
+        key, value = entry.split(":", 1)
+        parsed[key.strip()] = value.strip()
     return parsed
 
 
@@ -440,6 +451,52 @@ def main() -> None:
     type=click.Path(exists=True, dir_okay=False, path_type=str),
     help="Previous JSON report to diff against for change detection.",
 )
+@click.option(
+    "--control-plane-output",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Write a Control Plane bundle JSON for enterprise ingestion.",
+)
+@click.option(
+    "--control-plane-org",
+    type=str,
+    help="Organization ID for the Control Plane bundle.",
+)
+@click.option(
+    "--control-plane-project",
+    type=str,
+    help="Project ID for the Control Plane bundle.",
+)
+@click.option(
+    "--control-plane-environment",
+    type=str,
+    help="Environment name (dev/staging/prod) for the Control Plane bundle.",
+)
+@click.option(
+    "--control-plane-asset-type",
+    type=click.Choice(["model", "dataset", "pipeline"], case_sensitive=False),
+    help="Asset type for the Control Plane bundle.",
+)
+@click.option(
+    "--control-plane-asset-fingerprint",
+    type=str,
+    help="Asset fingerprint or immutable identifier for the Control Plane bundle.",
+)
+@click.option(
+    "--control-plane-asset-id",
+    type=str,
+    help="Optional asset ID if the asset is already registered.",
+)
+@click.option(
+    "--control-plane-prev-hash",
+    type=str,
+    help="Previous bundle hash to chain evidence records.",
+)
+@click.option(
+    "--control-plane-metadata",
+    "control_plane_metadata",
+    multiple=True,
+    help="Additional metadata for the Control Plane bundle in KEY:VALUE format (repeatable).",
+)
 def scan(
     requirements: Optional[str],
     pyproject: Optional[str],
@@ -495,6 +552,15 @@ def scan(
     attestation_output: Optional[str],
     runtime_trace: Optional[str],
     baseline_report: Optional[str],
+    control_plane_output: Optional[str],
+    control_plane_org: Optional[str],
+    control_plane_project: Optional[str],
+    control_plane_environment: Optional[str],
+    control_plane_asset_type: Optional[str],
+    control_plane_asset_fingerprint: Optional[str],
+    control_plane_asset_id: Optional[str],
+    control_plane_prev_hash: Optional[str],
+    control_plane_metadata: tuple[str, ...],
 ) -> None:
     """Scan dependencies, models, and produce a report."""
     requirements_path = requirements or (
@@ -720,6 +786,7 @@ def scan(
             click.echo(f"Unable to diff with baseline report: {exc}", err=True)
 
     graph_policy_requested = enforce_graph_policy
+    policy_failed = False
     if policy_data:
         graph_policy_requested = graph_policy_requested or policy_data.enforce_graph_policies
         policy_evaluation = evaluate_policy(
@@ -732,16 +799,17 @@ def scan(
         if github_check_output:
             write_github_check(Path(github_check_output), policy_evaluation, report)
         if not policy_evaluation.passed:
-            raise SystemExit(1)
+            policy_failed = True
     elif graph_policy_requested and stack_snapshot:
         violations = evaluate_graph_policies(stack_snapshot)
         report.graph_policy_violations = violations
         if any(v.severity.lower() == "error" for v in violations):
-            raise SystemExit(1)
+            policy_failed = True
 
+    score_failed = False
     if fail_on_score is not None:
         if report.stack_risk_score < fail_on_score:
-            raise SystemExit(1)
+            score_failed = True
 
     signature_text = None
     if sign_report:
@@ -783,6 +851,8 @@ def scan(
                 "fingerprint": trust_root_fingerprint(root),
             }
         write_attestation(attestation_path, attestation_payload)
+    else:
+        attestation_path = None
 
     if audit_log:
         entry = build_audit_entry(
@@ -807,6 +877,42 @@ def scan(
             baseline_diff,
             signature_text,
         )
+
+    if control_plane_output:
+        missing_fields = []
+        if not control_plane_org:
+            missing_fields.append("--control-plane-org")
+        if not control_plane_project:
+            missing_fields.append("--control-plane-project")
+        if not control_plane_environment:
+            missing_fields.append("--control-plane-environment")
+        if not control_plane_asset_type:
+            missing_fields.append("--control-plane-asset-type")
+        if not control_plane_asset_fingerprint:
+            missing_fields.append("--control-plane-asset-fingerprint")
+        if missing_fields:
+            raise click.BadParameter(
+                f"Missing required Control Plane fields: {', '.join(missing_fields)}"
+            )
+        bundle = build_control_plane_bundle(
+            report=report_json,
+            report_hash=compute_output_hash(json.dumps(report_json, sort_keys=True)),
+            org_id=control_plane_org,
+            project_id=control_plane_project,
+            environment=control_plane_environment,
+            asset_type=control_plane_asset_type or "",
+            asset_fingerprint=control_plane_asset_fingerprint,
+            asset_id=control_plane_asset_id,
+            policy_evaluation=policy_evaluation,
+            metadata=_parse_metadata_entries(control_plane_metadata, "control-plane-metadata"),
+            signature=signature_text,
+            attestation_path=attestation_path,
+            previous_hash=control_plane_prev_hash,
+        )
+        write_control_plane_bundle(Path(control_plane_output), bundle)
+
+    if policy_failed or score_failed:
+        raise SystemExit(1)
 
 
 @main.command()
