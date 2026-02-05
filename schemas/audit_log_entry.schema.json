@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Audit Log Entry",
+  "type": "object",
+  "required": [
+    "action",
+    "timestamp",
+    "approvals",
+    "metadata",
+    "entry_hash"
+  ],
+  "properties": {
+    "action": {"type": "string"},
+    "actor": {"type": ["string", "null"]},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "report_path": {"type": ["string", "null"]},
+    "report_sha256": {"type": ["string", "null"]},
+    "attestation_path": {"type": ["string", "null"]},
+    "policy_path": {"type": ["string", "null"]},
+    "approvals": {"type": "array", "items": {"type": "string"}},
+    "metadata": {"type": "object", "additionalProperties": true},
+    "previous_hash": {"type": ["string", "null"]},
+    "entry_hash": {"type": "string"}
+  }
+}

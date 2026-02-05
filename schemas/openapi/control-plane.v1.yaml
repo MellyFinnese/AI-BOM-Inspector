@@ -1,0 +1,1056 @@
+openapi: 3.0.3
+info:
+  title: AI-BOM Inspector Control Plane API
+  version: 1.0.0
+  description: |
+    Formal contract for the Control Plane REST API. This is an aspirational baseline
+    that matches the documented MVP surface and is intended to evolve alongside the
+    implementation.
+servers:
+  - url: https://control-plane.example.com
+security:
+  - bearerAuth: []
+paths:
+  /v1/organizations:
+    post:
+      summary: Create organization
+      operationId: createOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationCreate'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /v1/organizations/{org_id}/projects:
+    post:
+      summary: Create project
+      operationId: createProject
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /v1/projects/{project_id}/environments:
+    post:
+      summary: Create environment
+      operationId: createEnvironment
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnvironmentCreate'
+      responses:
+        '201':
+          description: Environment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /v1/assets:
+    post:
+      summary: Register asset
+      operationId: createAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetCreate'
+      responses:
+        '201':
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /v1/assets/{asset_id}:
+    get:
+      summary: Get asset
+      operationId: getAsset
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Asset detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/policies:
+    post:
+      summary: Create policy
+      operationId: createPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyCreate'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      summary: List policies
+      operationId: listPolicies
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Policy list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyList'
+  /v1/policies/{policy_id}/activate:
+    post:
+      summary: Activate policy
+      operationId: activatePolicy
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+      responses:
+        '200':
+          description: Policy activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/evidence:
+    post:
+      summary: Ingest evidence bundle
+      operationId: createEvidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceIngest'
+      responses:
+        '201':
+          description: Evidence recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      summary: List evidence
+      operationId: listEvidence
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Evidence list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceList'
+  /v1/audit:
+    get:
+      summary: List audit events
+      operationId: listAuditEvents
+      responses:
+        '200':
+          description: Audit list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditList'
+  /v1/sso/providers:
+    post:
+      summary: Create SSO provider
+      operationId: createSsoProvider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderCreate'
+      responses:
+        '201':
+          description: SSO provider created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoProvider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      summary: List SSO providers
+      operationId: listSsoProviders
+      responses:
+        '200':
+          description: SSO provider list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoProviderList'
+  /v1/sso/providers/{provider_id}:
+    get:
+      summary: Get SSO provider
+      operationId: getSsoProvider
+      parameters:
+        - $ref: '#/components/parameters/ProviderId'
+      responses:
+        '200':
+          description: SSO provider detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoProvider'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update SSO provider
+      operationId: updateSsoProvider
+      parameters:
+        - $ref: '#/components/parameters/ProviderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderUpdate'
+      responses:
+        '200':
+          description: SSO provider updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoProvider'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete SSO provider
+      operationId: deleteSsoProvider
+      parameters:
+        - $ref: '#/components/parameters/ProviderId'
+      responses:
+        '204':
+          description: SSO provider deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/roles:
+    post:
+      summary: Create role
+      operationId: createRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreate'
+      responses:
+        '201':
+          description: Role created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+    get:
+      summary: List roles
+      operationId: listRoles
+      responses:
+        '200':
+          description: Role list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleList'
+  /v1/roles/{role_id}:
+    get:
+      summary: Get role
+      operationId: getRole
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      responses:
+        '200':
+          description: Role detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update role
+      operationId: updateRole
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleUpdate'
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete role
+      operationId: deleteRole
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      responses:
+        '204':
+          description: Role deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/role-assignments:
+    post:
+      summary: Assign role
+      operationId: createRoleAssignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleAssignmentCreate'
+      responses:
+        '201':
+          description: Role assignment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleAssignment'
+    get:
+      summary: List role assignments
+      operationId: listRoleAssignments
+      responses:
+        '200':
+          description: Role assignment list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleAssignmentList'
+  /v1/role-assignments/{assignment_id}:
+    delete:
+      summary: Revoke role assignment
+      operationId: deleteRoleAssignment
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      responses:
+        '204':
+          description: Role assignment deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/policy-packs:
+    post:
+      summary: Create policy pack
+      operationId: createPolicyPack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyPackCreate'
+      responses:
+        '201':
+          description: Policy pack created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPack'
+    get:
+      summary: List policy packs
+      operationId: listPolicyPacks
+      responses:
+        '200':
+          description: Policy pack list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPackList'
+  /v1/policy-packs/{pack_id}:
+    get:
+      summary: Get policy pack
+      operationId: getPolicyPack
+      parameters:
+        - $ref: '#/components/parameters/PolicyPackId'
+      responses:
+        '200':
+          description: Policy pack detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPack'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update policy pack
+      operationId: updatePolicyPack
+      parameters:
+        - $ref: '#/components/parameters/PolicyPackId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyPackUpdate'
+      responses:
+        '200':
+          description: Policy pack updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPack'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete policy pack
+      operationId: deletePolicyPack
+      parameters:
+        - $ref: '#/components/parameters/PolicyPackId'
+      responses:
+        '204':
+          description: Policy pack deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/compliance/reports:
+    post:
+      summary: Create compliance report
+      operationId: createComplianceReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComplianceReportCreate'
+      responses:
+        '201':
+          description: Compliance report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceReport'
+    get:
+      summary: List compliance reports
+      operationId: listComplianceReports
+      responses:
+        '200':
+          description: Compliance report list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceReportList'
+  /v1/compliance/reports/{report_id}:
+    get:
+      summary: Get compliance report
+      operationId: getComplianceReport
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+      responses:
+        '200':
+          description: Compliance report detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceReport'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/compliance/reports/{report_id}/download:
+    get:
+      summary: Download compliance report
+      operationId: downloadComplianceReport
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+      responses:
+        '200':
+          description: Compliance report content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/ui/session:
+    post:
+      summary: Create UI session
+      operationId: createUiSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UiSessionCreate'
+      responses:
+        '201':
+          description: UI session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UiSession'
+  /v1/ui/overview:
+    get:
+      summary: Get UI overview
+      operationId: getUiOverview
+      responses:
+        '200':
+          description: UI overview summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UiOverview'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrgId:
+      name: org_id
+      in: query
+      required: true
+      schema:
+        type: string
+    ProviderId:
+      name: provider_id
+      in: path
+      required: true
+      schema:
+        type: string
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      schema:
+        type: string
+    AssetId:
+      name: asset_id
+      in: path
+      required: true
+      schema:
+        type: string
+    PolicyId:
+      name: policy_id
+      in: path
+      required: true
+      schema:
+        type: string
+    RoleId:
+      name: role_id
+      in: path
+      required: true
+      schema:
+        type: string
+    AssignmentId:
+      name: assignment_id
+      in: path
+      required: true
+      schema:
+        type: string
+    PolicyPackId:
+      name: pack_id
+      in: path
+      required: true
+      schema:
+        type: string
+    ReportId:
+      name: report_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    OrganizationCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ProjectCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        org_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    EnvironmentCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Environment:
+      type: object
+      properties:
+        id:
+          type: string
+        project_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    AssetCreate:
+      type: object
+      required: [type, fingerprint, project_id]
+      properties:
+        type:
+          type: string
+          enum: [model, dataset, pipeline]
+        fingerprint:
+          type: string
+        project_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        fingerprint:
+          type: string
+        project_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    PolicyCreate:
+      type: object
+      required: [name, org_id, definition]
+      properties:
+        name:
+          type: string
+        org_id:
+          type: string
+        definition:
+          type: object
+          additionalProperties: true
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        org_id:
+          type: string
+        active:
+          type: boolean
+        version:
+          type: integer
+    PolicyList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Policy'
+    EvidenceIngest:
+      type: object
+      required: [org_id, project_id, asset_fingerprint, bundle_hash, decision]
+      properties:
+        org_id:
+          type: string
+        project_id:
+          type: string
+        environment_id:
+          type: string
+        asset_fingerprint:
+          type: string
+        bundle_hash:
+          type: string
+        decision:
+          $ref: '#/components/schemas/PolicyDecision'
+        bundle_uri:
+          type: string
+    PolicyDecision:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pass, fail]
+        summary:
+          type: string
+        findings:
+          type: array
+          items:
+            type: string
+    EvidenceRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        asset_fingerprint:
+          type: string
+        decision:
+          $ref: '#/components/schemas/PolicyDecision'
+        created_at:
+          type: string
+          format: date-time
+    EvidenceList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceRecord'
+    AuditList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+    AuditEvent:
+      type: object
+      required: [id, action, actor, created_at]
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        actor:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+    SsoProviderCreate:
+      type: object
+      required: [name, type, metadata]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [oidc, saml]
+        metadata:
+          type: object
+          additionalProperties: true
+    SsoProvider:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    SsoProviderUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    SsoProviderList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SsoProvider'
+    RoleCreate:
+      type: object
+      required: [name, permissions]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+    RoleUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+    RoleList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+    RoleAssignmentCreate:
+      type: object
+      required: [principal_id, role_id]
+      properties:
+        principal_id:
+          type: string
+        role_id:
+          type: string
+        scope:
+          type: string
+    RoleAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+        principal_id:
+          type: string
+        role_id:
+          type: string
+        scope:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    RoleAssignmentList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleAssignment'
+    PolicyPackCreate:
+      type: object
+      required: [name, policies]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        policies:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    PolicyPack:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        policies:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    PolicyPackUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        policies:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    PolicyPackList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyPack'
+    ComplianceReportCreate:
+      type: object
+      required: [framework, scope]
+      properties:
+        framework:
+          type: string
+          enum: [soc2, iso27001]
+        scope:
+          type: object
+          additionalProperties: true
+        format:
+          type: string
+          enum: [pdf, csv, json]
+    ComplianceReport:
+      type: object
+      properties:
+        id:
+          type: string
+        framework:
+          type: string
+        status:
+          type: string
+          enum: [pending, ready, failed]
+        report_uri:
+          type: string
+        integrity_hash:
+          type: string
+        signature_uri:
+          type: string
+        evidence_uris:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+    ComplianceReportList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceReport'
+    UiSessionCreate:
+      type: object
+      required: [provider_id, redirect_uri]
+      properties:
+        provider_id:
+          type: string
+        redirect_uri:
+          type: string
+    UiSession:
+      type: object
+      properties:
+        session_id:
+          type: string
+        login_uri:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    UiOverview:
+      type: object
+      properties:
+        open_findings:
+          type: integer
+        pending_approvals:
+          type: integer
+        recent_activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
