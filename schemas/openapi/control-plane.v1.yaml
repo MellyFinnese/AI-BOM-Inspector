@@ -1,0 +1,429 @@
+openapi: 3.0.3
+info:
+  title: AI-BOM Inspector Control Plane API
+  version: 1.0.0
+  description: |
+    Formal contract for the Control Plane REST API. This is an aspirational baseline
+    that matches the documented MVP surface and is intended to evolve alongside the
+    implementation.
+servers:
+  - url: https://control-plane.example.com
+security:
+  - bearerAuth: []
+paths:
+  /v1/organizations:
+    post:
+      summary: Create organization
+      operationId: createOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationCreate'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /v1/organizations/{org_id}/projects:
+    post:
+      summary: Create project
+      operationId: createProject
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /v1/projects/{project_id}/environments:
+    post:
+      summary: Create environment
+      operationId: createEnvironment
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnvironmentCreate'
+      responses:
+        '201':
+          description: Environment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /v1/assets:
+    post:
+      summary: Register asset
+      operationId: createAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetCreate'
+      responses:
+        '201':
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /v1/assets/{asset_id}:
+    get:
+      summary: Get asset
+      operationId: getAsset
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Asset detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/policies:
+    post:
+      summary: Create policy
+      operationId: createPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyCreate'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      summary: List policies
+      operationId: listPolicies
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Policy list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyList'
+  /v1/policies/{policy_id}/activate:
+    post:
+      summary: Activate policy
+      operationId: activatePolicy
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+      responses:
+        '200':
+          description: Policy activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/evidence:
+    post:
+      summary: Ingest evidence bundle
+      operationId: createEvidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceIngest'
+      responses:
+        '201':
+          description: Evidence recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      summary: List evidence
+      operationId: listEvidence
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Evidence list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceList'
+  /v1/audit:
+    get:
+      summary: List audit events
+      operationId: listAuditEvents
+      responses:
+        '200':
+          description: Audit list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditList'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrgId:
+      name: org_id
+      in: query
+      required: true
+      schema:
+        type: string
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      schema:
+        type: string
+    AssetId:
+      name: asset_id
+      in: path
+      required: true
+      schema:
+        type: string
+    PolicyId:
+      name: policy_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    OrganizationCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ProjectCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        org_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    EnvironmentCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Environment:
+      type: object
+      properties:
+        id:
+          type: string
+        project_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    AssetCreate:
+      type: object
+      required: [type, fingerprint, project_id]
+      properties:
+        type:
+          type: string
+          enum: [model, dataset, pipeline]
+        fingerprint:
+          type: string
+        project_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        fingerprint:
+          type: string
+        project_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    PolicyCreate:
+      type: object
+      required: [name, org_id, definition]
+      properties:
+        name:
+          type: string
+        org_id:
+          type: string
+        definition:
+          type: object
+          additionalProperties: true
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        org_id:
+          type: string
+        active:
+          type: boolean
+        version:
+          type: integer
+    PolicyList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Policy'
+    EvidenceIngest:
+      type: object
+      required: [org_id, project_id, asset_fingerprint, bundle_hash, decision]
+      properties:
+        org_id:
+          type: string
+        project_id:
+          type: string
+        environment_id:
+          type: string
+        asset_fingerprint:
+          type: string
+        bundle_hash:
+          type: string
+        decision:
+          $ref: '#/components/schemas/PolicyDecision'
+        bundle_uri:
+          type: string
+    PolicyDecision:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pass, fail]
+        summary:
+          type: string
+        findings:
+          type: array
+          items:
+            type: string
+    EvidenceRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        asset_fingerprint:
+          type: string
+        decision:
+          $ref: '#/components/schemas/PolicyDecision'
+        created_at:
+          type: string
+          format: date-time
+    EvidenceList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceRecord'
+    AuditList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
