@@ -51,6 +51,35 @@ _BUILTIN_MAPPINGS: dict[str, list[FrameworkMapping]] = {
         FrameworkMapping("OWASP LLM Top 10", "LLM06"),
         FrameworkMapping("SOC 2", "CC7.1"),
     ],
+    "MODEL_VULNERABILITY": [
+        FrameworkMapping("NIST AI RMF", "GOVERN 1.6"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.8"),
+        FrameworkMapping("OWASP LLM Top 10", "LLM06"),
+        FrameworkMapping("MITRE ATLAS", "AML.TA0004"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+    ],
+    "MODEL_HASH_MALICIOUS": [
+        FrameworkMapping("NIST AI RMF", "MAP 1.4"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.4"),
+        FrameworkMapping("MITRE ATLAS", "AML.TA0004"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+    ],
+    "MODEL_WEIGHT_ANOMALY": [
+        FrameworkMapping("NIST AI RMF", "MEASURE 2.2"),
+        FrameworkMapping("ISO/IEC 42001", "A.7.4"),
+        FrameworkMapping("MITRE ATLAS", "AML.TA0004"),
+    ],
+    "PICKLE_DANGEROUS_GLOBALS": [
+        FrameworkMapping("NIST AI RMF", "MAP 1.4"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.4"),
+        FrameworkMapping("MITRE ATLAS", "AML.TA0005"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+    ],
+    "MODEL_LICENSE_RESTRICTED": [
+        FrameworkMapping("NIST AI RMF", "GOVERN 1.2"),
+        FrameworkMapping("ISO/IEC 42001", "A.5.2"),
+        FrameworkMapping("SOC 2", "CC1.2"),
+    ],
     "TYPOSQUAT_SUSPECT": [
         FrameworkMapping("NIST AI RMF", "MAP 1.3"),
         FrameworkMapping("ISO/IEC 42001", "A.6.4"),

@@ -1,0 +1,26 @@
+min_score: 88
+max_cves: 0
+min_trust_score: 75
+disallow:
+  - CVE
+  - MODEL_VULNERABILITY
+  - MODEL_HASH_MALICIOUS
+  - MODEL_WEIGHT_ANOMALY
+  - PICKLE_DANGEROUS_GLOBALS
+  - UNVERIFIED_SOURCE
+  - UNKNOWN_LICENSE
+  - MODEL_LICENSE_RESTRICTED
+trusted_registries:
+  - pypi
+  - npm
+  - maven
+protected_namespaces:
+  - internal
+  - corp
+require_dependency_signatures: true
+require_lockfile_checksums: true
+required_approvals:
+  - security
+  - compliance
+  - privacy
+enforce_graph_policies: true

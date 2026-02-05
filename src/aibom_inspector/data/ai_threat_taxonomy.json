@@ -1,0 +1,20 @@
+{
+  "version": "2024.10",
+  "mappings": {
+    "MODEL_WEIGHT_ANOMALY": {
+      "threats": ["Model poisoning", "Trojaned weights"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
+    },
+    "PICKLE_DANGEROUS_GLOBALS": {
+      "threats": ["Arbitrary code execution", "Supply chain compromise"],
+      "stride": ["Elevation of Privilege"],
+      "mitre_atlas": ["AML.TA0005"]
+    },
+    "MODEL_HASH_MALICIOUS": {
+      "threats": ["Model poisoning", "Trojaned weights"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
+    }
+  }
+}
