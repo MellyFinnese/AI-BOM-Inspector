@@ -39,6 +39,35 @@
       { "framework": "OWASP LLM Top 10", "control": "LLM06" },
       { "framework": "SOC 2", "control": "CC7.1" }
     ],
+    "MODEL_VULNERABILITY": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.6" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.8" },
+      { "framework": "OWASP LLM Top 10", "control": "LLM06" },
+      { "framework": "MITRE ATLAS", "control": "AML.TA0004" },
+      { "framework": "SOC 2", "control": "CC7.1" }
+    ],
+    "MODEL_HASH_MALICIOUS": [
+      { "framework": "NIST AI RMF", "control": "MAP 1.4" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.4" },
+      { "framework": "MITRE ATLAS", "control": "AML.TA0004" },
+      { "framework": "SOC 2", "control": "CC7.1" }
+    ],
+    "MODEL_WEIGHT_ANOMALY": [
+      { "framework": "NIST AI RMF", "control": "MEASURE 2.2" },
+      { "framework": "ISO/IEC 42001", "control": "A.7.4" },
+      { "framework": "MITRE ATLAS", "control": "AML.TA0004" }
+    ],
+    "PICKLE_DANGEROUS_GLOBALS": [
+      { "framework": "NIST AI RMF", "control": "MAP 1.4" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.4" },
+      { "framework": "MITRE ATLAS", "control": "AML.TA0005" },
+      { "framework": "SOC 2", "control": "CC7.1" }
+    ],
+    "MODEL_LICENSE_RESTRICTED": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.2" },
+      { "framework": "ISO/IEC 42001", "control": "A.5.2" },
+      { "framework": "SOC 2", "control": "CC1.2" }
+    ],
     "TYPOSQUAT_SUSPECT": [
       { "framework": "NIST AI RMF", "control": "MAP 1.3" },
       { "framework": "ISO/IEC 42001", "control": "A.6.4" },

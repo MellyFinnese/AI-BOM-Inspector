@@ -47,6 +47,9 @@ aibom = "aibom_inspector.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+aibom_inspector = ["data/*.json"]
+
 [tool.setuptools-rust]
 rust_extensions = [
     { name = "aibom_inspector._tensor_fuzz", path = "crates/core/Cargo.toml", binding = "pyo3" }

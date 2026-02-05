@@ -1,0 +1,20 @@
+{
+  "version": "2024.10",
+  "aliases": {
+    "apache-2.0": "permissive",
+    "mit": "permissive",
+    "bsd-3-clause": "permissive",
+    "bsd-2-clause": "permissive",
+    "gpl-3.0": "copyleft",
+    "agpl-3.0": "copyleft",
+    "lgpl-3.0": "weak_copyleft",
+    "openrail": "restricted",
+    "openrail-m": "restricted",
+    "llama-2": "restricted",
+    "llama-3": "restricted"
+  },
+  "tokens": {
+    "rail": "restricted",
+    "research-only": "restricted"
+  }
+}

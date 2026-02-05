@@ -1,6 +1,6 @@
 # Policy cookbook
 
-Three starter policies you can drop into `policies/` or CI pipelines. Use them as-is or copy the YAML into your own files.
+Starter policies you can drop into `policies/` or CI pipelines. Use them as-is or copy the YAML into your own files.
 
 ## OSS-friendly (fast adoption)
 Reference: `policies/examples/oss-friendly.yml`
@@ -24,6 +24,24 @@ Reference: `policies/examples/default.yml`
 - **Model provenance**: require `source`, `sha256`, and `last_updated` in `models.json`; treat missing fields as failures.
 - **Allowlist enforcement**: only allow curated registries; fail on unverified sources and require `--require-input`.
 - **CVE + advisory checks**: encourage `--with-cves` and model advisories where available to keep audit trails complete.
+
+## HIPAA (PHI-focused)
+Reference: `policies/examples/hipaa.yml`
+- **Zero CVE tolerance**: block any `CVE`/`MODEL_VULNERABILITY` hits before handling PHI.
+- **Restrictive sources**: allow only vetted registries and private model sources.
+- **Hash-based provenance**: disallow missing model hashes to enforce artifact integrity.
+
+## SOC 2 (trust services)
+Reference: `policies/examples/soc2.yml`
+- **Availability + security focus**: enforce lockfile checksums and unverified source bans.
+- **License governance**: block unknown or restricted model licenses.
+- **Audit trail ready**: require approvals for high-risk findings.
+
+## ISO/IEC 42001 (AI management)
+Reference: `policies/examples/iso-42001.yml`
+- **Risk scoring discipline**: higher minimum stack score and strict CVE caps.
+- **Model integrity checks**: block malicious hash matches and unsafe checkpoints.
+- **Governance requirements**: enforce graph guardrails in production.
 
 ## Policy-forward CI gate (recommended default)
 - **Graph guardrails on**: keep `--enforce-graph-policy --env prod` enabled so auto-discovered tools/models/providers are blocked when they carry write scopes or unpinned sources.

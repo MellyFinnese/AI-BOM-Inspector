@@ -57,6 +57,8 @@ ai-bom-inspector/
 - Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
 - Gather AI model metadata from JSON or explicit Hugging Face IDs and auto-discover model references (OpenAI/Anthropic calls, `from_pretrained` loads, pipeline configs) directly from your repo
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
+- Inspect model artifacts (safetensors/pickle checkpoints) for poisoned weights or unsafe globals and compute hashes for reputation checks
+- Cross-check models against local vulnerability/advisory feeds and map findings to STRIDE + MITRE ATLAS categories
 - Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics; the optional AI-summary hook is disabled by default and ready for teams to wire up their own LLM if they choose
 - Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --enable-shadow-uefi-intel` is used
 
@@ -72,6 +74,7 @@ The default reports only use the deterministic heuristics listed below; the "AI 
 | `https://api.osv.dev/v1/query` (or `OSV_API_URL`) | `--online` **and** `--with-cves` | JSON body containing `package.name`, `package.ecosystem`, and `version` for each dependency | Default offline; omit `--with-cves`; keep `--offline`; or point `OSV_API_URL` to an internal mirror |
 | `https://huggingface.co/api/models/<id>` (or `huggingface_hub` SDK) | `--online` with `--model-id` or models whose `source` is `huggingface` | Model identifier only; response cached locally | Default offline; avoid `--online`; or provide a fully populated `models.json` |
 | GitHub API for [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) | `--online` **and** `--enable-shadow-uefi-intel` | Repository metadata fetch; no project data sent | Default is disabled; leave `--enable-shadow-uefi-intel` off or keep `--offline` enabled |
+| Local model advisory/hash databases (`model_vulnerability_db.json`, `model_hash_reputation.json`) | Always local unless you point to a custom URL | None (local JSON only) | Use defaults or pass `--model-advisory-db` / `--model-hash-db` |
 | Future feeds | Any new integrations (documented as added) | Varies by feed | Default offline; disable the specific feature flag; or run with `--offline` |
 
 Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_API_TIMEOUT` / `SHADOW_UEFI_INTEL_TIMEOUT` environment variables.
@@ -129,7 +132,7 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
     "stack_risk_score": 30,
     "risk_breakdown": {"unpinned_deps": 3, "unverified_sources": 0, "unknown_licenses": 1, "stale_models": 1},
     "dependencies": [{"name": "urllib3", "issues": ["[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"]}],
-    "models": [{"id": "gpt2", "issues": ["[STALE_MODEL] Model metadata is stale", "[MODEL_ADVISORY] Known prompt-stealing leakage advisory (demo feed)"]}]
+    "models": [{"id": "gpt2", "issues": ["[STALE_MODEL] Model metadata is stale", "[MODEL_VULNERABILITY] Advisory feed match (model_vulnerability_db.json)"]}]
   }
   ```
 - **Screenshots:**
@@ -140,9 +143,10 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 - **Sample Markdown report:** `examples/report.sample.md`
 - **Example commands:**
   - Only dependency scan with autodetection: `aibom scan --format json`
-  - Include models from a file: `aibom scan --models-file examples/models.sample.json --format markdown --output report.md`
+- Include models from a file: `aibom scan --models-file examples/models.sample.json --format markdown --output report.md`
 - Specify models inline: `aibom scan --online --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
 - Enrich CVEs during the scan: `aibom scan --online --with-cves --format json`
+- Use local model advisory and hash feeds: `aibom scan --models-file models.json --model-advisory-db feeds/model_vulnerability_db.json --model-hash-db feeds/model_hash_reputation.json`
 - Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
 - Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html --output merged-report.html`
 - Run fully offline (no OSV/HF calls): `aibom scan --format markdown`
@@ -185,11 +189,12 @@ See `docs/OUTPUTS.md` for a side-by-side JSON, SARIF, and CycloneDX example plus
 ### Adoption defaults
 - **Gates to start with**: fail CI on `--fail-on-score 70`, require allowlisted model sources (`--require-input` plus allowlist rules in `policies/examples/*`), and keep `--offline` as the default posture.
 - **CI vs. local**: run `aibom scan --format json --output aibom-report.json --fail-on-score 70` in CI, then publish CycloneDX/SPDX via `--format cyclonedx` or `--format spdx` for downstream compliance jobs. Locally, add `--format html` or `--format markdown` for readability and iterate with `--diff` against previous runs.
-- **Policy cookbook**: see `docs/POLICY_COOKBOOK.md` for OSS-friendly, enterprise-strict, and regulated defaults that can be copied into your own policy file.
+- **Policy cookbook**: see `docs/POLICY_COOKBOOK.md` for OSS-friendly, enterprise-strict, and regulated defaults that can be copied into your own policy file (HIPAA, SOC 2, ISO/IEC 42001 packs are in `policies/examples/`).
 
 Configuration tips:
 
 - OSV enrichment uses the public API by default; override with `--osv-url` or `OSV_API_URL` and adjust the HTTP timeout via `--osv-timeout` or `OSV_API_TIMEOUT`.
+- Model risk databases can be swapped via `--model-advisory-db`, `--model-hash-db`, and `--license-risk-db` when you want to point at internal mirrors or curated feeds.
 
 ## Heuristics & Risk Signals
 AI-BOM Inspector ships with lightweight, explainable checks that map to common AI supply-chain issues:
@@ -201,10 +206,14 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `UNSTABLE_VERSION` | Pre-1.0 releases that may churn | Medium |
 | `KNOWN_VULN` / `CVE` | Known vulnerable versions (built-in heuristics + optional OSV lookup; recommends safer versions when known) | High |
 | `LICENSE_RISK` | Copyleft / reciprocal terms detected for a model | Medium |
+| `MODEL_LICENSE_RESTRICTED` | Restricted or custom model license detected (OpenRAIL, research-only, etc.) | Medium |
 | `UNKNOWN_LICENSE` | Model or SBOM component lacks license metadata | High |
 | `STALE_MODEL` | Model metadata older than ~9 months | Medium |
 | `UNVERIFIED_SOURCE` | Non-standard model source value | Medium |
-| `MODEL_ADVISORY` | Model flagged by a published advisory | High |
+| `MODEL_VULNERABILITY` | Model flagged by a vulnerability/advisory feed | High |
+| `MODEL_HASH_MALICIOUS` | Model hash matches a malicious fingerprint | High |
+| `MODEL_WEIGHT_ANOMALY` | Safetensors inspection detected poisoned/steganographic weights | High |
+| `PICKLE_DANGEROUS_GLOBALS` | Pickle checkpoint references dangerous globals | High |
 | `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED` | Scan ran offline or without network dependencies; no remote enrichment performed | Low |
 | `METADATA_UNAVAILABLE` | Model registry/API could not be reached; metadata reused from cache with a warning | Low |
 | `INVALID_SBOM` | SBOM could not be parsed; flagged as an issue instead of crashing the scan | Medium |
@@ -233,6 +242,19 @@ The report shows a `stack_risk_score` (0–100, higher is healthier) and a `risk
 - **Model metadata freshness depends on registries:** network failures are tolerated and recorded as `METADATA_UNAVAILABLE`, but license/freshness signals may be stale until the registry is reachable again.
 - **Weight inspection is heuristic:** the safetensors scanner samples bits and looks for NaNs/Inf/LSB bias; unusual dtypes or truncated files raise clear errors instead of silently passing.
 
+### Threat taxonomy + MITRE ATLAS mapping
+AI-BOM Inspector attaches explicit AI threat categories and STRIDE classifications to model findings. Mappings are surfaced in the report framework section and can be tailored via a local taxonomy file:
+- Default taxonomy: `src/aibom_inspector/data/ai_threat_taxonomy.json`
+- Override: `aibom scan --threat-taxonomy-db path/to/ai_threat_taxonomy.json`
+- MITRE ATLAS controls appear alongside NIST AI RMF, ISO/IEC 42001, OWASP LLM Top 10, and SOC 2 mappings.
+See `docs/THREAT_TAXONOMY.md` for the default taxonomy and extension guidance.
+
+### Model risk databases
+Model risk intelligence is local-first. You can ship curated JSON feeds in-repo or pull them from internal mirrors:
+- **Model vulnerability DB:** `model_vulnerability_db.json` (use `--model-advisory-db` to override)
+- **Model hash reputation DB:** `model_hash_reputation.json` (use `--model-hash-db` to override)
+- **License risk DB:** `license_risk_db.json` (use `--license-risk-db` to override)
+
 ### Before vs. after hardening
 
 | Scenario | Risk score | Signals |
@@ -246,6 +268,15 @@ aibom scan --requirements requirements.txt --models-file models.json --with-cves
   --risk-penalty-high 10 --risk-penalty-medium 5 --risk-penalty-low 2
 ```
 Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift, or run in CI with `--fail-on-score 70`.
+
+## Performance & scale signals
+Baseline timings below were captured on the included demo project to give teams a starting point. Re-run in your own CI to capture local baselines:
+
+| Scenario | Command | Result |
+| --- | --- | --- |
+| Demo project scan | `PYTHONPATH=src python -m aibom_inspector.cli scan --requirements examples/demo/requirements.txt --pyproject examples/demo/pyproject.toml --manifest examples/demo/package-lock.json --manifest examples/demo/go.mod --models-file examples/demo/models.json --format json --output /tmp/aibom-report.json` | 2.15s real (container, Python 3.10.19) |
+
+Use `/usr/bin/time -p` or your CI timing metrics to capture project-specific numbers (dependency count, model count, and total runtime).
 
 
 ## Testing and CI

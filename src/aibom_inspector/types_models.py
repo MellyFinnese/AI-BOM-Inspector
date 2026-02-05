@@ -21,6 +21,7 @@ class ModelInfo:
     license: Optional[str] = None
     last_updated: Optional[datetime] = None
     license_category: str | None = None
+    hashes: List[str] = field(default_factory=list)
     issues: List[ModelIssue] = field(default_factory=list)
     trust_signals: List[ModelIssue] = field(default_factory=list)
 
