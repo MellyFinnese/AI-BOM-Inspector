@@ -43,6 +43,7 @@ This project emits JSON, SARIF, CycloneDX/SPDX, and provenance attestations so t
 - **Schema**: enforced by `schemas/report.schema.json`.
 - **Framework mappings**: each issue detail now includes NIST AI RMF / ISO 42001 / OWASP LLM / SOC 2 crosswalks for governance-ready reports.
 - **Model lineage + hashes**: `models[].base_models`, `models[].fine_tuned_from`, `models[].training_sources`, and `models[].hashes` carry provenance and fingerprint signals for reputation checks.
+- **Threat summary**: `threat_summary` links issue codes to the AI threat taxonomy (MITRE ATLAS / STRIDE) for executive-ready risk mapping.
 
 ### SARIF (security findings)
 ```json
@@ -112,6 +113,22 @@ aibom scan --format json --output aibom-report.json --attestation-output aibom-a
 ```
 
 The attestation JSON includes input/output hashes and the resolved git commit, making it easy to integrate with SLSA or in-toto workflows.
+
+## Control Plane bundle (enterprise ingestion)
+Emit a Control Plane bundle to feed the enterprise policy engine and evidence store:
+
+```bash
+aibom scan --format json --output aibom-report.json \
+  --control-plane-output aibom-control-plane.json \
+  --control-plane-org 2c4f28c8-6f9b-4a3b-9a5d-1a7c2a8f7f91 \
+  --control-plane-project 6e6c1d1c-4a1f-4b8e-9f8c-2e4f3f56a0f2 \
+  --control-plane-environment prod \
+  --control-plane-asset-type model \
+  --control-plane-asset-fingerprint sha256:abc123
+```
+
+- **Best for**: enterprise governance workflows that need immutable evidence and policy decisions.
+- **Schema**: `schemas/control_plane_bundle.schema.json` (Control Plane API ingestion contract).
 
 ## Trust root signing + verification
 To own the trust root for attestation signing, generate a local trust root and use it to sign reports:

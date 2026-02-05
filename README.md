@@ -163,6 +163,13 @@ See [docs/HIGHEST_IMPACT_NEXT_MOVES.md](docs/HIGHEST_IMPACT_NEXT_MOVES.md) for t
 ## Enterprise trust baseline
 See [docs/ENTERPRISE_TRUST_BASELINE.md](docs/ENTERPRISE_TRUST_BASELINE.md) for the deal-maker controls around provenance/signing, artifact integrity, and dependency trust enforcement that enterprises expect in CI/CD rollouts.
 
+## Enterprise control plane roadmap
+- [Enterprise Control Plane](docs/ENTERPRISE_CONTROL_PLANE.md): multi-tenant governance, evidence storage, and CI/CD enforcement.
+- [Open-core boundary](docs/OPEN_CORE_BOUNDARY.md): commercial vs OSS separation and packaging.
+- [AI supply chain threat model](docs/AI_SUPPLY_CHAIN_THREAT_MODEL.md): sales-ready threat taxonomy and control mapping.
+- [Deployment reference](docs/DEPLOYMENT_REFERENCE.md): SaaS/on-prem parity and isolation model.
+- [Policy engine deep dive](docs/POLICY_ENGINE_DEEP_DIVE.md): deterministic enforcement and explainability.
+
 ### 30-second sample report (before vs. after)
 - **Input SBOM**: lightweight CycloneDX with a few Python and npm components plus a Hugging Face model ID.
 - **Before (messy state)**:

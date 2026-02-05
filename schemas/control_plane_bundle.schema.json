@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI-BOM Inspector Control Plane Bundle",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "bundle_id",
+    "created_at",
+    "tenant",
+    "asset",
+    "report",
+    "report_sha256",
+    "policy_decision",
+    "metadata",
+    "bundle_hash"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "bundle_id": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "tenant": {
+      "type": "object",
+      "required": ["organization_id", "project_id", "environment"],
+      "properties": {
+        "organization_id": {"type": "string"},
+        "project_id": {"type": "string"},
+        "environment": {"type": "string"}
+      }
+    },
+    "asset": {
+      "type": "object",
+      "required": ["type", "fingerprint"],
+      "properties": {
+        "asset_id": {"type": ["string", "null"]},
+        "type": {"type": "string", "enum": ["model", "dataset", "pipeline"]},
+        "fingerprint": {"type": "string"}
+      }
+    },
+    "report": {"type": "object"},
+    "report_sha256": {"type": "string"},
+    "policy_decision": {"type": "string", "enum": ["pass", "fail", "unknown"]},
+    "policy_evaluation": {"type": ["object", "null"]},
+    "signature": {"type": ["string", "null"]},
+    "attestation_path": {"type": ["string", "null"]},
+    "metadata": {"type": "object"},
+    "previous_hash": {"type": ["string", "null"]},
+    "bundle_hash": {"type": "string"}
+  }
+}

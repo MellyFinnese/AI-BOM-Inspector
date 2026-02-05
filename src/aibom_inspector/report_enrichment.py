@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict
 from typing import Iterable
 
+from .model_risk_db import load_threat_taxonomy_db
 from .stack_discovery import MODEL_HOST_DEPENDENCIES, PROVIDER_DEPENDENCIES
 from .types import CompletenessSummary, ExecutiveRiskSummary, Report, RuntimeTrace
 
@@ -124,6 +125,50 @@ def build_sbom_correlations(report: Report) -> list[dict]:
             }
         )
     return correlations
+
+
+def build_threat_summary(report: Report) -> dict | None:
+    taxonomy = load_threat_taxonomy_db()
+    mappings = taxonomy.get("mappings") or {}
+
+    findings: list[dict] = []
+    threat_counts: dict[str, int] = {}
+
+    def _record(subject: str, subject_type: str, code: str, severity: str) -> None:
+        mapping = mappings.get(code)
+        if not mapping:
+            return
+        threats = mapping.get("threats") or []
+        for threat in threats:
+            threat_counts[threat] = threat_counts.get(threat, 0) + 1
+        findings.append(
+            {
+                "subject": subject,
+                "subject_type": subject_type,
+                "issue_code": code,
+                "severity": severity,
+                "threats": threats,
+                "stride": mapping.get("stride") or [],
+                "mitre_atlas": mapping.get("mitre_atlas") or [],
+            }
+        )
+
+    for dep in report.dependencies:
+        for issue in dep.issues + dep.trust_signals:
+            _record(dep.name, "dependency", str(issue.code or issue.message), issue.severity)
+
+    for model in report.models:
+        for issue in model.issues + model.trust_signals:
+            _record(model.identifier, "model", str(issue.code or issue.message), issue.severity)
+
+    if not findings:
+        return None
+
+    return {
+        "version": taxonomy.get("version", "unknown"),
+        "findings": findings,
+        "threat_counts": threat_counts,
+    }
 
 
 def serialize_dataclass(value) -> dict | None:

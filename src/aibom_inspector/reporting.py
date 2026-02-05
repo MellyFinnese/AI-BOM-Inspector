@@ -13,7 +13,7 @@ from .framework_mapping import (
     framework_mappings_for_issue,
     serialize_mappings,
 )
-from .report_enrichment import build_sbom_correlations, serialize_dataclass
+from .report_enrichment import build_sbom_correlations, build_threat_summary, serialize_dataclass
 from .stack_discovery import snapshot_as_dict
 from .types import Report
 
@@ -86,6 +86,7 @@ def _model_rows(report: Report) -> Iterable[dict]:
 
 
 def render_json(report: Report) -> str:
+    threat_summary = build_threat_summary(report)
     payload = {
         "generated_at": report.generated_at.isoformat(),
         "ai_summary": report.ai_summary,
@@ -100,6 +101,7 @@ def render_json(report: Report) -> str:
         "executive_summary": serialize_dataclass(report.executive_summary),
         "framework_mapping": report.framework_mapping or framework_mapping_metadata(),
         "sbom_correlations": build_sbom_correlations(report),
+        "threat_summary": threat_summary,
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
@@ -183,6 +185,23 @@ def render_markdown(report: Report) -> str:
             )
         if report.runtime_trace.notes:
             lines.append(f"- Notes: {'; '.join(report.runtime_trace.notes)}")
+
+    threat_summary = build_threat_summary(report)
+    if threat_summary:
+        lines.append("\n## Threat summary\n")
+        lines.append(f"- Taxonomy version: {threat_summary.get('version', 'unknown')}")
+        threat_counts = threat_summary.get("threat_counts") or {}
+        if threat_counts:
+            lines.append("- Top threats:")
+            for threat, count in sorted(threat_counts.items(), key=lambda item: item[1], reverse=True):
+                lines.append(f"  - {threat}: {count}")
+        lines.append("- Findings:")
+        for finding in threat_summary.get("findings", []):
+            threats = ", ".join(finding.get("threats") or [])
+            lines.append(
+                f"  - [{finding.get('severity')}] {finding.get('subject_type')} "
+                f"{finding.get('subject')}: {finding.get('issue_code')} ({threats})"
+            )
 
     if report.integrity_findings:
         lines.append("\n## Integrity checks\n")
