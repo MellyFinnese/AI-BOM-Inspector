@@ -40,6 +40,16 @@
       "threats": ["Artifact tampering", "Integrity mismatch"],
       "stride": ["Tampering"],
       "mitre_atlas": ["AML.TA0004"]
+    },
+    "MODEL_HASH_INVALID": {
+      "threats": ["Integrity mismatch", "Artifact tampering"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
+    },
+    "MODEL_HASH_MISSING": {
+      "threats": ["Integrity gap", "Supply chain weakness"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
     }
   }
 }

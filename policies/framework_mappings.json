@@ -110,6 +110,18 @@
       { "framework": "SOC 2", "control": "CC7.1" },
       { "framework": "EU AI Act", "control": "Risk management" }
     ],
+    "MODEL_HASH_INVALID": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.6" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.8" },
+      { "framework": "SOC 2", "control": "CC7.1" },
+      { "framework": "EU AI Act", "control": "Risk management" }
+    ],
+    "MODEL_HASH_MISSING": [
+      { "framework": "NIST AI RMF", "control": "GOVERN 1.6" },
+      { "framework": "ISO/IEC 42001", "control": "A.6.8" },
+      { "framework": "SOC 2", "control": "CC7.1" },
+      { "framework": "EU AI Act", "control": "Risk management" }
+    ],
     "TYPOSQUAT_SUSPECT": [
       { "framework": "NIST AI RMF", "control": "MAP 1.3" },
       { "framework": "ISO/IEC 42001", "control": "A.6.4" },

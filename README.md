@@ -222,6 +222,8 @@ AI-BOM Inspector ships with lightweight, explainable checks that map to common A
 | `DATASET_CONTAMINATION_RISK` | Training sources suggest contamination or policy exposure | High |
 | `TRAINING_SOURCE_RISK` | Training source requires additional governance review | Medium |
 | `SUPPLY_CHAIN_ANOMALY` | Model hash mismatch or artifact integrity anomaly detected | High |
+| `MODEL_HASH_INVALID` | Declared model hash is not a valid SHA256 fingerprint | Medium |
+| `MODEL_HASH_MISSING` | Model artifacts present without declared hashes | Medium |
 | `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED` | Scan ran offline or without network dependencies; no remote enrichment performed | Low |
 | `METADATA_UNAVAILABLE` | Model registry/API could not be reached; metadata reused from cache with a warning | Low |
 | `INVALID_SBOM` | SBOM could not be parsed; flagged as an issue instead of crashing the scan | Medium |
@@ -283,7 +285,7 @@ Baseline timings below were captured on the included demo project to give teams 
 
 | Scenario | Command | Result |
 | --- | --- | --- |
-| Demo project scan | `PYTHONPATH=src python -m aibom_inspector.cli scan --requirements examples/demo/requirements.txt --pyproject examples/demo/pyproject.toml --manifest examples/demo/package-lock.json --manifest examples/demo/go.mod --models-file examples/demo/models.json --format json --output /tmp/aibom-report.json` | 2.23s real (container, Python 3.10.19) |
+| Demo project scan | `PYTHONPATH=src python -m aibom_inspector.cli scan --requirements examples/demo/requirements.txt --pyproject examples/demo/pyproject.toml --manifest examples/demo/package-lock.json --manifest examples/demo/go.mod --models-file examples/demo/models.json --format json --output /tmp/aibom-report.json` | 2.16s real (container, Python 3.10.19) |
 
 Use `/usr/bin/time -p` or your CI timing metrics to capture project-specific numbers (dependency count, model count, and total runtime).
 

@@ -122,6 +122,18 @@ _BUILTIN_MAPPINGS: dict[str, list[FrameworkMapping]] = {
         FrameworkMapping("SOC 2", "CC7.1"),
         FrameworkMapping("EU AI Act", "Risk management"),
     ],
+    "MODEL_HASH_INVALID": [
+        FrameworkMapping("NIST AI RMF", "GOVERN 1.6"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.8"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+        FrameworkMapping("EU AI Act", "Risk management"),
+    ],
+    "MODEL_HASH_MISSING": [
+        FrameworkMapping("NIST AI RMF", "GOVERN 1.6"),
+        FrameworkMapping("ISO/IEC 42001", "A.6.8"),
+        FrameworkMapping("SOC 2", "CC7.1"),
+        FrameworkMapping("EU AI Act", "Risk management"),
+    ],
     "TYPOSQUAT_SUSPECT": [
         FrameworkMapping("NIST AI RMF", "MAP 1.3"),
         FrameworkMapping("ISO/IEC 42001", "A.6.4"),

@@ -42,7 +42,7 @@ This project emits JSON, SARIF, CycloneDX/SPDX, and provenance attestations so t
 - **Best for**: programmatic consumption, `aibom diff`, and feeding into dashboards.
 - **Schema**: enforced by `schemas/report.schema.json`.
 - **Framework mappings**: each issue detail now includes NIST AI RMF / ISO 42001 / OWASP LLM / SOC 2 crosswalks for governance-ready reports.
-- **Model hashes**: `models[].hashes` carries any provided or computed SHA256 fingerprints for reputation checks.
+- **Model lineage + hashes**: `models[].base_models`, `models[].fine_tuned_from`, `models[].training_sources`, and `models[].hashes` carry provenance and fingerprint signals for reputation checks.
 
 ### SARIF (security findings)
 ```json

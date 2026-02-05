@@ -189,6 +189,18 @@
           "license": { "type": "string" },
           "license_category": { "type": "string" },
           "last_updated": { "type": "string" },
+          "base_models": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "fine_tuned_from": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "training_sources": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
           "hashes": {
             "type": "array",
             "items": { "type": "string" }

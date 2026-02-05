@@ -31,6 +31,12 @@ def _normalize_hash(value: str) -> str:
     return value.lower().replace("sha256:", "").strip()
 
 
+def _is_valid_sha256(value: str) -> bool:
+    if len(value) != 64:
+        return False
+    return all(char in "0123456789abcdef" for char in value)
+
+
 def _threat_context_from_mapping(mapping: dict) -> str:
     if not mapping:
         return ""
@@ -236,6 +242,14 @@ def _analyze_artifacts(
                 )
             )
 
+    if artifacts and not declared_hashes:
+        issues.append(
+            ModelIssue(
+                "[MODEL_HASH_MISSING] No declared hashes for model artifacts",
+                severity="medium",
+                code="MODEL_HASH_MISSING",
+            )
+        )
     if declared_hashes and artifacts and not hashes:
         issues.append(
             ModelIssue(
@@ -300,6 +314,16 @@ def parse_model_entry(entry: dict) -> ModelInfo:
     issues: List[ModelIssue] = []
     trust_signals: List[ModelIssue] = []
     hashes: list[str] = _collect_declared_hashes(entry)
+    invalid_hashes = [value for value in hashes if not _is_valid_sha256(value)]
+    if invalid_hashes:
+        issues.append(
+            ModelIssue(
+                f"[MODEL_HASH_INVALID] Invalid SHA256 hashes detected: {', '.join(invalid_hashes)}",
+                severity="medium",
+                code="MODEL_HASH_INVALID",
+            )
+        )
+    hashes = [value for value in hashes if _is_valid_sha256(value)]
     training_sources = _collect_training_sources(entry)
     base_models, fine_tuned_from = _collect_lineage(entry)
 
