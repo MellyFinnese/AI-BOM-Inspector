@@ -189,6 +189,10 @@
           "license": { "type": "string" },
           "license_category": { "type": "string" },
           "last_updated": { "type": "string" },
+          "hashes": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
           "issues": {
             "type": "array",
             "items": { "type": "string" }

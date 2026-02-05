@@ -18,8 +18,20 @@ Add model metadata when you want models scanned alongside dependencies. Auto-dis
 
 ```json
 [
-  {"id": "gpt2", "source": "huggingface", "license": "mit", "last_updated": "2024-01-01"},
-  {"id": "custom-embedder", "source": "private"}
+  {
+    "id": "gpt2",
+    "source": "huggingface",
+    "license": "mit",
+    "last_updated": "2024-01-01",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "id": "custom-embedder",
+    "source": "private",
+    "hashes": ["sha256:8f3b9fa14f1d84d89e6c6ce44d9edb0ee5f87f8f2f03ef9b6bcb4e2cf4d7a8ad"],
+    "training_sources": ["internal data lake", "synthetic augmentation"],
+    "artifacts": [{"path": "models/custom-embedder.safetensors", "kind": "safetensors"}]
+  }
 ]
 ```
 

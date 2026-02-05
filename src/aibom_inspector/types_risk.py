@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional
+
+from .data_loader import load_json_data
 
 
 @dataclass
@@ -40,11 +44,34 @@ LICENSE_CATEGORIES = [
 ]
 
 
+_LICENSE_DB_PATH: Path | None = None
+
+
+def set_license_risk_db_path(path: Path | None) -> None:
+    global _LICENSE_DB_PATH
+    _LICENSE_DB_PATH = path
+    _load_license_overrides.cache_clear()
+
+
+@lru_cache(maxsize=None)
+def _load_license_overrides() -> dict[str, dict[str, str]]:
+    data = load_json_data("license_risk_db.json", _LICENSE_DB_PATH)
+    aliases = {str(key).lower(): str(value) for key, value in (data.get("aliases") or {}).items()}
+    tokens = {str(key).lower(): str(value) for key, value in (data.get("tokens") or {}).items()}
+    return {"aliases": aliases, "tokens": tokens}
+
+
 def categorize_license(license_name: Optional[str]) -> str:
     if not license_name:
         return "unknown"
 
     normalized = license_name.lower()
+    overrides = _load_license_overrides()
+    if normalized in overrides["aliases"]:
+        return overrides["aliases"][normalized]
+    for token, category in overrides["tokens"].items():
+        if token and token in normalized:
+            return category
     for token, category in LICENSE_CATEGORIES:
         if token in normalized:
             return category

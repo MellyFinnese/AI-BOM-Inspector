@@ -1,0 +1,20 @@
+min_score: 82
+max_cves: 1
+min_trust_score: 70
+disallow:
+  - MODEL_HASH_MALICIOUS
+  - MODEL_WEIGHT_ANOMALY
+  - PICKLE_DANGEROUS_GLOBALS
+  - UNVERIFIED_SOURCE
+  - UNKNOWN_LICENSE
+  - MODEL_LICENSE_RESTRICTED
+trusted_registries:
+  - pypi
+  - npm
+  - maven
+require_dependency_signatures: true
+require_lockfile_checksums: true
+required_approvals:
+  - security
+  - compliance
+enforce_graph_policies: true

@@ -70,6 +70,7 @@ def _model_rows(report: Report) -> Iterable[dict]:
             "license": model.license or "unknown",
             "license_category": model.license_category or "unknown",
             "last_updated": model.last_updated.isoformat() if model.last_updated else "unknown",
+            "hashes": model.hashes,
             "issues": [issue["message"] for issue in issue_details],
             "issue_details": issue_details,
             "risk": model.risk_score,

@@ -1,0 +1,45 @@
+{
+  "version": "2024.10",
+  "mappings": {
+    "MODEL_WEIGHT_ANOMALY": {
+      "threats": ["Model poisoning", "Trojaned weights"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
+    },
+    "PICKLE_DANGEROUS_GLOBALS": {
+      "threats": ["Arbitrary code execution", "Supply chain compromise"],
+      "stride": ["Elevation of Privilege"],
+      "mitre_atlas": ["AML.TA0005"]
+    },
+    "MODEL_HASH_MALICIOUS": {
+      "threats": ["Model poisoning", "Trojaned weights"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
+    },
+    "DATASET_CONTAMINATION_RISK": {
+      "threats": ["Data poisoning", "Training data contamination"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0003"]
+    },
+    "TRAINING_SOURCE_RISK": {
+      "threats": ["Data sourcing risk", "Unvetted training data"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0003"]
+    },
+    "MODEL_LINEAGE_RISK": {
+      "threats": ["Supply chain compromise", "Inherited vulnerabilities"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
+    },
+    "FINE_TUNE_INHERITANCE_RISK": {
+      "threats": ["Inherited vulnerabilities", "Model poisoning"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
+    },
+    "SUPPLY_CHAIN_ANOMALY": {
+      "threats": ["Artifact tampering", "Integrity mismatch"],
+      "stride": ["Tampering"],
+      "mitre_atlas": ["AML.TA0004"]
+    }
+  }
+}
