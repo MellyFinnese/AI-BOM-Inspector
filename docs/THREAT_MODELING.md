@@ -148,6 +148,8 @@ The matrix below highlights representative threats per component. Items are prio
 - Runtime signal ingestion (new trust boundary: model runtime telemetry).
 - External attestations (supply chain signature verification at scale).
 - Multi-tenant analytics dashboards (aggregate query isolation).
+- SSO broker dependencies and IdP availability (expanded UI + SSO threat model).
+- Audit log tamper resistance and report integrity guarantees.
 
 ## Related documentation
 

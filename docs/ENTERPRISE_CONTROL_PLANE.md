@@ -94,12 +94,14 @@ The bundle includes:
 
 ## Security hardening checklist
 
+- **AuthZ on every Control Plane API** (token validation + tenant scoping).
+- **Central RBAC enforcement middleware** to prevent per-endpoint drift.
 - **OIDC + RBAC** at every API boundary.
 - **Row-level tenant isolation** (or physical isolation for dedicated SaaS).
 - **mTLS** between services (Control Plane ↔ Policy Engine ↔ Evidence Store).
 - **WORM semantics** for evidence records (append-only, hash chained).
 - **Signed AI-BOM artifacts** required for enforcement.
-- **Audit logging** for every policy, approval, and evidence read.
+- **Audit logging** for logins, role changes, policy changes, and enforcement actions.
 
 ## CI/CD enforcement guidance
 
@@ -115,3 +117,5 @@ The bundle includes:
 - Risk trend analytics dashboard.
 - Policy packs marketplace + curated baselines.
 - Compliance report exports (PDF/CSV/JSON) with evidence links.
+- Phase 2 (strong signal): threat model refresh (UI + SSO), API fuzzing + schema validation, policy engine test harness.
+- Phase 3 (enterprise polish): evidence artifacts for compliance, report integrity guarantees, tamper resistance on audit logs.

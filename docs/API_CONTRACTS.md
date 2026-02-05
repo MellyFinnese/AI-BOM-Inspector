@@ -33,6 +33,7 @@ This document defines the formal API contract strategy for AI-BOM Inspector and 
 - OpenAPI validation gates for Control Plane client libraries.
 - AsyncAPI validation for event payloads in CI.
 - JSON schema validation for evidence bundles and policy artifacts during ingestion.
+- API fuzzing against the OpenAPI contract with negative test cases.
 
 ## UI contract notes (aspirational)
 
