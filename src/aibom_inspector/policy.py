@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +14,7 @@ except Exception:  # pragma: no cover - exercised when PyYAML is missing
 
 from .policy_graph import GraphPolicyViolation, GraphSnapshot, evaluate_graph_policies
 from .types import DependencyIssue, ModelIssue, Report
+from .trust_root import TrustRoot, sign_payload, trust_root_fingerprint
 
 
 @dataclass
@@ -286,6 +288,8 @@ def write_evidence_pack(
     policy_path: Path | None,
     diff_summary: dict | None,
     signature_text: str | None,
+    previous_hash: str | None = None,
+    trust_root: TrustRoot | None = None,
 ) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     (destination / report_filename.name).write_text(report_content)
@@ -299,3 +303,71 @@ def write_evidence_pack(
         (destination / "changes-since-last-run.json").write_text(json.dumps(diff_summary, indent=2))
     if signature_text:
         (destination / f"{report_filename.name}.sha256").write_text(signature_text)
+    _write_evidence_manifest(destination, previous_hash=previous_hash)
+    if trust_root:
+        _write_evidence_signatures(destination, report_filename, trust_root)
+
+
+def _hash_manifest(payload: dict, previous_hash: str | None) -> str:
+    digest = hashlib.sha256()
+    digest.update((previous_hash or "").encode())
+    digest.update(json.dumps(payload, sort_keys=True).encode())
+    return digest.hexdigest()
+
+
+def _write_evidence_manifest(destination: Path, previous_hash: str | None = None) -> None:
+    files: dict[str, str] = {}
+    for path in sorted(destination.glob("*")):
+        if not path.is_file():
+            continue
+        if path.name == "evidence-manifest.json":
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        files[path.name] = digest
+
+    payload = {
+        "generated_at": datetime.utcnow().isoformat(),
+        "files": files,
+        "previous_hash": previous_hash,
+    }
+    payload["bundle_hash"] = _hash_manifest(payload, previous_hash)
+    (destination / "evidence-manifest.json").write_text(json.dumps(payload, indent=2))
+
+
+def _write_signature_file(destination: Path, name: str, payload: dict, trust_root: TrustRoot) -> None:
+    signature = sign_payload(payload, trust_root)
+    signature_payload = {
+        "signed_at": datetime.utcnow().isoformat(),
+        "key_id": trust_root.key_id,
+        "algorithm": trust_root.algorithm,
+        "fingerprint": trust_root_fingerprint(trust_root),
+        "payload": payload,
+        "signature": signature,
+    }
+    (destination / name).write_text(json.dumps(signature_payload, indent=2))
+
+
+def _write_evidence_signatures(
+    destination: Path, report_filename: Path, trust_root: TrustRoot
+) -> None:
+    manifest_path = destination / "evidence-manifest.json"
+    if manifest_path.exists():
+        manifest_payload = json.loads(manifest_path.read_text())
+        manifest_payload["kind"] = "evidence-manifest"
+        _write_signature_file(destination, "evidence-manifest.sig.json", manifest_payload, trust_root)
+
+    report_path = destination / report_filename.name
+    if report_path.exists():
+        report_hash = hashlib.sha256(report_path.read_bytes()).hexdigest()
+        report_payload = {
+            "kind": "report",
+            "filename": report_filename.name,
+            "sha256": report_hash,
+            "generated_at": datetime.utcnow().isoformat(),
+        }
+        _write_signature_file(
+            destination,
+            f"{report_filename.name}.sig.json",
+            report_payload,
+            trust_root,
+        )

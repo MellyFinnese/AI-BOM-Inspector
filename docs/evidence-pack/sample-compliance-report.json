@@ -1,0 +1,51 @@
+{
+  "generated_at": "2024-07-01T12:00:00Z",
+  "report_path": "reports/sample-aibom-report.json",
+  "summary": {
+    "stack_risk_score": 72,
+    "risk_breakdown": {
+      "dependencies": 28,
+      "models": 18,
+      "supply_chain": 16,
+      "operational": 10
+    },
+    "executive_summary": {
+      "governance_risk": "medium",
+      "regulatory_exposure": "medium",
+      "supply_chain_blast_radius": "low",
+      "rationale": [
+        "Two dependencies lack pinning",
+        "One model source missing provenance metadata"
+      ]
+    }
+  },
+  "provenance": {
+    "git_commit": "8c1f4d3",
+    "inputs": [
+      "requirements.txt",
+      "pyproject.toml"
+    ]
+  },
+  "integrity_findings": [
+    {
+      "kind": "lockfile",
+      "path": "requirements.txt",
+      "severity": "medium",
+      "message": "Missing dependency hash for requests==2.32.0"
+    }
+  ],
+  "approvals": [
+    "security",
+    "compliance"
+  ],
+  "framework_mappings": {
+    "SOC2": [
+      "CC6.1",
+      "CC7.2"
+    ],
+    "ISO27001": [
+      "A.5.15",
+      "A.8.12"
+    ]
+  }
+}

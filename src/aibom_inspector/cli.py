@@ -45,6 +45,7 @@ from .evidence_export import write_evidence_export
 from .integrity import compute_file_sha256, enforce_lockfile_checksums, verify_expected_hashes
 from .ip_protection import protect_ip
 from .control_plane import build_control_plane_bundle, write_control_plane_bundle
+from .report_loader import load_report_payload
 from .trust_root import (
     create_trust_root,
     load_trust_root,
@@ -427,6 +428,16 @@ def main() -> None:
     help="Directory to write an audit-friendly evidence bundle (policy decisions, signed report).",
 )
 @click.option(
+    "--evidence-prev-hash",
+    type=str,
+    help="Previous evidence bundle hash to chain evidence manifests.",
+)
+@click.option(
+    "--sign-evidence",
+    is_flag=True,
+    help="Sign evidence manifest and report artifacts using the trust root.",
+)
+@click.option(
     "--sign-report",
     is_flag=True,
     help="Emit a SHA256 signature alongside the rendered report for tamper evidence.",
@@ -547,6 +558,8 @@ def scan(
     policy: Optional[str],
     github_check_output: Optional[str],
     evidence_pack: Optional[str],
+    evidence_prev_hash: Optional[str],
+    sign_evidence: bool,
     sign_report: bool,
     trust_root: Optional[str],
     attestation_output: Optional[str],
@@ -868,6 +881,7 @@ def scan(
         append_audit_log(Path(audit_log), entry)
 
     if evidence_pack:
+        evidence_trust_root = load_trust_root(Path(trust_root)) if sign_evidence and trust_root else None
         write_evidence_pack(
             Path(evidence_pack),
             rendered,
@@ -876,6 +890,8 @@ def scan(
             Path(policy) if policy else None,
             baseline_diff,
             signature_text,
+            previous_hash=evidence_prev_hash,
+            trust_root=evidence_trust_root,
         )
 
     if control_plane_output:
@@ -1054,6 +1070,68 @@ def verify_report(report_path: str, sha256_path: Optional[str], attestation_path
         raise SystemExit(1)
 
     click.echo("Report hash verified.")
+
+
+@main.command("simulate-policy")
+@click.option(
+    "--report",
+    "report_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="JSON report file to simulate policy evaluation against.",
+)
+@click.option(
+    "--policy",
+    "policy_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Policy YAML file to simulate.",
+)
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Optional output path for the simulation result JSON.",
+)
+@click.option(
+    "--enforce-graph-policy/--no-enforce-graph-policy",
+    default=False,
+    show_default=True,
+    help="Evaluate graph policy guardrails when graph data is available.",
+)
+def simulate_policy_cmd(
+    report_path: str,
+    policy_path: str,
+    output_path: Optional[str],
+    enforce_graph_policy: bool,
+) -> None:
+    """Simulate policy evaluation without blocking a pipeline."""
+
+    payload = json.loads(Path(report_path).read_text())
+    report = load_report_payload(payload)
+    policy = load_policy(Path(policy_path))
+    evaluation = evaluate_policy(
+        report,
+        policy,
+        graph_snapshot=report.stack_snapshot,
+        enforce_graph=policy.enforce_graph_policies or enforce_graph_policy,
+    )
+
+    result = {
+        "would_block": not evaluation.passed,
+        "failures": evaluation.failures,
+        "used_exceptions": [entry.as_dict() for entry in evaluation.used_exceptions],
+        "expired_exceptions": [entry.as_dict() for entry in evaluation.expired_exceptions],
+        "graph_policy_violations": [asdict(v) for v in evaluation.graph_policy_violations],
+    }
+
+    output_json = json.dumps(result, indent=2)
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text(output_json)
+        click.echo(f"Wrote policy simulation to {output_path}")
+    else:
+        click.echo(output_json)
 
 
 @main.command("verify-audit-log")
