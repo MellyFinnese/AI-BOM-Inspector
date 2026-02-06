@@ -45,6 +45,7 @@ from .evidence_export import write_evidence_export
 from .integrity import compute_file_sha256, enforce_lockfile_checksums, verify_expected_hashes
 from .ip_protection import protect_ip
 from .control_plane import build_control_plane_bundle, write_control_plane_bundle
+from .report_loader import load_report_payload
 from .trust_root import (
     create_trust_root,
     load_trust_root,
@@ -1054,6 +1055,68 @@ def verify_report(report_path: str, sha256_path: Optional[str], attestation_path
         raise SystemExit(1)
 
     click.echo("Report hash verified.")
+
+
+@main.command("simulate-policy")
+@click.option(
+    "--report",
+    "report_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="JSON report file to simulate policy evaluation against.",
+)
+@click.option(
+    "--policy",
+    "policy_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Policy YAML file to simulate.",
+)
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(dir_okay=False, writable=True, path_type=str),
+    help="Optional output path for the simulation result JSON.",
+)
+@click.option(
+    "--enforce-graph-policy/--no-enforce-graph-policy",
+    default=False,
+    show_default=True,
+    help="Evaluate graph policy guardrails when graph data is available.",
+)
+def simulate_policy_cmd(
+    report_path: str,
+    policy_path: str,
+    output_path: Optional[str],
+    enforce_graph_policy: bool,
+) -> None:
+    """Simulate policy evaluation without blocking a pipeline."""
+
+    payload = json.loads(Path(report_path).read_text())
+    report = load_report_payload(payload)
+    policy = load_policy(Path(policy_path))
+    evaluation = evaluate_policy(
+        report,
+        policy,
+        graph_snapshot=report.stack_snapshot,
+        enforce_graph=policy.enforce_graph_policies or enforce_graph_policy,
+    )
+
+    result = {
+        "would_block": not evaluation.passed,
+        "failures": evaluation.failures,
+        "used_exceptions": [entry.as_dict() for entry in evaluation.used_exceptions],
+        "expired_exceptions": [entry.as_dict() for entry in evaluation.expired_exceptions],
+        "graph_policy_violations": [asdict(v) for v in evaluation.graph_policy_violations],
+    }
+
+    output_json = json.dumps(result, indent=2)
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text(output_json)
+        click.echo(f"Wrote policy simulation to {output_path}")
+    else:
+        click.echo(output_json)
 
 
 @main.command("verify-audit-log")
