@@ -433,6 +433,11 @@ def main() -> None:
     help="Previous evidence bundle hash to chain evidence manifests.",
 )
 @click.option(
+    "--sign-evidence",
+    is_flag=True,
+    help="Sign evidence manifest and report artifacts using the trust root.",
+)
+@click.option(
     "--sign-report",
     is_flag=True,
     help="Emit a SHA256 signature alongside the rendered report for tamper evidence.",
@@ -554,6 +559,7 @@ def scan(
     github_check_output: Optional[str],
     evidence_pack: Optional[str],
     evidence_prev_hash: Optional[str],
+    sign_evidence: bool,
     sign_report: bool,
     trust_root: Optional[str],
     attestation_output: Optional[str],
@@ -620,7 +626,7 @@ def scan(
         click.echo("No dependencies or models detected; nothing to scan.", err=True)
         if require_input:
             raise SystemExit(1)
-
+f
     if with_cves:
         dependencies = enrich_with_osv(dependencies, offline=offline, osv_url=osv_url, timeout=osv_timeout)
 
@@ -755,67 +761,6 @@ def scan(
         integrity_findings=integrity_findings,
         approvals=approvals,
         runtime_trace=runtime_trace_data,
-        completeness=completeness,
-    )
-    report.executive_summary = build_executive_summary(report)
-    report.framework_mapping = framework_mapping_metadata()
-
-    rendered = render_report(report, fmt)
-    destination = Path(output) if output else None
-    report_path: Path | None = destination
-    if fmt in {"cyclonedx", "spdx"} and sbom_output:
-        report_path = Path(sbom_output)
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(rendered)
-    else:
-        rendered = write_report(report, fmt, destination)
-        report_path = destination
-        if not destination:
-            report_path = Path(f"aibom-report.{fmt}")
-            click.echo(rendered)
-
-    markdown_payload = None
-    if markdown_output:
-        markdown_payload = write_report(report, "markdown", Path(markdown_output))
-
-    sarif_payload = None
-    if sarif_output:
-        sarif_payload = write_report(report, "sarif", Path(sarif_output))
-
-    policy_evaluation = None
-    report_json = json.loads(render_report(report, "json"))
-    baseline_diff = None
-    if baseline_report:
-        try:
-            base_data = json.loads(Path(baseline_report).read_text())
-            baseline_diff = diff_reports(base_data, report_json)
-        except Exception as exc:  # pragma: no cover - I/O heavy
-            click.echo(f"Unable to diff with baseline report: {exc}", err=True)
-
-    graph_policy_requested = enforce_graph_policy
-    policy_failed = False
-    if policy_data:
-        graph_policy_requested = graph_policy_requested or policy_data.enforce_graph_policies
-        policy_evaluation = evaluate_policy(
-            report,
-            policy_data,
-            graph_snapshot=stack_snapshot,
-            enforce_graph=graph_policy_requested,
-        )
-        report.graph_policy_violations = policy_evaluation.graph_policy_violations
-        if github_check_output:
-            write_github_check(Path(github_check_output), policy_evaluation, report)
-        if not policy_evaluation.passed:
-            policy_failed = True
-    elif graph_policy_requested and stack_snapshot:
-        violations = evaluate_graph_policies(stack_snapshot)
-        report.graph_policy_violations = violations
-        if any(v.severity.lower() == "error" for v in violations):
-            policy_failed = True
-
-    score_failed = False
-    if fail_on_score is not None:
-        if report.stack_risk_score < fail_on_score:
             score_failed = True
 
     signature_text = None
@@ -875,6 +820,7 @@ def scan(
         append_audit_log(Path(audit_log), entry)
 
     if evidence_pack:
+        evidence_trust_root = load_trust_root(Path(trust_root)) if sign_evidence and trust_root else None
         write_evidence_pack(
             Path(evidence_pack),
             rendered,
@@ -884,6 +830,7 @@ def scan(
             baseline_diff,
             signature_text,
             previous_hash=evidence_prev_hash,
+            trust_root=evidence_trust_root,
         )
 
     if control_plane_output:
