@@ -15,13 +15,14 @@ except ModuleNotFoundError:  # pragma: no cover - exercised in older runtimes
     import tomli as tomllib  # type: ignore
 
 from packaging.requirements import Requirement
-import requests  # type: ignore[import-untyped]
 
 from .types import (
     DependencyInfo,
     DependencyIssue,
     apply_license_category_dependency,
 )
+from .network import RetryConfig, request_with_retry
+from .parsers import ParserError, parse_sbom_file, read_text
 
 
 KNOWN_BAD_VERSIONS = {
@@ -246,23 +247,23 @@ def parse_requirement_line(line: str, source: str = "requirements.txt") -> Depen
     return dep
 
 
-def scan_requirements(path: Path) -> List[DependencyInfo]:
+def scan_requirements(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
     dependencies: List[DependencyInfo] = []
-    for line in path.read_text().splitlines():
+    for line in read_text(path, max_bytes=max_bytes).splitlines():
         info = parse_requirement_line(line, source="requirements.txt")
         if info:
             dependencies.append(info)
     return dependencies
 
 
-def scan_pyproject(path: Path) -> List[DependencyInfo]:
+def scan_pyproject(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
-    data = tomllib.loads(path.read_text())
+    data = tomllib.loads(read_text(path, max_bytes=max_bytes))
     project = data.get("project", {})
     dependencies: List[DependencyInfo] = []
 
@@ -313,7 +314,12 @@ def fetch_shadow_uefi_intel_dependency(
         return dep
 
     try:
-        response = requests.get(api_url, timeout=timeout)
+        response = request_with_retry(
+            "GET",
+            api_url,
+            timeout=timeout,
+            retry_config=RetryConfig(),
+        )
     except Exception as exc:  # pragma: no cover - depends on network conditions
         issues.append(
             DependencyIssue(
@@ -367,11 +373,11 @@ def fetch_shadow_uefi_intel_dependency(
     return dep
 
 
-def scan_package_json(path: Path) -> List[DependencyInfo]:
+def scan_package_json(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
-    data = json.loads(path.read_text())
+    data = json.loads(read_text(path, max_bytes=max_bytes))
     dependencies: List[DependencyInfo] = []
 
     def _parse_block(block: dict | None) -> None:
@@ -402,11 +408,11 @@ def scan_package_json(path: Path) -> List[DependencyInfo]:
     return dependencies
 
 
-def scan_package_lock(path: Path) -> List[DependencyInfo]:
+def scan_package_lock(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
-    data = json.loads(path.read_text())
+    data = json.loads(read_text(path, max_bytes=max_bytes))
     deps: List[DependencyInfo] = []
     packages = data.get("packages") or {}
     for name, details in packages.items():
@@ -472,7 +478,7 @@ def _scan_go_mod_with_cli(path: Path) -> tuple[List[DependencyInfo], str | None]
         return [], "go_list_parse_error"
 
 
-def scan_go_mod(path: Path) -> List[DependencyInfo]:
+def scan_go_mod(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
@@ -481,7 +487,7 @@ def scan_go_mod(path: Path) -> List[DependencyInfo]:
         return cli_deps
 
     dependencies: List[DependencyInfo] = []
-    for line in path.read_text().splitlines():
+    for line in read_text(path, max_bytes=max_bytes).splitlines():
         stripped = line.strip()
         if stripped.startswith("require") and "(" in stripped:
             continue
@@ -510,12 +516,12 @@ def scan_go_mod(path: Path) -> List[DependencyInfo]:
     return dependencies
 
 
-def scan_pom(path: Path) -> List[DependencyInfo]:
+def scan_pom(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
     try:
-        root = ET.parse(path).getroot()
+        root = ET.fromstring(read_text(path, max_bytes=max_bytes))
     except ET.ParseError as exc:
         return [
             DependencyInfo(
@@ -621,7 +627,13 @@ def enrich_with_osv(
         try:
             import requests  # type: ignore
 
-            response = requests.post(target_url, json=payload, timeout=request_timeout)
+            response = request_with_retry(
+                "POST",
+                target_url,
+                timeout=request_timeout,
+                json_payload=payload,
+                retry_config=RetryConfig(),
+            )
             if response.status_code != 200:
                 dep.issues.append(
                     DependencyIssue(
@@ -662,13 +674,13 @@ def enrich_with_osv(
     return dependencies
 
 
-def parse_sbom(path: Path) -> List[DependencyInfo]:
+def parse_sbom(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
     try:
-        data = json.loads(path.read_text())
-    except json.JSONDecodeError as exc:
+        sbom_payload = parse_sbom_file(path, max_bytes=max_bytes)
+    except ParserError as exc:
         return [
             DependencyInfo(
                 name=path.name,
@@ -683,7 +695,9 @@ def parse_sbom(path: Path) -> List[DependencyInfo]:
                 ],
             )
         ]
-    if str(data.get("bomFormat", "")).lower() == "cyclonedx":
+
+    data = sbom_payload.payload.model_dump()
+    if sbom_payload.kind == "cyclonedx":
         deps: list[DependencyInfo] = []
         for comp in data.get("components", []) or []:
             license_value = None
@@ -705,7 +719,7 @@ def parse_sbom(path: Path) -> List[DependencyInfo]:
             deps.append(dep)
         return deps
 
-    if data.get("spdxVersion"):
+    if sbom_payload.kind == "spdx":
         deps = []
         for pkg in data.get("packages", []) or []:
             license_value = pkg.get("licenseDeclared") or pkg.get("licenseConcluded")

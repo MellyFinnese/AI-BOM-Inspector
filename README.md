@@ -57,16 +57,20 @@ ai-bom-inspector/
 - Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
 - Gather AI model metadata from JSON or explicit Hugging Face IDs and auto-discover model references (OpenAI/Anthropic calls, `from_pretrained` loads, pipeline configs) directly from your repo
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
+- Surface AI model lineage, training data provenance, license ambiguity, and model risk profiles so AI-BOM metadata is front-and-center for governance reviews
 - Inspect model artifacts (safetensors/pickle checkpoints) for poisoned weights or unsafe globals and compute hashes for reputation checks
 - Cross-check models against local vulnerability/advisory feeds, training source fingerprints, and map findings to STRIDE + MITRE ATLAS categories
 - Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics plus a deterministic, offline AI summary (optionally replaceable by your own LLM if desired)
 - Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --enable-shadow-uefi-intel` is used
+- Maintain evidence chain-of-custody with attestations, audit logs, and integrity checks so governance teams can trace decisions end-to-end
+- Provide score explainability artifacts (policy version, intel versions, weight breakdowns, temporal multipliers) to make risk outcomes audit-ready
 
 The default reports only use deterministic heuristics; the "AI summary" field is generated offline from the scan findings so teams get an executive-ready summary without hosted inference.
 
 ## Network behavior
 - Global posture: `--offline` is the default and hard-blocks every remote call. Expect `[OFFLINE_MODE]` / `[CVE_LOOKUP_SKIPPED]` annotations in reports when enrichment is skipped.
 - Opt-in enrichment: add `--online` to allow outbound calls, then enable specific feeds (e.g., `--with-cves`, `--model-id`, `--enable-shadow-uefi-intel`) to choose what actually dials out.
+- Local-only hardening: pass `--local-only` (or keep `--safe-mode` enabled) to enforce zero outbound fetches even if `--online` is set.
 - Endpoints and payloads:
 
 | Endpoint | When it fires | Data sent | How to disable |
@@ -92,6 +96,17 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
   ```
 - **Wheels:** the Rust extension ships as a wheel when you build from source—`python -m build` will produce a `.whl` under `dist/` for airgapped installs.
 - **PyPI readiness:** packaging metadata and wheels are production-ready for internal or public registries; use GitHub release pins above for stable CI installs or build a wheel locally for airgapped environments.
+
+## Build + SBOM generation
+- Build a wheel for offline installs:
+  ```bash
+  python -m build
+  ```
+- Generate a CycloneDX SBOM for this tool:
+  ```bash
+  pip install cyclonedx-bom
+  cyclonedx-py -o aibom-inspector-sbom.json
+  ```
 
 ## Getting started
 1. Create a `models.json` file if you want to include model metadata (auto-discovery will still pull model IDs out of your code/configs when this is omitted). A ready-to-use sample lives in `examples/models.sample.json`:
@@ -165,6 +180,7 @@ See [docs/ENTERPRISE_TRUST_BASELINE.md](docs/ENTERPRISE_TRUST_BASELINE.md) for t
 
 ## Enterprise control plane
 - [Enterprise Control Plane](docs/ENTERPRISE_CONTROL_PLANE.md): multi-tenant governance, evidence storage, and CI/CD enforcement.
+- [Enterprise roadmap](docs/ENTERPRISE_ROADMAP.md): central policy server, org audit features, dashboards, and web UI milestones.
 - [Open-core boundary](docs/OPEN_CORE_BOUNDARY.md): commercial vs OSS separation and packaging.
 - [AI supply chain threat model](docs/AI_SUPPLY_CHAIN_THREAT_MODEL.md): sales-ready threat taxonomy and control mapping.
 - [Deployment reference](docs/DEPLOYMENT_REFERENCE.md): SaaS/on-prem parity and isolation model.
