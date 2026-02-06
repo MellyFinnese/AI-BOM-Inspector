@@ -38,6 +38,7 @@ class Report:
     policy_metadata: dict | None = None
     intel_versions: dict | None = None
     score_explanation: dict | None = None
+    score: int | None = None
 
     @property
     def total_risk(self) -> int:
@@ -49,42 +50,9 @@ class Report:
     def stack_risk_score(self) -> int:
         """Return an easy-to-share 0–100 risk score (100 = healthiest)."""
 
-        penalties = 0
-        missing_intel_hits = 0
-        for dep in self.dependencies:
-            for dep_issue in dep.issues:
-                penalties += self.risk_settings.penalty_for(dep_issue.severity)
-                penalties += temporal_penalty(dep_issue.metadata, self.risk_settings.temporal_weights)
-
-        for model in self.models:
-            for model_issue in model.issues:
-                penalties += self.risk_settings.penalty_for(model_issue.severity)
-                penalties += temporal_penalty(model_issue.metadata, self.risk_settings.temporal_weights)
-            if not (model.base_models or model.fine_tuned_from):
-                missing_intel_hits += 1
-            if not model.training_sources:
-                missing_intel_hits += 1
-            if not model.license or model.license_category == "unknown":
-                missing_intel_hits += 1
-
-        breakdown = self.risk_breakdown
-        penalties += self.risk_settings.governance_penalty * (
-            breakdown.get("unpinned_deps", 0) + breakdown.get("unverified_sources", 0)
-        )
-        penalties += self.risk_settings.cve_penalty * breakdown.get("cves", 0)
-        penalties += missing_intel_hits * self.risk_settings.missing_intel_penalty
-        org_weights = self.risk_settings.org_weights
-        for key, count in breakdown.items():
-            if key in org_weights:
-                penalties += org_weights[key] * count
-        category_weights = self.risk_settings.category_weights
-        if category_weights:
-            weighted_total = 0.0
-            for key, weight in category_weights.items():
-                weighted_total += weight * breakdown.get(key, 0)
-            penalties += int(self.risk_settings.weight_scale * weighted_total)
-
-        return max(0, min(self.risk_settings.max_score, self.risk_settings.max_score - penalties))
+        if self.score is None:
+            raise RuntimeError("Score has not been computed. A scoring model is required.")
+        return self.score
 
     @property
     def risk_breakdown(self) -> dict[str, int]:

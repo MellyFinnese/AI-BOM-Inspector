@@ -23,6 +23,7 @@ from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_p
 from .renderers import render_report_outputs
 from .report_loader import load_report_payload
 from .risk_engine import ScanConfig, parse_metadata_entries, run_scan
+from .scoring_models import OrgContext
 from .runtime_trace import trace_python
 from .tensor_fuzz import inspect_weight_files
 from .trust_root import (
@@ -175,6 +176,24 @@ def main() -> None:
     default=True,
     show_default=True,
     help="Enable strict parsing with size limits and no outbound fetches.",
+)
+@click.option(
+    "--asset-criticality",
+    type=click.Choice(["low", "medium", "high", "critical"], case_sensitive=False),
+    required=True,
+    help="Asset criticality required for scoring.",
+)
+@click.option(
+    "--data-sensitivity",
+    type=click.Choice(["public", "internal", "confidential", "restricted"], case_sensitive=False),
+    required=True,
+    help="Data sensitivity required for scoring.",
+)
+@click.option(
+    "--risk-environment",
+    type=click.Choice(["dev", "test", "staging", "prod"], case_sensitive=False),
+    required=True,
+    help="Environment used for risk multipliers (dev/test/staging/prod).",
 )
 @click.option(
     "--osv-url",
@@ -426,6 +445,9 @@ def scan(
     offline: bool,
     local_only: bool,
     safe_mode: bool,
+    asset_criticality: str,
+    data_sensitivity: str,
+    risk_environment: str,
     osv_url: Optional[str],
     osv_timeout: Optional[float],
     model_advisory_db: Optional[str],
@@ -525,6 +547,12 @@ def scan(
         baseline_report=baseline_report,
         ai_summary=ai_summary,
         max_manifest_bytes=max_manifest_bytes,
+        org_context=OrgContext(
+            asset_criticality=asset_criticality.lower(),
+            data_sensitivity=data_sensitivity.lower(),
+            environment=risk_environment.lower(),
+        ),
+        scoring_model_override=None,
     )
 
     result = run_scan(config)

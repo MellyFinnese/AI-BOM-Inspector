@@ -115,7 +115,10 @@ def load_report_payload(payload: dict) -> Report:
         category_weights=risk_payload.get("category_weights", {}),
         weight_scale=risk_payload.get("weight_scale", 10.0),
         org_weights=risk_payload.get("org_weights", {}),
-        temporal_weights=risk_payload.get("temporal_weights", {}),
+        temporal_multipliers=risk_payload.get("temporal_multipliers", {}),
+        asset_criticality_multipliers=risk_payload.get("asset_criticality_multipliers", {}),
+        data_sensitivity_multipliers=risk_payload.get("data_sensitivity_multipliers", {}),
+        environment_multipliers=risk_payload.get("environment_multipliers", {}),
     )
 
     report = Report(
@@ -129,6 +132,7 @@ def load_report_payload(payload: dict) -> Report:
         policy_metadata=payload.get("policy_metadata"),
         intel_versions=payload.get("intel_versions"),
         score_explanation=payload.get("score_explanation"),
+        score=payload.get("stack_risk_score"),
     )
     return report
 

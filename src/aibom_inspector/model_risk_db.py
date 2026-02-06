@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -57,14 +59,20 @@ def load_training_source_db() -> dict[str, Any]:
     return load_json_data("training_source_fingerprints.json", _TRAINING_SOURCE_DB_PATH)
 
 
-def get_intel_versions() -> dict[str, str | None]:
+def get_intel_versions() -> dict[str, dict[str, str | None]]:
     advisory = load_model_advisory_db()
     hashes = load_model_hash_db()
     taxonomy = load_threat_taxonomy_db()
     training = load_training_source_db()
     return {
-        "model_advisory_db": str(advisory.get("version")) if advisory.get("version") is not None else None,
-        "model_hash_db": str(hashes.get("version")) if hashes.get("version") is not None else None,
-        "threat_taxonomy_db": str(taxonomy.get("version")) if taxonomy.get("version") is not None else None,
-        "training_source_db": str(training.get("version")) if training.get("version") is not None else None,
+        "model_advisory_db": _version_hash(advisory),
+        "model_hash_db": _version_hash(hashes),
+        "threat_taxonomy_db": _version_hash(taxonomy),
+        "training_source_db": _version_hash(training),
     }
+
+
+def _version_hash(payload: dict[str, Any]) -> dict[str, str | None]:
+    version = str(payload.get("version")) if payload.get("version") is not None else None
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+    return {"version": version, "sha256": digest}

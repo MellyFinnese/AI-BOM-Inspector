@@ -35,7 +35,6 @@ from .report_enrichment import (
     build_ai_summary,
     build_completeness,
     build_executive_summary,
-    build_score_explanation,
 )
 from .reporting import render_report
 from .runtime_trace import load_runtime_trace
@@ -44,6 +43,7 @@ from .trust_enforcement import TrustEnforcementConfig, apply_dependency_trust_en
 from .types import ModelInfo, Report, RiskSettings, RuntimeTrace
 from .types_risk import set_license_risk_db_path
 from .parsers import ParserError, load_json_payload
+from .scoring_models import OrgContext, ScoringContext, get_score_model
 
 
 @dataclass(frozen=True)
@@ -91,6 +91,8 @@ class ScanConfig:
     baseline_report: Optional[str]
     ai_summary: bool
     max_manifest_bytes: Optional[int]
+    org_context: OrgContext | None
+    scoring_model_override: str | None
 
 
 @dataclass(frozen=True)
@@ -247,9 +249,18 @@ def build_risk_settings(config: ScanConfig, policy: object | None = None) -> Ris
         policy_org_weights = getattr(policy, "org_weights", None) or {}
         if policy_org_weights:
             settings.org_weights = dict(policy_org_weights)
-        policy_temporal_weights = getattr(policy, "temporal_weights", None) or {}
-        if policy_temporal_weights:
-            settings.temporal_weights = dict(policy_temporal_weights)
+        policy_temporal = getattr(policy, "temporal_multipliers", None) or {}
+        if policy_temporal:
+            settings.temporal_multipliers = dict(policy_temporal)
+        policy_asset = getattr(policy, "asset_criticality_multipliers", None) or {}
+        if policy_asset:
+            settings.asset_criticality_multipliers = dict(policy_asset)
+        policy_data_sensitivity = getattr(policy, "data_sensitivity_multipliers", None) or {}
+        if policy_data_sensitivity:
+            settings.data_sensitivity_multipliers = dict(policy_data_sensitivity)
+        policy_environment = getattr(policy, "environment_multipliers", None) or {}
+        if policy_environment:
+            settings.environment_multipliers = dict(policy_environment)
         policy_missing_intel = getattr(policy, "missing_intel_penalty", None)
         if policy_missing_intel is not None:
             settings.missing_intel_penalty = int(policy_missing_intel)
@@ -270,15 +281,35 @@ def validate_risk_settings(settings: RiskSettings) -> None:
     for key, value in settings.org_weights.items():
         if value < 0:
             raise ValueError(f"Org weight for '{key}' must be non-negative.")
-    for key, value in settings.temporal_weights.items():
-        if value < 0 or value > 10:
-            raise ValueError(f"Temporal weight '{key}' must be between 0 and 10.")
+    for key, value in settings.temporal_multipliers.items():
+        if value < 1.0 or value > 5.0:
+            raise ValueError(f"Temporal multiplier '{key}' must be between 1.0 and 5.0.")
     if settings.category_weights:
         total = sum(settings.category_weights.values())
         if any(weight < 0 or weight > 1 for weight in settings.category_weights.values()):
             raise ValueError("Category weights must be between 0.0 and 1.0.")
         if abs(total - 1.0) > 1e-6:
             raise ValueError("Category weights must sum to 1.0.")
+    for name, mapping in {
+        "asset_criticality_multipliers": settings.asset_criticality_multipliers,
+        "data_sensitivity_multipliers": settings.data_sensitivity_multipliers,
+        "environment_multipliers": settings.environment_multipliers,
+    }.items():
+        for key, value in mapping.items():
+            if value < 1.0:
+                raise ValueError(f"{name} '{key}' must be >= 1.0.")
+
+
+def validate_org_context(context: OrgContext | None) -> OrgContext:
+    if context is None:
+        raise ValueError("Org context is required for scoring (asset criticality, data sensitivity, environment).")
+    if context.asset_criticality not in {"low", "medium", "high", "critical"}:
+        raise ValueError("asset_criticality must be one of: low, medium, high, critical.")
+    if context.data_sensitivity not in {"public", "internal", "confidential", "restricted"}:
+        raise ValueError("data_sensitivity must be one of: public, internal, confidential, restricted.")
+    if context.environment not in {"dev", "test", "staging", "prod"}:
+        raise ValueError("environment must be one of: dev, test, staging, prod.")
+    return context
 
 
 def run_scan(config: ScanConfig) -> ScanResult:
@@ -367,6 +398,7 @@ def run_scan(config: ScanConfig) -> ScanResult:
         env_vars = [node.id for node in stack_snapshot.nodes if node.kind == "EnvVar"]
 
     risk_settings = build_risk_settings(config, policy_data)
+    org_context = validate_org_context(config.org_context)
 
     policy_metadata = None
     if policy_data:
@@ -464,14 +496,29 @@ def run_scan(config: ScanConfig) -> ScanResult:
         policy_metadata=policy_metadata,
         intel_versions=intel_versions,
     )
+    scoring_model_name = (
+        config.scoring_model_override
+        or (policy_data.scoring_model if policy_data else None)
+        or "default"
+    )
+    score_model = get_score_model(scoring_model_name)
+    score_outcome = score_model.score(
+        report,
+        ScoringContext(
+            org_context=org_context,
+            policy_metadata=policy_metadata,
+            intel_versions=intel_versions,
+        ),
+    )
+    report.score = score_outcome.final_score
+    report.score_explanation = score_outcome.explanation
+
     report.completeness = completeness
     report.executive_summary = build_executive_summary(report)
     report.framework_mapping = framework_mapping_metadata()
 
     if config.ai_summary:
         report.ai_summary = build_ai_summary(report)
-
-    report.score_explanation = build_score_explanation(report)
 
     policy_evaluation = None
     policy_failed = False

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from aibom_inspector.parsers import SAFE_MAX_BYTES
 from aibom_inspector.risk_engine import ScanConfig, run_scan
+from aibom_inspector.scoring_models import OrgContext
 
 
 def _base_config(tmp_path: Path, *, fail_on_score: int | None = None, baseline_report: str | None = None) -> ScanConfig:
@@ -55,6 +56,12 @@ def _base_config(tmp_path: Path, *, fail_on_score: int | None = None, baseline_r
         baseline_report=baseline_report,
         ai_summary=False,
         max_manifest_bytes=SAFE_MAX_BYTES,
+        org_context=OrgContext(
+            asset_criticality="medium",
+            data_sensitivity="internal",
+            environment="dev",
+        ),
+        scoring_model_override=None,
     )
 
 

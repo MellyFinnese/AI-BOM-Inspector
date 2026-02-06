@@ -47,7 +47,10 @@ class Policy:
     category_weights: dict[str, float] = field(default_factory=dict)
     weight_scale: float | None = None
     org_weights: dict[str, int] = field(default_factory=dict)
-    temporal_weights: dict[str, int] = field(default_factory=dict)
+    temporal_multipliers: dict[str, float] = field(default_factory=dict)
+    asset_criticality_multipliers: dict[str, float] = field(default_factory=dict)
+    data_sensitivity_multipliers: dict[str, float] = field(default_factory=dict)
+    environment_multipliers: dict[str, float] = field(default_factory=dict)
     missing_intel_penalty: int | None = None
     policy_version: str | None = None
     change_log: list[dict] = field(default_factory=list)
@@ -152,7 +155,10 @@ def load_policy(path: Path, *, max_bytes: int | None = None) -> Policy:
         category_weights=raw.get("category_weights") or {},
         weight_scale=raw.get("weight_scale"),
         org_weights=raw.get("org_weights") or {},
-        temporal_weights=raw.get("temporal_weights") or {},
+        temporal_multipliers=raw.get("temporal_multipliers") or {},
+        asset_criticality_multipliers=raw.get("asset_criticality_multipliers") or {},
+        data_sensitivity_multipliers=raw.get("data_sensitivity_multipliers") or {},
+        environment_multipliers=raw.get("environment_multipliers") or {},
         missing_intel_penalty=raw.get("missing_intel_penalty"),
         policy_version=raw.get("policy_version") or raw.get("version"),
         change_log=raw.get("change_log") or [],

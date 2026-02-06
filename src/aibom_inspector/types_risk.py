@@ -22,8 +22,17 @@ class RiskSettings:
     category_weights: dict[str, float] = field(default_factory=dict)
     weight_scale: float = 10.0
     org_weights: dict[str, int] = field(default_factory=dict)
-    temporal_weights: dict[str, int] = field(
-        default_factory=lambda: {"active_exploitation": 6, "mature": 4, "poc": 2}
+    temporal_multipliers: dict[str, float] = field(
+        default_factory=lambda: {"active_exploitation": 1.8, "mature": 1.4, "poc": 1.2}
+    )
+    asset_criticality_multipliers: dict[str, float] = field(
+        default_factory=lambda: {"low": 1.0, "medium": 1.2, "high": 1.5, "critical": 2.0}
+    )
+    data_sensitivity_multipliers: dict[str, float] = field(
+        default_factory=lambda: {"public": 1.0, "internal": 1.2, "confidential": 1.5, "restricted": 2.0}
+    )
+    environment_multipliers: dict[str, float] = field(
+        default_factory=lambda: {"dev": 1.0, "test": 1.1, "staging": 1.3, "prod": 1.7}
     )
 
     def penalty_for(self, severity: str) -> int:
@@ -41,21 +50,24 @@ class RiskSettings:
             "category_weights": self.category_weights,
             "weight_scale": self.weight_scale,
             "org_weights": self.org_weights,
-            "temporal_weights": self.temporal_weights,
+            "temporal_multipliers": self.temporal_multipliers,
+            "asset_criticality_multipliers": self.asset_criticality_multipliers,
+            "data_sensitivity_multipliers": self.data_sensitivity_multipliers,
+            "environment_multipliers": self.environment_multipliers,
         }
 
 
-def temporal_penalty(metadata: dict[str, object], temporal_weights: dict[str, int]) -> int:
+def temporal_multiplier(metadata: dict[str, object], temporal_multipliers: dict[str, float]) -> float:
     if not metadata:
-        return 0
+        return 1.0
     if metadata.get("active_exploitation") is True:
-        return temporal_weights.get("active_exploitation", 0)
+        return temporal_multipliers.get("active_exploitation", 1.0)
     maturity = str(metadata.get("exploit_maturity", "")).lower()
     if maturity in {"active", "mature", "high"}:
-        return temporal_weights.get("mature", 0)
+        return temporal_multipliers.get("mature", 1.0)
     if maturity in {"poc", "proof-of-concept", "medium"}:
-        return temporal_weights.get("poc", 0)
-    return 0
+        return temporal_multipliers.get("poc", 1.0)
+    return 1.0
 
 
 LICENSE_CATEGORIES = [

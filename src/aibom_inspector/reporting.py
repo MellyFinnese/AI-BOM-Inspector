@@ -115,6 +115,7 @@ def render_json(report: Report) -> str:
         "policy_metadata": report.policy_metadata,
         "intel_versions": report.intel_versions,
         "score_explanation": report.score_explanation,
+        "org_context": report.score_explanation.get("org_context") if report.score_explanation else None,
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }

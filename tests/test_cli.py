@@ -8,13 +8,14 @@ from aibom_inspector.cli import main
 
 def test_scan_cli_generates_json(tmp_path: Path):
     runner = CliRunner()
+    org_args = ["--asset-criticality", "medium", "--data-sensitivity", "internal", "--risk-environment", "dev"]
     with runner.isolated_filesystem():
         req_file = Path("requirements.txt")
         req_file.write_text("demo\n")
 
         result = runner.invoke(
             main,
-            ["scan", "--requirements", str(req_file), "--format", "json", "--offline"],
+            ["scan", "--requirements", str(req_file), "--format", "json", "--offline", *org_args],
         )
 
     assert result.exit_code == 0
@@ -45,6 +46,7 @@ def test_diff_cli_reports_changes(tmp_path: Path):
 
 def test_fail_on_score_threshold(tmp_path: Path):
     runner = CliRunner()
+    org_args = ["--asset-criticality", "high", "--data-sensitivity", "confidential", "--risk-environment", "prod"]
     with runner.isolated_filesystem():
         req_file = Path("requirements.txt")
         req_file.write_text("unpinned\n")
@@ -60,6 +62,7 @@ def test_fail_on_score_threshold(tmp_path: Path):
                 "--fail-on-score",
                 "50",
                 "--offline",
+                *org_args,
             ],
         )
         assert ok.exit_code == 0
@@ -75,6 +78,7 @@ def test_fail_on_score_threshold(tmp_path: Path):
                 "--fail-on-score",
                 "95",
                 "--offline",
+                *org_args,
             ],
         )
         assert failing.exit_code == 1
@@ -83,6 +87,7 @@ def test_fail_on_score_threshold(tmp_path: Path):
 def test_warns_when_nothing_to_scan(tmp_path: Path):
     runner = CliRunner()
     output_path = tmp_path / "report.json"
+    org_args = ["--asset-criticality", "low", "--data-sensitivity", "public", "--risk-environment", "dev"]
     with runner.isolated_filesystem():
         result = runner.invoke(
             main,
@@ -93,6 +98,7 @@ def test_warns_when_nothing_to_scan(tmp_path: Path):
                 "--output",
                 str(output_path),
                 "--offline",
+                *org_args,
             ],
         )
 
@@ -103,6 +109,7 @@ def test_warns_when_nothing_to_scan(tmp_path: Path):
 
 def test_require_input_flag_exits_when_empty(tmp_path: Path):
     runner = CliRunner()
+    org_args = ["--asset-criticality", "low", "--data-sensitivity", "public", "--risk-environment", "dev"]
     with runner.isolated_filesystem():
         result = runner.invoke(
             main,
@@ -112,6 +119,7 @@ def test_require_input_flag_exits_when_empty(tmp_path: Path):
                 "json",
                 "--offline",
                 "--require-input",
+                *org_args,
             ],
         )
 
@@ -122,7 +130,21 @@ def test_require_input_flag_exits_when_empty(tmp_path: Path):
 def test_excludes_shadow_repo_by_default(tmp_path: Path):
     runner = CliRunner()
     with runner.isolated_filesystem():
-        result = runner.invoke(main, ["scan", "--format", "json", "--offline"])
+        result = runner.invoke(
+            main,
+            [
+                "scan",
+                "--format",
+                "json",
+                "--offline",
+                "--asset-criticality",
+                "medium",
+                "--data-sensitivity",
+                "internal",
+                "--risk-environment",
+                "dev",
+            ],
+        )
 
     assert result.exit_code == 0
     payload = json.loads(result.output[result.output.find("{") :])
@@ -135,7 +157,20 @@ def test_includes_shadow_repo_when_enabled(tmp_path: Path):
     with runner.isolated_filesystem():
         result = runner.invoke(
             main,
-            ["scan", "--format", "json", "--offline", "--enable-shadow-uefi-intel"],
+            [
+                "scan",
+                "--format",
+                "json",
+                "--offline",
+                "--enable-shadow-uefi-intel",
+                "--unsafe-mode",
+                "--asset-criticality",
+                "medium",
+                "--data-sensitivity",
+                "internal",
+                "--risk-environment",
+                "dev",
+            ],
         )
 
     assert result.exit_code == 0
@@ -152,7 +187,21 @@ def test_autodiscovery_surfaces_models(tmp_path: Path):
             "from transformers import AutoModel\nmodel = AutoModel.from_pretrained('gpt2')\n"
         )
 
-        result = runner.invoke(main, ["scan", "--format", "json", "--offline"])
+        result = runner.invoke(
+            main,
+            [
+                "scan",
+                "--format",
+                "json",
+                "--offline",
+                "--asset-criticality",
+                "medium",
+                "--data-sensitivity",
+                "internal",
+                "--risk-environment",
+                "dev",
+            ],
+        )
 
     assert result.exit_code == 0
     payload = json.loads(result.output[result.output.find("{") :])

@@ -53,7 +53,10 @@ class PolicySchema(BaseModel):
     category_weights: Mapping[str, float] = Field(default_factory=dict)
     weight_scale: float | None = None
     org_weights: Mapping[str, int] = Field(default_factory=dict)
-    temporal_weights: Mapping[str, int] = Field(default_factory=dict)
+    temporal_multipliers: Mapping[str, float] = Field(default_factory=dict)
+    asset_criticality_multipliers: Mapping[str, float] = Field(default_factory=dict)
+    data_sensitivity_multipliers: Mapping[str, float] = Field(default_factory=dict)
+    environment_multipliers: Mapping[str, float] = Field(default_factory=dict)
     missing_intel_penalty: int | None = None
     policy_version: str | None = None
     change_log: List[Mapping[str, Any]] = Field(default_factory=list)
@@ -199,7 +202,10 @@ class RiskSettingsSchema(BaseModel):
     category_weights: Mapping[str, float] = Field(default_factory=dict)
     weight_scale: float | None = None
     org_weights: Mapping[str, int] = Field(default_factory=dict)
-    temporal_weights: Mapping[str, int] = Field(default_factory=dict)
+    temporal_multipliers: Mapping[str, float] = Field(default_factory=dict)
+    asset_criticality_multipliers: Mapping[str, float] = Field(default_factory=dict)
+    data_sensitivity_multipliers: Mapping[str, float] = Field(default_factory=dict)
+    environment_multipliers: Mapping[str, float] = Field(default_factory=dict)
     missing_intel_penalty: int | None = None
 
     model_config = ConfigDict(extra="allow", strict=True)

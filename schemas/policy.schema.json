@@ -91,10 +91,25 @@
       "description": "Org-specific weights for risk categories (category -> penalty)",
       "additionalProperties": { "type": "integer" }
     },
-    "temporal_weights": {
+    "temporal_multipliers": {
       "type": "object",
-      "description": "Penalties for exploit maturity signals (active_exploitation, mature, poc)",
-      "additionalProperties": { "type": "integer" }
+      "description": "Multipliers for exploit maturity signals (active_exploitation, mature, poc)",
+      "additionalProperties": { "type": "number" }
+    },
+    "asset_criticality_multipliers": {
+      "type": "object",
+      "description": "Multipliers by asset criticality",
+      "additionalProperties": { "type": "number" }
+    },
+    "data_sensitivity_multipliers": {
+      "type": "object",
+      "description": "Multipliers by data sensitivity",
+      "additionalProperties": { "type": "number" }
+    },
+    "environment_multipliers": {
+      "type": "object",
+      "description": "Multipliers by environment (dev/test/staging/prod)",
+      "additionalProperties": { "type": "number" }
     },
     "missing_intel_penalty": {
       "type": "integer",

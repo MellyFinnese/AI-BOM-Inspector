@@ -64,6 +64,7 @@ ai-bom-inspector/
 - Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --enable-shadow-uefi-intel` is used
 - Maintain evidence chain-of-custody with attestations, audit logs, and integrity checks so governance teams can trace decisions end-to-end
 - Provide score explainability artifacts (policy version, intel versions, weight breakdowns, temporal multipliers) to make risk outcomes audit-ready
+- Require org context (asset criticality, data sensitivity, environment) so scores cannot be generated without enterprise context
 
 The default reports only use deterministic heuristics; the "AI summary" field is generated offline from the scan findings so teams get an executive-ready summary without hosted inference.
 
