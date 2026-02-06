@@ -6,19 +6,25 @@ from pathlib import Path
 from typing import Iterable
 from uuid import uuid4
 
-from jinja2 import Environment, select_autoescape
+from jinja2 import select_autoescape
+from jinja2.sandbox import SandboxedEnvironment
 
 from .framework_mapping import (
     framework_mapping_metadata,
     framework_mappings_for_issue,
     serialize_mappings,
 )
-from .report_enrichment import build_sbom_correlations, build_threat_summary, serialize_dataclass
+from .report_enrichment import (
+    build_model_metadata_summary,
+    build_sbom_correlations,
+    build_threat_summary,
+    serialize_dataclass,
+)
 from .stack_discovery import snapshot_as_dict
 from .types import Report
 
 
-env = Environment(autoescape=select_autoescape(["html", "xml"]))
+env = SandboxedEnvironment(autoescape=select_autoescape(["html", "xml"]))
 
 
 def _dependency_rows(report: Report) -> Iterable[dict]:
@@ -28,6 +34,7 @@ def _dependency_rows(report: Report) -> Iterable[dict]:
                 "message": issue.message,
                 "severity": issue.severity,
                 "code": issue.code,
+                "metadata": issue.metadata,
                 "frameworks": serialize_mappings(
                     framework_mappings_for_issue(issue.code, issue.message)
                 ),
@@ -58,6 +65,7 @@ def _model_rows(report: Report) -> Iterable[dict]:
                 "message": issue.message,
                 "severity": issue.severity,
                 "code": issue.code,
+                "metadata": issue.metadata,
                 "frameworks": serialize_mappings(
                     framework_mappings_for_issue(issue.code, issue.message)
                 ),
@@ -87,6 +95,7 @@ def _model_rows(report: Report) -> Iterable[dict]:
 
 def render_json(report: Report) -> str:
     threat_summary = build_threat_summary(report)
+    model_metadata_summary = build_model_metadata_summary(report)
     payload = {
         "generated_at": report.generated_at.isoformat(),
         "ai_summary": report.ai_summary,
@@ -102,6 +111,11 @@ def render_json(report: Report) -> str:
         "framework_mapping": report.framework_mapping or framework_mapping_metadata(),
         "sbom_correlations": build_sbom_correlations(report),
         "threat_summary": threat_summary,
+        "model_metadata_summary": model_metadata_summary,
+        "policy_metadata": report.policy_metadata,
+        "intel_versions": report.intel_versions,
+        "score_explanation": report.score_explanation,
+        "org_context": report.score_explanation.get("org_context") if report.score_explanation else None,
         "dependencies": list(_dependency_rows(report)),
         "models": list(_model_rows(report)),
     }
@@ -170,6 +184,23 @@ def render_markdown(report: Report) -> str:
             lines.append("- Unobservable areas:")
             for entry in report.completeness.unobservable_areas:
                 lines.append(f"  - {entry}")
+
+    if report.models:
+        metadata_summary = build_model_metadata_summary(report)
+        lines.append("\n## Model metadata coverage\n")
+        lines.append(f"- Total models: {metadata_summary['models_total']}")
+        lines.append(f"- Missing lineage: {metadata_summary['lineage_missing']}")
+        lines.append(f"- Missing training data provenance: {metadata_summary['training_data_missing']}")
+        lines.append(f"- License ambiguities: {metadata_summary['license_ambiguity']}")
+        lines.append(f"- Model risk profiles flagged: {metadata_summary['risk_profiles_flagged']}")
+
+    if report.score_explanation:
+        lines.append("\n## Score explainability\n")
+        lines.append(f"- Final score: {report.score_explanation.get('final_score')}")
+        lines.append(f"- Total penalty: {report.score_explanation.get('total_penalty')}")
+        lines.append(
+            f"- Missing intel penalty: {report.score_explanation.get('missing_intel_penalty')}"
+        )
 
     if report.runtime_trace:
         lines.append("\n## Runtime observations\n")

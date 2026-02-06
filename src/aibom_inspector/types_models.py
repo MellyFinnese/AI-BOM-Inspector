@@ -12,6 +12,7 @@ class ModelIssue:
     message: str
     severity: str = "medium"
     code: str | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass

@@ -35,6 +35,10 @@ class Report:
     completeness: "CompletenessSummary | None" = None
     executive_summary: "ExecutiveRiskSummary | None" = None
     framework_mapping: dict | None = None
+    policy_metadata: dict | None = None
+    intel_versions: dict | None = None
+    score_explanation: dict | None = None
+    score: int | None = None
 
     @property
     def total_risk(self) -> int:
@@ -46,22 +50,9 @@ class Report:
     def stack_risk_score(self) -> int:
         """Return an easy-to-share 0–100 risk score (100 = healthiest)."""
 
-        penalties = 0
-        for dep in self.dependencies:
-            for dep_issue in dep.issues:
-                penalties += self.risk_settings.penalty_for(dep_issue.severity)
-
-        for model in self.models:
-            for model_issue in model.issues:
-                penalties += self.risk_settings.penalty_for(model_issue.severity)
-
-        breakdown = self.risk_breakdown
-        penalties += self.risk_settings.governance_penalty * (
-            breakdown.get("unpinned_deps", 0) + breakdown.get("unverified_sources", 0)
-        )
-        penalties += self.risk_settings.cve_penalty * breakdown.get("cves", 0)
-
-        return max(0, min(self.risk_settings.max_score, self.risk_settings.max_score - penalties))
+        if self.score is None:
+            raise RuntimeError("Score has not been computed. A scoring model is required.")
+        return self.score
 
     @property
     def risk_breakdown(self) -> dict[str, int]:
@@ -73,6 +64,10 @@ class Report:
             "unknown_licenses": 0,
             "stale_models": 0,
             "cves": 0,
+            "model_lineage_missing": 0,
+            "training_data_missing": 0,
+            "license_ambiguity": 0,
+            "model_risk_profiles": 0,
         }
 
         for dep in self.dependencies:
@@ -102,6 +97,16 @@ class Report:
                     buckets["cves"] += 1
             if model.license_category == "unknown" and model.license:
                 buckets["unknown_licenses"] += 1
+            if not (model.base_models or model.fine_tuned_from):
+                buckets["model_lineage_missing"] += 1
+            if not model.training_sources:
+                buckets["training_data_missing"] += 1
+            if not model.license or model.license_category == "unknown":
+                buckets["license_ambiguity"] += 1
+            if any(
+                issue.code and str(issue.code).startswith("MODEL_") for issue in model.issues
+            ):
+                buckets["model_risk_profiles"] += 1
 
         return buckets
 

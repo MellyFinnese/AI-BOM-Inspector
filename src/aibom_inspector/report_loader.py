@@ -9,6 +9,7 @@ from .types_dependencies import DependencyInfo, DependencyIssue, apply_license_c
 from .types_models import ModelInfo, ModelIssue, apply_license_category_model
 from .types_report import Report
 from .types_risk import RiskSettings
+from .parsers import ReportPayloadSchema, validate_or_none
 
 
 def _parse_datetime(value: str | None) -> datetime:
@@ -37,10 +38,15 @@ def _parse_issue(payload: dict | str, *, issue_cls: type[DependencyIssue] | type
         message=message,
         severity=payload.get("severity") or "medium",
         code=payload.get("code") or _extract_code(message),
+        metadata=payload.get("metadata") or {},
     )
 
 
 def load_report_payload(payload: dict) -> Report:
+    validated = validate_or_none(ReportPayloadSchema, payload)
+    if not validated:
+        raise ValueError("Invalid report payload schema.")
+    payload = validated.model_dump()
     dependencies: list[DependencyInfo] = []
     for dep_payload in payload.get("dependencies", []):
         issue_details = dep_payload.get("issue_details") or dep_payload.get("issues") or []
@@ -103,6 +109,17 @@ def load_report_payload(payload: dict) -> Report:
         severity_penalties=risk_payload.get("severity_penalties", {"high": 8, "medium": 4, "low": 2}),
         governance_penalty=risk_payload.get("governance_penalty", 3),
         cve_penalty=risk_payload.get("cve_penalty", 7),
+        missing_intel_penalty=risk_payload.get("missing_intel_penalty", 2),
+        active_exploitation_penalty=risk_payload.get("active_exploitation_penalty", 25),
+        scoring_model=risk_payload.get("scoring_model", "default"),
+        scoring_model_version=risk_payload.get("scoring_model_version", "v1"),
+        category_weights=risk_payload.get("category_weights", {}),
+        weight_scale=risk_payload.get("weight_scale", 10.0),
+        org_weights=risk_payload.get("org_weights", {}),
+        temporal_multipliers=risk_payload.get("temporal_multipliers", {}),
+        asset_criticality_multipliers=risk_payload.get("asset_criticality_multipliers", {}),
+        data_sensitivity_multipliers=risk_payload.get("data_sensitivity_multipliers", {}),
+        environment_multipliers=risk_payload.get("environment_multipliers", {}),
     )
 
     report = Report(
@@ -113,6 +130,10 @@ def load_report_payload(payload: dict) -> Report:
         risk_settings=risk_settings,
         provenance=payload.get("provenance"),
         approvals=payload.get("approvals") or [],
+        policy_metadata=payload.get("policy_metadata"),
+        intel_versions=payload.get("intel_versions"),
+        score_explanation=payload.get("score_explanation"),
+        score=payload.get("stack_risk_score"),
     )
     return report
 
