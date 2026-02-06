@@ -7,6 +7,151 @@ from typing import Iterable
 from .model_risk_db import load_threat_taxonomy_db
 from .stack_discovery import MODEL_HOST_DEPENDENCIES, PROVIDER_DEPENDENCIES
 from .types import CompletenessSummary, ExecutiveRiskSummary, Report, RuntimeTrace
+from .types_risk import temporal_penalty
+
+
+def build_model_metadata_summary(report: Report) -> dict[str, int]:
+    missing_lineage = 0
+    missing_training = 0
+    license_ambiguity = 0
+    risk_profiles = 0
+
+    for model in report.models:
+        if not (model.base_models or model.fine_tuned_from):
+            missing_lineage += 1
+        if not model.training_sources:
+            missing_training += 1
+        if not model.license or model.license_category == "unknown":
+            license_ambiguity += 1
+        if any(issue.code and str(issue.code).startswith("MODEL_") for issue in model.issues):
+            risk_profiles += 1
+
+    return {
+        "models_total": len(report.models),
+        "lineage_missing": missing_lineage,
+        "training_data_missing": missing_training,
+        "license_ambiguity": license_ambiguity,
+        "risk_profiles_flagged": risk_profiles,
+    }
+
+
+def build_score_explanation(report: Report) -> dict:
+    breakdown = report.risk_breakdown
+    settings = report.risk_settings
+
+    issue_contributions: list[dict] = []
+    for dep in report.dependencies:
+        for issue in dep.issues:
+            temporal = temporal_penalty(issue.metadata, settings.temporal_weights)
+            issue_contributions.append(
+                {
+                    "type": "dependency_issue",
+                    "subject": dep.name,
+                    "severity": issue.severity,
+                    "code": issue.code,
+                    "base_penalty": settings.penalty_for(issue.severity),
+                    "temporal_penalty": temporal,
+                    "metadata": issue.metadata,
+                }
+            )
+
+    for model in report.models:
+        for issue in model.issues:
+            temporal = temporal_penalty(issue.metadata, settings.temporal_weights)
+            issue_contributions.append(
+                {
+                    "type": "model_issue",
+                    "subject": model.identifier,
+                    "severity": issue.severity,
+                    "code": issue.code,
+                    "base_penalty": settings.penalty_for(issue.severity),
+                    "temporal_penalty": temporal,
+                    "metadata": issue.metadata,
+                }
+            )
+
+    missing_intel: list[dict] = []
+    for model in report.models:
+        if not (model.base_models or model.fine_tuned_from):
+            missing_intel.append({"model": model.identifier, "signal": "lineage"})
+        if not model.training_sources:
+            missing_intel.append({"model": model.identifier, "signal": "training_data"})
+        if not model.license or model.license_category == "unknown":
+            missing_intel.append({"model": model.identifier, "signal": "license"})
+
+    category_weights = [
+        {"category": key, "weight": value, "count": breakdown.get(key, 0)}
+        for key, value in settings.category_weights.items()
+    ]
+    org_weights = [
+        {"category": key, "weight": value, "count": breakdown.get(key, 0)}
+        for key, value in settings.org_weights.items()
+    ]
+
+    total_penalty = report.risk_settings.max_score - report.stack_risk_score
+
+    nodes = [{"id": "score", "label": "stack_risk_score", "value": report.stack_risk_score}]
+    edges = []
+    for contribution in issue_contributions:
+        node_id = f"{contribution['type']}:{contribution['subject']}:{contribution.get('code')}"
+        nodes.append(
+            {
+                "id": node_id,
+                "label": contribution["subject"],
+                "type": contribution["type"],
+                "severity": contribution["severity"],
+                "penalty": contribution["base_penalty"] + contribution["temporal_penalty"],
+            }
+        )
+        edges.append({"from": node_id, "to": "score", "penalty": contribution["base_penalty"]})
+
+    for item in missing_intel:
+        node_id = f"missing:{item['model']}:{item['signal']}"
+        nodes.append({"id": node_id, "label": item["model"], "type": "missing_intel"})
+        edges.append({"from": node_id, "to": "score", "penalty": settings.missing_intel_penalty})
+
+    return {
+        "final_score": report.stack_risk_score,
+        "total_penalty": total_penalty,
+        "severity_penalties": settings.severity_penalties,
+        "temporal_weights": settings.temporal_weights,
+        "missing_intel_penalty": settings.missing_intel_penalty,
+        "category_weights": category_weights,
+        "org_weights": org_weights,
+        "weight_scale": settings.weight_scale,
+        "issue_contributions": issue_contributions,
+        "missing_intel": missing_intel,
+        "policy_metadata": report.policy_metadata,
+        "intel_versions": report.intel_versions,
+        "graph": {"nodes": nodes, "edges": edges},
+    }
+
+
+def build_model_metadata_summary(report: Report) -> dict[str, int]:
+    missing_lineage = 0
+    missing_training = 0
+    license_ambiguity = 0
+    risk_profiles = 0
+
+    for model in report.models:
+        if not (model.base_models or model.fine_tuned_from):
+            missing_lineage += 1
+        if not model.training_sources:
+            missing_training += 1
+        if not model.license or model.license_category == "unknown":
+            license_ambiguity += 1
+        if any(issue.code and str(issue.code).startswith("MODEL_") for issue in model.issues):
+            risk_profiles += 1
+
+    return {
+        "models_total": len(report.models),
+        "lineage_missing": missing_lineage,
+        "training_data_missing": missing_training,
+        "license_ambiguity": license_ambiguity,
+        "risk_profiles_flagged": risk_profiles,
+    }
+
+
 
 
 def build_model_metadata_summary(report: Report) -> dict[str, int]:
