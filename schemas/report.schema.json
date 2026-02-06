@@ -25,7 +25,11 @@
         "unverified_sources": { "type": "integer", "minimum": 0 },
         "unknown_licenses": { "type": "integer", "minimum": 0 },
         "stale_models": { "type": "integer", "minimum": 0 },
-        "cves": { "type": "integer", "minimum": 0 }
+        "cves": { "type": "integer", "minimum": 0 },
+        "model_lineage_missing": { "type": "integer", "minimum": 0 },
+        "training_data_missing": { "type": "integer", "minimum": 0 },
+        "license_ambiguity": { "type": "integer", "minimum": 0 },
+        "model_risk_profiles": { "type": "integer", "minimum": 0 }
       }
     },
     "risk_settings": {
@@ -38,7 +42,35 @@
           "additionalProperties": { "type": "integer" }
         },
         "governance_penalty": { "type": "integer" },
-        "cve_penalty": { "type": "integer" }
+        "cve_penalty": { "type": "integer" },
+        "missing_intel_penalty": { "type": "integer" },
+        "scoring_model": { "type": "string" },
+        "scoring_model_version": { "type": "string" },
+        "category_weights": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "weight_scale": { "type": "number" },
+        "org_weights": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "temporal_multipliers": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "asset_criticality_multipliers": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "data_sensitivity_multipliers": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "environment_multipliers": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
       }
     },
     "provenance": {
@@ -118,6 +150,33 @@
         "additionalProperties": true
       }
     },
+    "model_metadata_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "models_total": { "type": "integer", "minimum": 0 },
+        "lineage_missing": { "type": "integer", "minimum": 0 },
+        "training_data_missing": { "type": "integer", "minimum": 0 },
+        "license_ambiguity": { "type": "integer", "minimum": 0 },
+        "risk_profiles_flagged": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "policy_metadata": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "intel_versions": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "score_explanation": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "org_context": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
     "threat_summary": {
       "type": ["object", "null"],
       "additionalProperties": false,
@@ -173,6 +232,10 @@
                 "message": { "type": "string" },
                 "severity": { "type": "string" },
                 "code": { "type": ["string", "null"] },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
                 "frameworks": {
                   "type": "array",
                   "items": {
@@ -248,6 +311,10 @@
                 "message": { "type": "string" },
                 "severity": { "type": "string" },
                 "code": { "type": ["string", "null"] },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
                 "frameworks": {
                   "type": "array",
                   "items": {

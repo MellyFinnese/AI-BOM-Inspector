@@ -69,6 +69,64 @@
       "type": "boolean",
       "description": "Whether to enforce default graph-based AI stack policies"
     },
+    "scoring_model": {
+      "type": "string",
+      "description": "Select the risk scoring model (default/weighted/temporal)"
+    },
+    "scoring_model_version": {
+      "type": "string",
+      "description": "Version identifier for the scoring model"
+    },
+    "category_weights": {
+      "type": "object",
+      "description": "Normalized category weights for weighted scoring (sum to 1.0)",
+      "additionalProperties": { "type": "number" }
+    },
+    "weight_scale": {
+      "type": "number",
+      "description": "Multiplier used with category weights"
+    },
+    "org_weights": {
+      "type": "object",
+      "description": "Org-specific weights for risk categories (category -> penalty)",
+      "additionalProperties": { "type": "integer" }
+    },
+    "temporal_multipliers": {
+      "type": "object",
+      "description": "Multipliers for exploit maturity signals (active_exploitation, mature, poc)",
+      "additionalProperties": { "type": "number" }
+    },
+    "asset_criticality_multipliers": {
+      "type": "object",
+      "description": "Multipliers by asset criticality",
+      "additionalProperties": { "type": "number" }
+    },
+    "data_sensitivity_multipliers": {
+      "type": "object",
+      "description": "Multipliers by data sensitivity",
+      "additionalProperties": { "type": "number" }
+    },
+    "environment_multipliers": {
+      "type": "object",
+      "description": "Multipliers by environment (dev/test/staging/prod)",
+      "additionalProperties": { "type": "number" }
+    },
+    "missing_intel_penalty": {
+      "type": "integer",
+      "description": "Penalty applied when required intel signals are missing"
+    },
+    "policy_version": {
+      "type": "string",
+      "description": "Policy version identifier for audit trails"
+    },
+    "change_log": {
+      "type": "array",
+      "description": "Change log entries for policy updates",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
     "exceptions": {
       "type": "array",
       "items": {

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import builtins
-import json
 import runpy
 import sys
 from datetime import datetime
@@ -10,6 +9,7 @@ from types import ModuleType
 from typing import Callable, Iterable
 
 from .types import RuntimeTrace
+from .parsers import ParserError, parse_runtime_trace_file
 
 
 def _wrap_callable(target: object, name: str, record: Callable[[str], None]) -> Callable[[], None]:
@@ -125,7 +125,10 @@ def trace_python(script: Path, args: Iterable[str]) -> RuntimeTrace:
 
 
 def load_runtime_trace(path: Path) -> RuntimeTrace:
-    data = json.loads(path.read_text())
+    try:
+        data = parse_runtime_trace_file(path).model_dump()
+    except ParserError as exc:
+        raise RuntimeError(str(exc)) from exc
     return RuntimeTrace(
         trace_mode=data.get("trace_mode", "unknown"),
         captured_at=datetime.fromisoformat(data.get("captured_at"))

@@ -14,6 +14,7 @@ requires-python = ">=3.10"
 dependencies = [
     "click>=8.1.0",
     "jinja2>=3.1.0",
+    "pydantic>=2.6.0",
     "requests>=2.31.0",
     "packaging>=23.0",
     "PyYAML>=6.0.0",
@@ -39,7 +40,13 @@ Repository = "https://github.com/aibom-inspector/AI-BOM-Inspector"
 
 [project.optional-dependencies]
 huggingface = ["huggingface_hub>=0.26.0"]
-dev = ["pytest>=8.0.0", "ruff>=0.6.0", "mypy>=1.10.0", "types-requests>=2.32.0.20240622"]
+dev = [
+    "build>=1.2.1",
+    "pytest>=8.0.0",
+    "ruff>=0.6.0",
+    "mypy>=1.10.0",
+    "types-requests>=2.32.0.20240622",
+]
 
 [project.scripts]
 aibom = "aibom_inspector.cli:main"
