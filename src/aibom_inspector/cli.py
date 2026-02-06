@@ -35,9 +35,8 @@ from .model_risk_db import (
     set_training_source_db_path,
 )
 from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_pack, write_github_check
-from .policy_graph import evaluate_graph_policies
 from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
-from .report_enrichment import build_completeness, build_executive_summary
+from .report_enrichment import build_ai_summary, build_completeness, build_executive_summary
 from .reporting import render_report, write_report
 from .runtime_trace import load_runtime_trace, trace_python
 from .audit_log import append_audit_log, build_audit_entry, verify_audit_log
@@ -224,7 +223,7 @@ def main() -> None:
 @click.option(
     "--ai-summary",
     is_flag=True,
-    help="Include a placeholder AI-generated summary (offline stub).",
+    help="Include a deterministic, offline executive summary in the report.",
 )
 @click.option(
     "--fail-on-score",
@@ -626,7 +625,6 @@ def scan(
         click.echo("No dependencies or models detected; nothing to scan.", err=True)
         if require_input:
             raise SystemExit(1)
-f
     if with_cves:
         dependencies = enrich_with_osv(dependencies, offline=offline, osv_url=osv_url, timeout=osv_timeout)
 
@@ -678,10 +676,6 @@ f
         else base_settings.governance_penalty,
         cve_penalty=risk_penalty_cve if risk_penalty_cve is not None else base_settings.cve_penalty,
     )
-
-    summary = None
-    if ai_summary:
-        summary = "AI summarization is disabled by default. Provide an LLM backend to enable rich summaries."
 
     input_paths = [
         Path(path)
@@ -754,14 +748,73 @@ f
         dependencies=dependencies,
         models=models,
         generated_at=datetime.utcnow(),
-        ai_summary=summary,
         risk_settings=risk_settings,
         stack_snapshot=stack_snapshot,
         provenance=provenance,
         integrity_findings=integrity_findings,
         approvals=approvals,
         runtime_trace=runtime_trace_data,
-            score_failed = True
+    )
+    report.completeness = completeness
+    report.executive_summary = build_executive_summary(report)
+    report.framework_mapping = framework_mapping_metadata()
+
+    if ai_summary:
+        report.ai_summary = build_ai_summary(report)
+
+    policy_evaluation = None
+    policy_failed = False
+    if policy_data:
+        policy_evaluation = evaluate_policy(
+            report,
+            policy_data,
+            graph_snapshot=stack_snapshot,
+            enforce_graph=enforce_graph_policy and policy_data.enforce_graph_policies,
+        )
+        report.graph_policy_violations = policy_evaluation.graph_policy_violations
+        policy_failed = not policy_evaluation.passed
+
+    if github_check_output:
+        if not policy_evaluation:
+            raise click.BadParameter("--github-check-output requires --policy to evaluate the report.")
+        write_github_check(Path(github_check_output), policy_evaluation, report)
+
+    report_json = json.loads(render_report(report, "json"))
+
+    baseline_diff = None
+    if baseline_report:
+        baseline_payload = json.loads(Path(baseline_report).read_text())
+        baseline_diff = diff_reports(baseline_payload, report_json)
+
+    score_failed = False
+    if fail_on_score is not None and report.stack_risk_score < fail_on_score:
+        score_failed = True
+
+    report_path = None
+    if output:
+        report_path = Path(output)
+    elif sbom_output and fmt.lower() in {"cyclonedx", "spdx"}:
+        report_path = Path(sbom_output)
+
+    rendered = write_report(report, fmt, report_path)
+
+    if output is None and not (sbom_output and fmt.lower() in {"cyclonedx", "spdx"}):
+        click.echo(rendered)
+
+    markdown_payload = None
+    if markdown_output:
+        markdown_payload = write_report(report, "markdown", Path(markdown_output))
+
+    sarif_payload = None
+    if sarif_output:
+        sarif_payload = write_report(report, "sarif", Path(sarif_output))
+
+    if (
+        sbom_output
+        and fmt.lower() in {"cyclonedx", "spdx"}
+        and (report_path is None or Path(sbom_output) != report_path)
+    ):
+        write_report(report, fmt, Path(sbom_output))
 
     signature_text = None
     if sign_report:
