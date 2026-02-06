@@ -428,6 +428,11 @@ def main() -> None:
     help="Directory to write an audit-friendly evidence bundle (policy decisions, signed report).",
 )
 @click.option(
+    "--evidence-prev-hash",
+    type=str,
+    help="Previous evidence bundle hash to chain evidence manifests.",
+)
+@click.option(
     "--sign-report",
     is_flag=True,
     help="Emit a SHA256 signature alongside the rendered report for tamper evidence.",
@@ -548,6 +553,7 @@ def scan(
     policy: Optional[str],
     github_check_output: Optional[str],
     evidence_pack: Optional[str],
+    evidence_prev_hash: Optional[str],
     sign_report: bool,
     trust_root: Optional[str],
     attestation_output: Optional[str],
@@ -877,6 +883,7 @@ def scan(
             Path(policy) if policy else None,
             baseline_diff,
             signature_text,
+            previous_hash=evidence_prev_hash,
         )
 
     if control_plane_output:

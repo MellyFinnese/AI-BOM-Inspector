@@ -162,6 +162,7 @@ For security review handoffs, see the sample artifacts in `docs/evidence-pack/`:
 
 - `sample-compliance-report.json` — compliance summary with framework mappings.
 - `sample-audit-log.jsonl` — hash-chained audit log entries ready for verification.
+- `evidence-manifest.json` — generated manifest (from `--evidence-pack`) with file hashes and bundle chain hash.
 
 These files are formatted as reference outputs for GRC, auditors, and security teams.
 
