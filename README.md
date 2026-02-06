@@ -67,6 +67,7 @@ The default reports only use deterministic heuristics; the "AI summary" field is
 ## Network behavior
 - Global posture: `--offline` is the default and hard-blocks every remote call. Expect `[OFFLINE_MODE]` / `[CVE_LOOKUP_SKIPPED]` annotations in reports when enrichment is skipped.
 - Opt-in enrichment: add `--online` to allow outbound calls, then enable specific feeds (e.g., `--with-cves`, `--model-id`, `--enable-shadow-uefi-intel`) to choose what actually dials out.
+- Local-only hardening: pass `--local-only` (or keep `--safe-mode` enabled) to enforce zero outbound fetches even if `--online` is set.
 - Endpoints and payloads:
 
 | Endpoint | When it fires | Data sent | How to disable |
@@ -92,6 +93,17 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
   ```
 - **Wheels:** the Rust extension ships as a wheel when you build from source—`python -m build` will produce a `.whl` under `dist/` for airgapped installs.
 - **PyPI readiness:** packaging metadata and wheels are production-ready for internal or public registries; use GitHub release pins above for stable CI installs or build a wheel locally for airgapped environments.
+
+## Build + SBOM generation
+- Build a wheel for offline installs:
+  ```bash
+  python -m build
+  ```
+- Generate a CycloneDX SBOM for this tool:
+  ```bash
+  pip install cyclonedx-bom
+  cyclonedx-py -o aibom-inspector-sbom.json
+  ```
 
 ## Getting started
 1. Create a `models.json` file if you want to include model metadata (auto-discovery will still pull model IDs out of your code/configs when this is omitted). A ready-to-use sample lives in `examples/models.sample.json`:
