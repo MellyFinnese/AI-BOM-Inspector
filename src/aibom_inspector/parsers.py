@@ -48,6 +48,15 @@ class PolicySchema(BaseModel):
     plugin_signatures: Mapping[str, str] = Field(default_factory=dict)
     exceptions: List[PolicyExceptionSchema] = Field(default_factory=list)
     enforce_graph_policies: bool = False
+    scoring_model: str | None = None
+    scoring_model_version: str | None = None
+    category_weights: Mapping[str, float] = Field(default_factory=dict)
+    weight_scale: float | None = None
+    org_weights: Mapping[str, int] = Field(default_factory=dict)
+    temporal_weights: Mapping[str, int] = Field(default_factory=dict)
+    missing_intel_penalty: int | None = None
+    policy_version: str | None = None
+    change_log: List[Mapping[str, Any]] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -142,6 +151,7 @@ class IssueSchema(BaseModel):
     message: str | None = None
     severity: str | None = None
     code: str | None = None
+    metadata: Mapping[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="allow", strict=True)
 
@@ -184,6 +194,13 @@ class RiskSettingsSchema(BaseModel):
     severity_penalties: Mapping[str, int] = Field(default_factory=dict)
     governance_penalty: int | None = None
     cve_penalty: int | None = None
+    scoring_model: str | None = None
+    scoring_model_version: str | None = None
+    category_weights: Mapping[str, float] = Field(default_factory=dict)
+    weight_scale: float | None = None
+    org_weights: Mapping[str, int] = Field(default_factory=dict)
+    temporal_weights: Mapping[str, int] = Field(default_factory=dict)
+    missing_intel_penalty: int | None = None
 
     model_config = ConfigDict(extra="allow", strict=True)
 
@@ -196,6 +213,9 @@ class ReportPayloadSchema(BaseModel):
     risk_settings: RiskSettingsSchema | None = None
     provenance: Mapping[str, Any] | None = None
     approvals: List[str] = Field(default_factory=list)
+    policy_metadata: Mapping[str, Any] | None = None
+    intel_versions: Mapping[str, Any] | None = None
+    score_explanation: Mapping[str, Any] | None = None
 
     model_config = ConfigDict(extra="allow", strict=True)
 

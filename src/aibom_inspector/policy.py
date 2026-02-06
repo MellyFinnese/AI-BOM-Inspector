@@ -42,6 +42,15 @@ class Policy:
     plugin_signatures: dict[str, str] = field(default_factory=dict)
     exceptions: List[PolicyException] = field(default_factory=list)
     enforce_graph_policies: bool = False
+    scoring_model: str | None = None
+    scoring_model_version: str | None = None
+    category_weights: dict[str, float] = field(default_factory=dict)
+    weight_scale: float | None = None
+    org_weights: dict[str, int] = field(default_factory=dict)
+    temporal_weights: dict[str, int] = field(default_factory=dict)
+    missing_intel_penalty: int | None = None
+    policy_version: str | None = None
+    change_log: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -138,6 +147,15 @@ def load_policy(path: Path, *, max_bytes: int | None = None) -> Policy:
         plugin_signatures=raw.get("plugin_signatures") or {},
         exceptions=exceptions,
         enforce_graph_policies=bool(raw.get("enforce_graph_policies", False)),
+        scoring_model=raw.get("scoring_model"),
+        scoring_model_version=raw.get("scoring_model_version"),
+        category_weights=raw.get("category_weights") or {},
+        weight_scale=raw.get("weight_scale"),
+        org_weights=raw.get("org_weights") or {},
+        temporal_weights=raw.get("temporal_weights") or {},
+        missing_intel_penalty=raw.get("missing_intel_penalty"),
+        policy_version=raw.get("policy_version") or raw.get("version"),
+        change_log=raw.get("change_log") or [],
     )
 
 
@@ -289,6 +307,7 @@ def write_evidence_pack(
     policy_path: Path | None,
     diff_summary: dict | None,
     signature_text: str | None,
+    evaluation_metadata: dict | None = None,
     previous_hash: str | None = None,
     trust_root: TrustRoot | None = None,
 ) -> None:
@@ -302,6 +321,10 @@ def write_evidence_pack(
             policy_dest.write_text(policy_path.read_text())
     if diff_summary:
         (destination / "changes-since-last-run.json").write_text(json.dumps(diff_summary, indent=2))
+    if evaluation_metadata:
+        (destination / "evaluation-metadata.json").write_text(
+            json.dumps(evaluation_metadata, indent=2)
+        )
     if signature_text:
         (destination / f"{report_filename.name}.sha256").write_text(signature_text)
     _write_evidence_manifest(destination, previous_hash=previous_hash)

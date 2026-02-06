@@ -8,7 +8,7 @@ from typing import List, Optional
 
 import click
 
-from .attestation import collect_input_hashes, current_git_commit
+from .attestation import collect_input_hashes, compute_output_hash, current_git_commit
 from .dependency_scanner import (
     enrich_with_osv,
     fetch_shadow_uefi_intel_dependency,
@@ -24,13 +24,19 @@ from .framework_mapping import framework_mapping_metadata
 from .integrity import enforce_lockfile_checksums, verify_expected_hashes
 from .model_inspector import enrich_models_with_cves, scan_models_from_file, summarize_models
 from .model_risk_db import (
+    get_intel_versions,
     set_model_advisory_db_path,
     set_model_hash_db_path,
     set_threat_taxonomy_db_path,
     set_training_source_db_path,
 )
 from .policy import diff_reports, evaluate_policy, load_policy
-from .report_enrichment import build_ai_summary, build_completeness, build_executive_summary
+from .report_enrichment import (
+    build_ai_summary,
+    build_completeness,
+    build_executive_summary,
+    build_score_explanation,
+)
 from .reporting import render_report
 from .runtime_trace import load_runtime_trace
 from .stack_discovery import discover_models, discover_stack
@@ -205,7 +211,7 @@ def parse_metadata_entries(entries: tuple[str, ...], label: str) -> dict[str, st
     return parsed
 
 
-def build_risk_settings(config: ScanConfig) -> RiskSettings:
+def build_risk_settings(config: ScanConfig, policy: object | None = None) -> RiskSettings:
     base_settings = RiskSettings()
     severity_penalties = dict(base_settings.severity_penalties)
     if config.risk_penalty_high is not None:
@@ -215,7 +221,7 @@ def build_risk_settings(config: ScanConfig) -> RiskSettings:
     if config.risk_penalty_low is not None:
         severity_penalties["low"] = config.risk_penalty_low
 
-    return RiskSettings(
+    settings = RiskSettings(
         max_score=config.risk_max_score,
         severity_penalties=severity_penalties,
         governance_penalty=config.risk_penalty_governance
@@ -225,6 +231,54 @@ def build_risk_settings(config: ScanConfig) -> RiskSettings:
         if config.risk_penalty_cve is not None
         else base_settings.cve_penalty,
     )
+    if policy:
+        policy_scoring_model = getattr(policy, "scoring_model", None)
+        if policy_scoring_model:
+            settings.scoring_model = policy_scoring_model
+        policy_scoring_version = getattr(policy, "scoring_model_version", None)
+        if policy_scoring_version:
+            settings.scoring_model_version = policy_scoring_version
+        policy_category_weights = getattr(policy, "category_weights", None) or {}
+        if policy_category_weights:
+            settings.category_weights = dict(policy_category_weights)
+        policy_weight_scale = getattr(policy, "weight_scale", None)
+        if policy_weight_scale is not None:
+            settings.weight_scale = float(policy_weight_scale)
+        policy_org_weights = getattr(policy, "org_weights", None) or {}
+        if policy_org_weights:
+            settings.org_weights = dict(policy_org_weights)
+        policy_temporal_weights = getattr(policy, "temporal_weights", None) or {}
+        if policy_temporal_weights:
+            settings.temporal_weights = dict(policy_temporal_weights)
+        policy_missing_intel = getattr(policy, "missing_intel_penalty", None)
+        if policy_missing_intel is not None:
+            settings.missing_intel_penalty = int(policy_missing_intel)
+    validate_risk_settings(settings)
+    return settings
+
+
+def validate_risk_settings(settings: RiskSettings) -> None:
+    if not (0 <= settings.max_score <= 100):
+        raise ValueError("RiskSettings.max_score must be between 0 and 100.")
+    if settings.weight_scale < 0:
+        raise ValueError("RiskSettings.weight_scale must be non-negative.")
+    if settings.missing_intel_penalty < 0:
+        raise ValueError("RiskSettings.missing_intel_penalty must be non-negative.")
+    for severity, value in settings.severity_penalties.items():
+        if value < 0:
+            raise ValueError(f"Penalty for severity '{severity}' must be non-negative.")
+    for key, value in settings.org_weights.items():
+        if value < 0:
+            raise ValueError(f"Org weight for '{key}' must be non-negative.")
+    for key, value in settings.temporal_weights.items():
+        if value < 0 or value > 10:
+            raise ValueError(f"Temporal weight '{key}' must be between 0 and 10.")
+    if settings.category_weights:
+        total = sum(settings.category_weights.values())
+        if any(weight < 0 or weight > 1 for weight in settings.category_weights.values()):
+            raise ValueError("Category weights must be between 0.0 and 1.0.")
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError("Category weights must sum to 1.0.")
 
 
 def run_scan(config: ScanConfig) -> ScanResult:
@@ -312,7 +366,23 @@ def run_scan(config: ScanConfig) -> ScanResult:
     if stack_snapshot:
         env_vars = [node.id for node in stack_snapshot.nodes if node.kind == "EnvVar"]
 
-    risk_settings = build_risk_settings(config)
+    risk_settings = build_risk_settings(config, policy_data)
+
+    policy_metadata = None
+    if policy_data:
+        policy_metadata = {
+            "version": policy_data.policy_version,
+            "scoring_model": policy_data.scoring_model,
+            "scoring_model_version": policy_data.scoring_model_version,
+            "change_log": policy_data.change_log,
+        }
+        if config.policy:
+            try:
+                policy_metadata["policy_hash"] = compute_output_hash(Path(config.policy).read_text())
+            except Exception:
+                policy_metadata["policy_hash"] = None
+
+    intel_versions = get_intel_versions()
 
     input_paths = [
         Path(path)
@@ -391,6 +461,8 @@ def run_scan(config: ScanConfig) -> ScanResult:
         integrity_findings=integrity_findings,
         approvals=approvals,
         runtime_trace=runtime_trace_data,
+        policy_metadata=policy_metadata,
+        intel_versions=intel_versions,
     )
     report.completeness = completeness
     report.executive_summary = build_executive_summary(report)
@@ -398,6 +470,8 @@ def run_scan(config: ScanConfig) -> ScanResult:
 
     if config.ai_summary:
         report.ai_summary = build_ai_summary(report)
+
+    report.score_explanation = build_score_explanation(report)
 
     policy_evaluation = None
     policy_failed = False

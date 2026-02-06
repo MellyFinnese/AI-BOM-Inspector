@@ -64,6 +64,7 @@ def test_fail_on_score_flags_result(tmp_path: Path) -> None:
     result = run_scan(config)
 
     assert result.score_failed is True
+    assert result.report.score_explanation is not None
 
 
 def test_baseline_diff_generation(tmp_path: Path) -> None:

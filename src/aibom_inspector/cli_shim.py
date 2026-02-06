@@ -554,6 +554,8 @@ def scan(
 
     if attestation_output or evidence_pack:
         attestation_path = Path(attestation_output) if attestation_output else Path(evidence_pack) / "attestation.json"
+        intel_versions = result.report.intel_versions
+        policy_metadata = result.report.policy_metadata
         attestation_payload = build_attestation(
             inputs=result.input_hashes,
             report_hash=rendered_outputs.report_hash,
@@ -562,7 +564,11 @@ def scan(
             output_hashes=rendered_outputs.output_hashes,
             git_commit=result.git_commit,
             signature=rendered_outputs.signature_text,
-            metadata={"runtime_trace": bool(runtime_trace)},
+            metadata={
+                "runtime_trace": bool(runtime_trace),
+                "policy_version": (policy_metadata or {}).get("version"),
+                "intel_versions": intel_versions,
+            },
         )
         if trust_root:
             root = load_trust_root(Path(trust_root))
@@ -592,6 +598,13 @@ def scan(
 
     if evidence_pack:
         evidence_trust_root = load_trust_root(Path(trust_root)) if sign_evidence and trust_root else None
+        evaluation_metadata = {
+            "policy_metadata": result.report.policy_metadata,
+            "intel_versions": result.report.intel_versions,
+            "score_explanation": result.report.score_explanation,
+            "provenance": result.report.provenance,
+            "risk_settings": result.report.risk_settings.as_dict(),
+        }
         write_evidence_pack(
             Path(evidence_pack),
             rendered_outputs.rendered,
@@ -600,6 +613,7 @@ def scan(
             Path(policy) if policy else None,
             result.baseline_diff,
             rendered_outputs.signature_text,
+            evaluation_metadata,
             previous_hash=evidence_prev_hash,
             trust_root=evidence_trust_root,
         )

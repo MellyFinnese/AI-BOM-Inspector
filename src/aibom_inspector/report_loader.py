@@ -38,6 +38,7 @@ def _parse_issue(payload: dict | str, *, issue_cls: type[DependencyIssue] | type
         message=message,
         severity=payload.get("severity") or "medium",
         code=payload.get("code") or _extract_code(message),
+        metadata=payload.get("metadata") or {},
     )
 
 
@@ -108,6 +109,13 @@ def load_report_payload(payload: dict) -> Report:
         severity_penalties=risk_payload.get("severity_penalties", {"high": 8, "medium": 4, "low": 2}),
         governance_penalty=risk_payload.get("governance_penalty", 3),
         cve_penalty=risk_payload.get("cve_penalty", 7),
+        missing_intel_penalty=risk_payload.get("missing_intel_penalty", 2),
+        scoring_model=risk_payload.get("scoring_model", "default"),
+        scoring_model_version=risk_payload.get("scoring_model_version", "v1"),
+        category_weights=risk_payload.get("category_weights", {}),
+        weight_scale=risk_payload.get("weight_scale", 10.0),
+        org_weights=risk_payload.get("org_weights", {}),
+        temporal_weights=risk_payload.get("temporal_weights", {}),
     )
 
     report = Report(
@@ -118,6 +126,9 @@ def load_report_payload(payload: dict) -> Report:
         risk_settings=risk_settings,
         provenance=payload.get("provenance"),
         approvals=payload.get("approvals") or [],
+        policy_metadata=payload.get("policy_metadata"),
+        intel_versions=payload.get("intel_versions"),
+        score_explanation=payload.get("score_explanation"),
     )
     return report
 

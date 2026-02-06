@@ -16,6 +16,15 @@ class RiskSettings:
     severity_penalties: dict[str, int] = field(default_factory=lambda: {"high": 8, "medium": 4, "low": 2})
     governance_penalty: int = 3
     cve_penalty: int = 7
+    missing_intel_penalty: int = 2
+    scoring_model: str = "default"
+    scoring_model_version: str = "v1"
+    category_weights: dict[str, float] = field(default_factory=dict)
+    weight_scale: float = 10.0
+    org_weights: dict[str, int] = field(default_factory=dict)
+    temporal_weights: dict[str, int] = field(
+        default_factory=lambda: {"active_exploitation": 6, "mature": 4, "poc": 2}
+    )
 
     def penalty_for(self, severity: str) -> int:
         return self.severity_penalties.get(severity.lower(), 5)
@@ -26,7 +35,27 @@ class RiskSettings:
             "severity_penalties": self.severity_penalties,
             "governance_penalty": self.governance_penalty,
             "cve_penalty": self.cve_penalty,
+            "missing_intel_penalty": self.missing_intel_penalty,
+            "scoring_model": self.scoring_model,
+            "scoring_model_version": self.scoring_model_version,
+            "category_weights": self.category_weights,
+            "weight_scale": self.weight_scale,
+            "org_weights": self.org_weights,
+            "temporal_weights": self.temporal_weights,
         }
+
+
+def temporal_penalty(metadata: dict[str, object], temporal_weights: dict[str, int]) -> int:
+    if not metadata:
+        return 0
+    if metadata.get("active_exploitation") is True:
+        return temporal_weights.get("active_exploitation", 0)
+    maturity = str(metadata.get("exploit_maturity", "")).lower()
+    if maturity in {"active", "mature", "high"}:
+        return temporal_weights.get("mature", 0)
+    if maturity in {"poc", "proof-of-concept", "medium"}:
+        return temporal_weights.get("poc", 0)
+    return 0
 
 
 LICENSE_CATEGORIES = [

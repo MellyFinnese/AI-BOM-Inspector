@@ -521,6 +521,11 @@ def _apply_model_advisories(models: List[ModelInfo], advisory_db: dict) -> None:
                 advisory_id = advisory.get("id", "MODEL_VULNERABILITY")
                 summary = advisory.get("summary", "Model advisory")
                 context = _threat_context_from_mapping(advisory)
+                metadata = {}
+                if "exploit_maturity" in advisory:
+                    metadata["exploit_maturity"] = advisory.get("exploit_maturity")
+                if "active_exploitation" in advisory:
+                    metadata["active_exploitation"] = advisory.get("active_exploitation")
                 code_token = (
                     f"{advisory_id}|MODEL_VULNERABILITY"
                     if advisory_id
@@ -531,6 +536,7 @@ def _apply_model_advisories(models: List[ModelInfo], advisory_db: dict) -> None:
                         f"[MODEL_VULNERABILITY] {advisory_id}: {summary}{context}",
                         severity=str(advisory.get("severity", "high")),
                         code=code_token,
+                        metadata=metadata,
                     )
                 )
 
