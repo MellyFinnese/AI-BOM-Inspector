@@ -7,7 +7,7 @@ from typing import Optional
 from .policy_graph import GraphPolicyViolation, GraphSnapshot
 from .types_dependencies import DependencyInfo
 from .types_models import ModelInfo
-from .types_risk import RiskSettings
+from .types_risk import RiskSettings, temporal_penalty
 
 
 @dataclass
