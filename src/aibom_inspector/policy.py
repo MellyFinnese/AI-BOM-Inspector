@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
@@ -286,6 +287,7 @@ def write_evidence_pack(
     policy_path: Path | None,
     diff_summary: dict | None,
     signature_text: str | None,
+    previous_hash: str | None = None,
 ) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     (destination / report_filename.name).write_text(report_content)
@@ -299,3 +301,30 @@ def write_evidence_pack(
         (destination / "changes-since-last-run.json").write_text(json.dumps(diff_summary, indent=2))
     if signature_text:
         (destination / f"{report_filename.name}.sha256").write_text(signature_text)
+    _write_evidence_manifest(destination, previous_hash=previous_hash)
+
+
+def _hash_manifest(payload: dict, previous_hash: str | None) -> str:
+    digest = hashlib.sha256()
+    digest.update((previous_hash or "").encode())
+    digest.update(json.dumps(payload, sort_keys=True).encode())
+    return digest.hexdigest()
+
+
+def _write_evidence_manifest(destination: Path, previous_hash: str | None = None) -> None:
+    files: dict[str, str] = {}
+    for path in sorted(destination.glob("*")):
+        if not path.is_file():
+            continue
+        if path.name == "evidence-manifest.json":
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        files[path.name] = digest
+
+    payload = {
+        "generated_at": datetime.utcnow().isoformat(),
+        "files": files,
+        "previous_hash": previous_hash,
+    }
+    payload["bundle_hash"] = _hash_manifest(payload, previous_hash)
+    (destination / "evidence-manifest.json").write_text(json.dumps(payload, indent=2))
