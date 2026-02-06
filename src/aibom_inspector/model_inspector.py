@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .integrity import compute_file_sha256
+from .network import RetryConfig, request_with_retry
 from .model_risk_db import (
     load_model_advisory_db,
     load_model_hash_db,
@@ -15,6 +16,7 @@ from .model_risk_db import (
 from .pickle_inspector import PickleScanError, inspect_pickle_file
 from .tensor_fuzz import SafetensorsDataError, SafetensorsHeaderError, inspect_weight_files
 from .types import ModelInfo, ModelIssue, apply_license_category_model, categorize_license
+from .parsers import ParserError, parse_models_file
 
 
 STALE_DAYS = 270
@@ -291,7 +293,12 @@ def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline
         except ImportError:
             import requests  # type: ignore[import-untyped]
 
-            response = requests.get(f"https://huggingface.co/api/models/{identifier}", timeout=10)
+            response = request_with_retry(
+                "GET",
+                f"https://huggingface.co/api/models/{identifier}",
+                timeout=10,
+                retry_config=RetryConfig(),
+            )
             if response.status_code == 200:
                 payload = response.json()
                 data["license"] = payload.get("license")
@@ -432,17 +439,19 @@ def parse_model_entry(entry: dict) -> ModelInfo:
     return model
 
 
-def scan_models_from_file(path: Path) -> List[ModelInfo]:
+def scan_models_from_file(path: Path, *, max_bytes: int | None = None) -> List[ModelInfo]:
     if not path or not path.exists():
         return []
 
-    data = json.loads(path.read_text())
-    entries = data if isinstance(data, list) else data.get("models", [])
+    try:
+        data = parse_models_file(path, max_bytes=max_bytes)
+    except ParserError:
+        return []
+    entries = data.models
 
     models: List[ModelInfo] = []
     for entry in entries:
-        if isinstance(entry, dict):
-            models.append(parse_model_entry(entry))
+        models.append(parse_model_entry(entry.model_dump()))
     return models
 
 

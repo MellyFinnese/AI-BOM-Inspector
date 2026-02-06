@@ -9,6 +9,7 @@ from .types_dependencies import DependencyInfo, DependencyIssue, apply_license_c
 from .types_models import ModelInfo, ModelIssue, apply_license_category_model
 from .types_report import Report
 from .types_risk import RiskSettings
+from .parsers import ReportPayloadSchema, validate_or_none
 
 
 def _parse_datetime(value: str | None) -> datetime:
@@ -41,6 +42,10 @@ def _parse_issue(payload: dict | str, *, issue_cls: type[DependencyIssue] | type
 
 
 def load_report_payload(payload: dict) -> Report:
+    validated = validate_or_none(ReportPayloadSchema, payload)
+    if not validated:
+        raise ValueError("Invalid report payload schema.")
+    payload = validated.model_dump()
     dependencies: list[DependencyInfo] = []
     for dep_payload in payload.get("dependencies", []):
         issue_details = dep_payload.get("issue_details") or dep_payload.get("issues") or []

@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Iterable
 from uuid import uuid4
 
-from jinja2 import Environment, select_autoescape
+from jinja2 import select_autoescape
+from jinja2.sandbox import SandboxedEnvironment
 
 from .framework_mapping import (
     framework_mapping_metadata,
@@ -18,7 +19,7 @@ from .stack_discovery import snapshot_as_dict
 from .types import Report
 
 
-env = Environment(autoescape=select_autoescape(["html", "xml"]))
+env = SandboxedEnvironment(autoescape=select_autoescape(["html", "xml"]))
 
 
 def _dependency_rows(report: Report) -> Iterable[dict]:

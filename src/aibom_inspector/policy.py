@@ -7,14 +7,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, List, Optional
 
-try:  # Optional dependency so we can still run without policy files
-    import yaml
-except Exception:  # pragma: no cover - exercised when PyYAML is missing
-    yaml = None
+from pydantic import ValidationError
 
 from .policy_graph import GraphPolicyViolation, GraphSnapshot, evaluate_graph_policies
 from .types import DependencyIssue, ModelIssue, Report
 from .trust_root import TrustRoot, sign_payload, trust_root_fingerprint
+from .parsers import ParserError, PolicySchema, parse_policy_file, serialize_validation_errors
 
 
 @dataclass
@@ -93,14 +91,17 @@ class PolicyEvaluation:
         }
 
 
-def _load_yaml(path: Path) -> dict:
-    if yaml is None:
-        raise RuntimeError("PyYAML is required to load policy files. Install with `pip install pyyaml`.")
-    return yaml.safe_load(path.read_text()) or {}
+def load_policy(path: Path, *, max_bytes: int | None = None) -> Policy:
+    try:
+        raw_payload = parse_policy_file(path, max_bytes=max_bytes)
+    except ParserError as exc:
+        raise RuntimeError(str(exc)) from exc
+    except ValidationError as exc:
+        details = serialize_validation_errors(exc.errors())
+        detail_text = "; ".join(details) if details else "invalid policy schema"
+        raise RuntimeError(f"Invalid policy schema: {detail_text}") from exc
 
-
-def load_policy(path: Path) -> Policy:
-    raw = _load_yaml(path)
+    raw = raw_payload.model_dump()
     exceptions: list[PolicyException] = []
     for entry in raw.get("exceptions", []) or []:
         expires_at = entry.get("expires") if isinstance(entry, dict) else None
