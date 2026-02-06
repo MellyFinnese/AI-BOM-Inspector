@@ -258,6 +258,7 @@ The report shows a `stack_risk_score` (0–100, higher is healthier) and a `risk
 - Start from `risk_settings.max_score` (default 100) and subtract penalties instead of adding danger points.
 - Every dependency/model issue subtracts `risk_settings.penalty_for(severity)` (default high=8, medium=4, low=2).
 - Governance penalties subtract an extra `governance_penalty` for each unpinned dependency and unverified model source; CVE hits subtract `cve_penalty` to emphasize known exploit paths.
+- Active exploitation flags override baseline scoring with `active_exploitation_penalty`, ensuring live exploitation signals dominate baseline severity math.
 - The resulting value is clamped between 0–`max_score`, giving you a “health score” you can fail CI on via `--fail-on-score`.
 
 ### Recommended scoring policy

@@ -17,6 +17,7 @@ class RiskSettings:
     governance_penalty: int = 3
     cve_penalty: int = 7
     missing_intel_penalty: int = 2
+    active_exploitation_penalty: int = 25
     scoring_model: str = "default"
     scoring_model_version: str = "v1"
     category_weights: dict[str, float] = field(default_factory=dict)
@@ -45,6 +46,7 @@ class RiskSettings:
             "governance_penalty": self.governance_penalty,
             "cve_penalty": self.cve_penalty,
             "missing_intel_penalty": self.missing_intel_penalty,
+            "active_exploitation_penalty": self.active_exploitation_penalty,
             "scoring_model": self.scoring_model,
             "scoring_model_version": self.scoring_model_version,
             "category_weights": self.category_weights,
@@ -68,6 +70,16 @@ def temporal_multiplier(metadata: dict[str, object], temporal_multipliers: dict[
     if maturity in {"poc", "proof-of-concept", "medium"}:
         return temporal_multipliers.get("poc", 1.0)
     return 1.0
+
+
+def temporal_override_penalty(
+    metadata: dict[str, object], *, active_exploitation_penalty: int
+) -> int | None:
+    if not metadata:
+        return None
+    if metadata.get("active_exploitation") is True:
+        return active_exploitation_penalty
+    return None
 
 
 LICENSE_CATEGORIES = [

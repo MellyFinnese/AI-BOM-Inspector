@@ -110,6 +110,7 @@ def load_report_payload(payload: dict) -> Report:
         governance_penalty=risk_payload.get("governance_penalty", 3),
         cve_penalty=risk_payload.get("cve_penalty", 7),
         missing_intel_penalty=risk_payload.get("missing_intel_penalty", 2),
+        active_exploitation_penalty=risk_payload.get("active_exploitation_penalty", 25),
         scoring_model=risk_payload.get("scoring_model", "default"),
         scoring_model_version=risk_payload.get("scoring_model_version", "v1"),
         category_weights=risk_payload.get("category_weights", {}),

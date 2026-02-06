@@ -115,6 +115,10 @@
       "type": "integer",
       "description": "Penalty applied when required intel signals are missing"
     },
+    "active_exploitation_penalty": {
+      "type": "integer",
+      "description": "Minimum penalty applied when active exploitation is detected"
+    },
     "policy_version": {
       "type": "string",
       "description": "Policy version identifier for audit trails"

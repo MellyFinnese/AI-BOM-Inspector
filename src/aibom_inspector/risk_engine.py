@@ -264,6 +264,9 @@ def build_risk_settings(config: ScanConfig, policy: object | None = None) -> Ris
         policy_missing_intel = getattr(policy, "missing_intel_penalty", None)
         if policy_missing_intel is not None:
             settings.missing_intel_penalty = int(policy_missing_intel)
+        policy_active_exploit = getattr(policy, "active_exploitation_penalty", None)
+        if policy_active_exploit is not None:
+            settings.active_exploitation_penalty = int(policy_active_exploit)
     validate_risk_settings(settings)
     return settings
 
@@ -275,12 +278,23 @@ def validate_risk_settings(settings: RiskSettings) -> None:
         raise ValueError("RiskSettings.weight_scale must be non-negative.")
     if settings.missing_intel_penalty < 0:
         raise ValueError("RiskSettings.missing_intel_penalty must be non-negative.")
+    if settings.active_exploitation_penalty < 0:
+        raise ValueError("RiskSettings.active_exploitation_penalty must be non-negative.")
+    if settings.active_exploitation_penalty > settings.max_score:
+        raise ValueError("RiskSettings.active_exploitation_penalty cannot exceed max_score.")
+    for severity in {"high", "medium", "low"}:
+        if severity not in settings.severity_penalties:
+            raise ValueError(f"Penalty for severity '{severity}' is required.")
     for severity, value in settings.severity_penalties.items():
         if value < 0:
             raise ValueError(f"Penalty for severity '{severity}' must be non-negative.")
     for key, value in settings.org_weights.items():
         if value < 0:
             raise ValueError(f"Org weight for '{key}' must be non-negative.")
+    required_temporal = {"active_exploitation", "mature", "poc"}
+    missing_temporal = required_temporal.difference(settings.temporal_multipliers)
+    if missing_temporal:
+        raise ValueError(f"Temporal multipliers missing keys: {', '.join(sorted(missing_temporal))}.")
     for key, value in settings.temporal_multipliers.items():
         if value < 1.0 or value > 5.0:
             raise ValueError(f"Temporal multiplier '{key}' must be between 1.0 and 5.0.")
@@ -290,11 +304,19 @@ def validate_risk_settings(settings: RiskSettings) -> None:
             raise ValueError("Category weights must be between 0.0 and 1.0.")
         if abs(total - 1.0) > 1e-6:
             raise ValueError("Category weights must sum to 1.0.")
+    required_org_keys = {
+        "asset_criticality_multipliers": {"low", "medium", "high", "critical"},
+        "data_sensitivity_multipliers": {"public", "internal", "confidential", "restricted"},
+        "environment_multipliers": {"dev", "test", "staging", "prod"},
+    }
     for name, mapping in {
         "asset_criticality_multipliers": settings.asset_criticality_multipliers,
         "data_sensitivity_multipliers": settings.data_sensitivity_multipliers,
         "environment_multipliers": settings.environment_multipliers,
     }.items():
+        missing_keys = required_org_keys[name].difference(mapping)
+        if missing_keys:
+            raise ValueError(f"{name} missing keys: {', '.join(sorted(missing_keys))}.")
         for key, value in mapping.items():
             if value < 1.0:
                 raise ValueError(f"{name} '{key}' must be >= 1.0.")
@@ -303,13 +325,18 @@ def validate_risk_settings(settings: RiskSettings) -> None:
 def validate_org_context(context: OrgContext | None) -> OrgContext:
     if context is None:
         raise ValueError("Org context is required for scoring (asset criticality, data sensitivity, environment).")
-    if context.asset_criticality not in {"low", "medium", "high", "critical"}:
+    normalized = OrgContext(
+        asset_criticality=context.asset_criticality.lower(),
+        data_sensitivity=context.data_sensitivity.lower(),
+        environment=context.environment.lower(),
+    )
+    if normalized.asset_criticality not in {"low", "medium", "high", "critical"}:
         raise ValueError("asset_criticality must be one of: low, medium, high, critical.")
-    if context.data_sensitivity not in {"public", "internal", "confidential", "restricted"}:
+    if normalized.data_sensitivity not in {"public", "internal", "confidential", "restricted"}:
         raise ValueError("data_sensitivity must be one of: public, internal, confidential, restricted.")
-    if context.environment not in {"dev", "test", "staging", "prod"}:
+    if normalized.environment not in {"dev", "test", "staging", "prod"}:
         raise ValueError("environment must be one of: dev, test, staging, prod.")
-    return context
+    return normalized
 
 
 def run_scan(config: ScanConfig) -> ScanResult:

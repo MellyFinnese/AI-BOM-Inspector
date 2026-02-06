@@ -58,6 +58,7 @@ class PolicySchema(BaseModel):
     data_sensitivity_multipliers: Mapping[str, float] = Field(default_factory=dict)
     environment_multipliers: Mapping[str, float] = Field(default_factory=dict)
     missing_intel_penalty: int | None = None
+    active_exploitation_penalty: int | None = None
     policy_version: str | None = None
     change_log: List[Mapping[str, Any]] = Field(default_factory=list)
 

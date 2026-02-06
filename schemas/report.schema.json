@@ -44,6 +44,7 @@
         "governance_penalty": { "type": "integer" },
         "cve_penalty": { "type": "integer" },
         "missing_intel_penalty": { "type": "integer" },
+        "active_exploitation_penalty": { "type": "integer" },
         "scoring_model": { "type": "string" },
         "scoring_model_version": { "type": "string" },
         "category_weights": {

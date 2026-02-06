@@ -52,6 +52,7 @@ class Policy:
     data_sensitivity_multipliers: dict[str, float] = field(default_factory=dict)
     environment_multipliers: dict[str, float] = field(default_factory=dict)
     missing_intel_penalty: int | None = None
+    active_exploitation_penalty: int | None = None
     policy_version: str | None = None
     change_log: list[dict] = field(default_factory=list)
 
@@ -160,6 +161,7 @@ def load_policy(path: Path, *, max_bytes: int | None = None) -> Policy:
         data_sensitivity_multipliers=raw.get("data_sensitivity_multipliers") or {},
         environment_multipliers=raw.get("environment_multipliers") or {},
         missing_intel_penalty=raw.get("missing_intel_penalty"),
+        active_exploitation_penalty=raw.get("active_exploitation_penalty"),
         policy_version=raw.get("policy_version") or raw.get("version"),
         change_log=raw.get("change_log") or [],
     )
@@ -331,6 +333,11 @@ def write_evidence_pack(
         (destination / "evaluation-metadata.json").write_text(
             json.dumps(evaluation_metadata, indent=2)
         )
+        score_explanation = evaluation_metadata.get("score_explanation")
+        if score_explanation:
+            (destination / "score-explanation.json").write_text(
+                json.dumps(score_explanation, indent=2)
+            )
     if signature_text:
         (destination / f"{report_filename.name}.sha256").write_text(signature_text)
     _write_evidence_manifest(destination, previous_hash=previous_hash)

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Dict, Protocol
 
 from .types import Report
-from .types_risk import temporal_multiplier
+from .types_risk import temporal_multiplier, temporal_override_penalty
 
 
 class ScoreModel(Protocol):
@@ -55,47 +58,44 @@ class DefaultScoreModel:
         settings = report.risk_settings
         breakdown = report.risk_breakdown
         org_multiplier = _org_multiplier(settings, context.org_context)
+        model_snapshot = _model_snapshot(report)
 
         issue_contributions: list[dict] = []
         base_penalty = 0.0
 
         for dep in report.dependencies:
             for issue in dep.issues:
-                severity_penalty = settings.penalty_for(issue.severity)
-                multiplier = temporal_multiplier(issue.metadata, settings.temporal_multipliers)
-                penalty = severity_penalty * multiplier
+                penalty, contribution = _issue_penalty(issue, settings)
                 base_penalty += penalty
-                issue_contributions.append(
+                contribution.update(
                     {
                         "type": "dependency_issue",
                         "subject": dep.name,
                         "severity": issue.severity,
                         "code": issue.code,
-                        "base_penalty": severity_penalty,
-                        "temporal_multiplier": multiplier,
-                        "penalty": penalty,
                         "metadata": issue.metadata,
                     }
+                )
+                issue_contributions.append(
+                    contribution
                 )
 
         missing_intel: list[dict] = []
         for model in report.models:
             for issue in model.issues:
-                severity_penalty = settings.penalty_for(issue.severity)
-                multiplier = temporal_multiplier(issue.metadata, settings.temporal_multipliers)
-                penalty = severity_penalty * multiplier
+                penalty, contribution = _issue_penalty(issue, settings)
                 base_penalty += penalty
-                issue_contributions.append(
+                contribution.update(
                     {
                         "type": "model_issue",
                         "subject": model.identifier,
                         "severity": issue.severity,
                         "code": issue.code,
-                        "base_penalty": severity_penalty,
-                        "temporal_multiplier": multiplier,
-                        "penalty": penalty,
                         "metadata": issue.metadata,
                     }
+                )
+                issue_contributions.append(
+                    contribution
                 )
             if not (model.base_models or model.fine_tuned_from):
                 missing_intel.append({"model": model.identifier, "signal": "lineage"})
@@ -126,12 +126,18 @@ class DefaultScoreModel:
         final_score = max(0, min(settings.max_score, settings.max_score - total_penalty))
 
         explanation = {
+            "kind": "score_explainability",
+            "version": "v1",
+            "generated_at": datetime.utcnow().isoformat(),
+            "scoring_model": self.name,
+            "scoring_model_version": settings.scoring_model_version,
             "final_score": final_score,
             "total_penalty": total_penalty,
             "org_multiplier": org_multiplier,
             "org_context": context.org_context.__dict__,
             "severity_penalties": settings.severity_penalties,
             "temporal_multipliers": settings.temporal_multipliers,
+            "active_exploitation_penalty": settings.active_exploitation_penalty,
             "missing_intel_penalty": settings.missing_intel_penalty,
             "category_weights": [
                 {"category": key, "weight": value, "count": breakdown.get(key, 0)}
@@ -148,6 +154,7 @@ class DefaultScoreModel:
             "issue_contributions": issue_contributions,
             "policy_metadata": context.policy_metadata,
             "intel_versions": context.intel_versions,
+            "model_snapshot": model_snapshot,
             "graph": _build_graph(issue_contributions, missing_intel, settings.missing_intel_penalty, final_score),
         }
 
@@ -159,6 +166,40 @@ def _org_multiplier(settings, context: OrgContext) -> float:
     data_mult = settings.data_sensitivity_multipliers.get(context.data_sensitivity, 1.0)
     env_mult = settings.environment_multipliers.get(context.environment, 1.0)
     return asset_mult * data_mult * env_mult
+
+
+def _issue_penalty(issue, settings) -> tuple[float, dict]:
+    severity_penalty = settings.penalty_for(issue.severity)
+    multiplier = temporal_multiplier(issue.metadata, settings.temporal_multipliers)
+    base_penalty = severity_penalty * multiplier
+    override_penalty = temporal_override_penalty(
+        issue.metadata, active_exploitation_penalty=settings.active_exploitation_penalty
+    )
+    penalty = base_penalty
+    override_applied = False
+    if override_penalty is not None:
+        penalty = max(base_penalty, override_penalty)
+        override_applied = penalty == override_penalty
+    return penalty, {
+        "base_penalty": severity_penalty,
+        "temporal_multiplier": multiplier,
+        "override_penalty": override_penalty,
+        "override_applied": override_applied,
+        "penalty": penalty,
+    }
+
+
+def _model_snapshot(report: Report) -> dict:
+    models = [
+        {
+            "id": model.identifier,
+            "source": model.source,
+            "hashes": sorted(model.hashes),
+        }
+        for model in report.models
+    ]
+    digest = hashlib.sha256(json.dumps(models, sort_keys=True).encode()).hexdigest()
+    return {"count": len(models), "sha256": digest, "models": models}
 
 
 def _build_graph(contributions: list[dict], missing_intel: list[dict], missing_penalty: int, score: int) -> dict:

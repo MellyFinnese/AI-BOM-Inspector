@@ -154,6 +154,33 @@ def build_model_metadata_summary(report: Report) -> dict[str, int]:
 
 
 
+def build_model_metadata_summary(report: Report) -> dict[str, int]:
+    missing_lineage = 0
+    missing_training = 0
+    license_ambiguity = 0
+    risk_profiles = 0
+
+    for model in report.models:
+        if not (model.base_models or model.fine_tuned_from):
+            missing_lineage += 1
+        if not model.training_sources:
+            missing_training += 1
+        if not model.license or model.license_category == "unknown":
+            license_ambiguity += 1
+        if any(issue.code and str(issue.code).startswith("MODEL_") for issue in model.issues):
+            risk_profiles += 1
+
+    return {
+        "models_total": len(report.models),
+        "lineage_missing": missing_lineage,
+        "training_data_missing": missing_training,
+        "license_ambiguity": license_ambiguity,
+        "risk_profiles_flagged": risk_profiles,
+    }
+
+
+
+
 def build_completeness(
     dependencies_count: int,
     models_count: int,
