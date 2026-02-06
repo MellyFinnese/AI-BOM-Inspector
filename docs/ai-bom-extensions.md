@@ -13,7 +13,7 @@ AI-BOM Inspector emits a JSON report and can export CycloneDX/SPDX SBOMs with AI
   - `cve_penalty` (int)
 - `stack` (object, optional): normalized discovery results with `nodes`, `edges`, and `context` (e.g., `env`).
 - `graph_policy_violations` (array, optional): violations emitted by default graph guardrails with `id`, `severity`, `message`, `evidence`, and `suggested_fixes`.
-- `ai_summary` (string|null): human-readable placeholder text; intended to be replaced by your own LLM integration.
+- `ai_summary` (string|null): deterministic, offline executive summary generated from the scan findings.
 - `dependencies` (array):
   - `name` (string)
   - `version` (string; includes comparator, e.g., `==1.2.3`)

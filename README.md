@@ -2,7 +2,7 @@
 
 ![AI-BOM Inspector CI](https://img.shields.io/badge/AI--BOM%20Inspector-Scan%20your%20AI%20stack%20in%20CI-blue)
 
-Offline-first SBOM + AI supply-chain risk and license scanner. Privacy posture: default is `--offline` (no network calls) unless you opt into `--online`. Local-first; optional enrichment (OSV/HF/Shadow-UEFI) can be enabled explicitly. Fully offline supported. The "AI" is transparent rules + heuristics with an optional summarizer hook that is stubbed/disabled until you wire in your own LLM.
+Offline-first SBOM + AI supply-chain risk and license scanner. Privacy posture: default is `--offline` (no network calls) unless you opt into `--online`. Local-first; optional enrichment (OSV/HF/Shadow-UEFI) can be enabled explicitly. Fully offline supported. The "AI" is transparent rules + heuristics with a deterministic executive summary that runs offline; teams can still layer in their own LLM if desired.
 
 ## Architecture at a glance
 
@@ -59,10 +59,10 @@ ai-bom-inspector/
 - Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
 - Inspect model artifacts (safetensors/pickle checkpoints) for poisoned weights or unsafe globals and compute hashes for reputation checks
 - Cross-check models against local vulnerability/advisory feeds, training source fingerprints, and map findings to STRIDE + MITRE ATLAS categories
-- Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics; the optional AI-summary hook is disabled by default and ready for teams to wire up their own LLM if they choose
+- Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics plus a deterministic, offline AI summary (optionally replaceable by your own LLM if desired)
 - Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --enable-shadow-uefi-intel` is used
 
-The default reports only use the deterministic heuristics listed below; the "AI summary" field is a stubbed, human-readable placeholder so teams can wire in their own LLM if desired without expecting hosted inference out of the box.
+The default reports only use deterministic heuristics; the "AI summary" field is generated offline from the scan findings so teams get an executive-ready summary without hosted inference.
 
 ## Network behavior
 - Global posture: `--offline` is the default and hard-blocks every remote call. Expect `[OFFLINE_MODE]` / `[CVE_LOOKUP_SKIPPED]` annotations in reports when enrichment is skipped.
@@ -91,7 +91,7 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
   pip install -e .[dev]
   ```
 - **Wheels:** the Rust extension ships as a wheel when you build from source—`python -m build` will produce a `.whl` under `dist/` for airgapped installs.
-- **PyPI status:** publishing is planned; until then, prefer the GitHub release pins above to avoid `pip install aibom-inspector` confusion.
+- **PyPI readiness:** packaging metadata and wheels are production-ready for internal or public registries; use GitHub release pins above for stable CI installs or build a wheel locally for airgapped environments.
 
 ## Getting started
 1. Create a `models.json` file if you want to include model metadata (auto-discovery will still pull model IDs out of your code/configs when this is omitted). A ready-to-use sample lives in `examples/models.sample.json`:
@@ -157,13 +157,13 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
 - Inspect model weights directly (detect NaNs/LSB steganography): `aibom weights my_model.safetensors --json`
   - Quick comparison of two runs: `aibom diff aibom-report-old.json aibom-report-new.json`
 
-## Highest-impact feature bets
-See [docs/HIGHEST_IMPACT_NEXT_MOVES.md](docs/HIGHEST_IMPACT_NEXT_MOVES.md) for the feature bets that enable the end-to-end `discover → enforce` loop, policy-as-code UX, and GitHub-native SARIF outputs.
+## Highest-impact capabilities
+See [docs/HIGHEST_IMPACT_NEXT_MOVES.md](docs/HIGHEST_IMPACT_NEXT_MOVES.md) for the capabilities that enable the end-to-end `discover → enforce` loop, policy-as-code UX, and GitHub-native SARIF outputs.
 
 ## Enterprise trust baseline
 See [docs/ENTERPRISE_TRUST_BASELINE.md](docs/ENTERPRISE_TRUST_BASELINE.md) for the deal-maker controls around provenance/signing, artifact integrity, and dependency trust enforcement that enterprises expect in CI/CD rollouts.
 
-## Enterprise control plane roadmap
+## Enterprise control plane
 - [Enterprise Control Plane](docs/ENTERPRISE_CONTROL_PLANE.md): multi-tenant governance, evidence storage, and CI/CD enforcement.
 - [Open-core boundary](docs/OPEN_CORE_BOUNDARY.md): commercial vs OSS separation and packaging.
 - [AI supply chain threat model](docs/AI_SUPPLY_CHAIN_THREAT_MODEL.md): sales-ready threat taxonomy and control mapping.

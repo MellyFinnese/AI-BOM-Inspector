@@ -87,6 +87,64 @@ def build_executive_summary(report: Report) -> ExecutiveRiskSummary:
     )
 
 
+def build_ai_summary(report: Report) -> str:
+    breakdown = report.risk_breakdown
+    severity_counts = {"high": 0, "medium": 0, "low": 0}
+
+    for dep in report.dependencies:
+        for issue in dep.issues:
+            severity = issue.severity.lower()
+            if severity in severity_counts:
+                severity_counts[severity] += 1
+            else:
+                severity_counts["low"] += 1
+
+    for model in report.models:
+        for issue in model.issues:
+            severity = issue.severity.lower()
+            if severity in severity_counts:
+                severity_counts[severity] += 1
+            else:
+                severity_counts["low"] += 1
+
+    summary_parts = [
+        (
+            "Stack risk score "
+            f"{report.stack_risk_score}/100 across {len(report.dependencies)} dependencies "
+            f"and {len(report.models)} models."
+        ),
+        (
+            "Findings: "
+            f"{severity_counts['high']} high, {severity_counts['medium']} medium, "
+            f"{severity_counts['low']} low severity issues; "
+            f"{breakdown.get('cves', 0)} CVE/advisory hits."
+        ),
+        (
+            "Governance signals: "
+            f"{breakdown.get('unpinned_deps', 0)} unpinned deps, "
+            f"{breakdown.get('unverified_sources', 0)} unverified sources, "
+            f"{breakdown.get('unknown_licenses', 0)} unknown licenses, "
+            f"{breakdown.get('stale_models', 0)} stale models."
+        ),
+    ]
+
+    if report.completeness:
+        summary_parts.append(
+            (
+                "Visibility: "
+                f"{report.completeness.static_coverage_pct}% static coverage, "
+                f"{report.completeness.runtime_coverage_pct}% runtime coverage."
+            )
+        )
+
+    if report.integrity_findings:
+        summary_parts.append(
+            f"Integrity checks: {len(report.integrity_findings)} finding(s) flagged."
+        )
+
+    return " ".join(summary_parts)
+
+
 def build_sbom_correlations(report: Report) -> list[dict]:
     correlations: list[dict] = []
     provider_lookup = {
