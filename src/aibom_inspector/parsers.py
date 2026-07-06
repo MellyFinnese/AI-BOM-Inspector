@@ -71,6 +71,7 @@ class RuntimeTraceSchema(BaseModel):
     command: List[str] = Field(default_factory=list)
     imported_modules: List[str] = Field(default_factory=list)
     observed_models: List[str] = Field(default_factory=list)
+    observed_ai_calls: List[Mapping[str, str]] = Field(default_factory=list)
     observed_dependencies: List[str] = Field(default_factory=list)
     observed_env: List[str] = Field(default_factory=list)
     notes: List[str] = Field(default_factory=list)

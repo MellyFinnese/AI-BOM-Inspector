@@ -7,7 +7,7 @@ from typing import Optional
 from .policy_graph import GraphPolicyViolation, GraphSnapshot
 from .types_dependencies import DependencyInfo
 from .types_models import ModelInfo
-from .types_risk import RiskSettings, temporal_penalty
+from .types_risk import RiskSettings
 
 
 @dataclass
@@ -51,7 +51,7 @@ class Report:
         """Return an easy-to-share 0–100 risk score (100 = healthiest)."""
 
         if self.score is None:
-            raise RuntimeError("Score has not been computed. A scoring model is required.")
+            return max(0, self.risk_settings.max_score - self.total_risk)
         return self.score
 
     @property
@@ -118,6 +118,7 @@ class RuntimeTrace:
     command: list[str]
     imported_modules: list[str] = field(default_factory=list)
     observed_models: list[str] = field(default_factory=list)
+    observed_ai_calls: list[dict[str, str]] = field(default_factory=list)
     observed_dependencies: list[str] = field(default_factory=list)
     observed_env: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)

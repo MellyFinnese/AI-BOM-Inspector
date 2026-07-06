@@ -210,6 +210,13 @@ def render_markdown(report: Report) -> str:
             lines.append(
                 f"- Observed models: {', '.join(report.runtime_trace.observed_models)}"
             )
+        if report.runtime_trace.observed_ai_calls:
+            calls = [
+                f"{call.get('provider', 'unknown')}:{call.get('call', 'unknown')}"
+                + (f" ({call['model']})" if call.get("model") else "")
+                for call in report.runtime_trace.observed_ai_calls
+            ]
+            lines.append(f"- Observed AI calls: {', '.join(calls)}")
         if report.runtime_trace.imported_modules:
             lines.append(
                 f"- Observed imports: {', '.join(report.runtime_trace.imported_modules)}"
@@ -420,6 +427,9 @@ def render_html(report: Report) -> str:
       <li>Captured at: {{ runtime_trace.captured_at }}</li>
       {% if runtime_trace.observed_models %}
       <li>Observed models: {{ ", ".join(runtime_trace.observed_models) }}</li>
+      {% endif %}
+      {% if runtime_trace.observed_ai_calls %}
+      <li>Observed AI calls: {{ runtime_trace.observed_ai_calls }}</li>
       {% endif %}
       {% if runtime_trace.imported_modules %}
       <li>Observed imports: {{ ", ".join(runtime_trace.imported_modules) }}</li>
