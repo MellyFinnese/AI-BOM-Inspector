@@ -13,6 +13,7 @@ except Exception:  # pragma: no cover - optional dependency
     yaml = None
 
 from .policy_graph import GraphEdge, GraphNode, GraphSnapshot
+from .ast_analysis import discover_static_model_evidence
 from .types import (
     DependencyInfo,
     ModelInfo,
@@ -227,6 +228,14 @@ def discover_models(
                 )
             )
 
+    for item in discover_static_model_evidence(root_path):
+        call_detail = f" {item.call}" if item.call else ""
+        _record(
+            item.identifier,
+            explicit_source=item.provider,
+            evidence=f"{item.evidence} ({item.language} AST{call_detail})",
+        )
+
     for path in root_path.rglob("*"):
         if path.is_dir():
             continue
@@ -234,6 +243,8 @@ def discover_models(
             continue
         text = _safe_read(path)
         if not text:
+            continue
+        if path.suffix.lower() in {".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"}:
             continue
 
         for pattern, provider in MODEL_PATTERNS:
@@ -314,6 +325,22 @@ def discover_stack(
             ),
         )
 
+    for item in discover_static_model_evidence(root_path):
+        _add_node(
+            nodes,
+            GraphNode(
+                id=item.identifier,
+                kind="Model",
+                metadata={
+                    "provider": _infer_source(item.identifier, provider_hint, item.provider),
+                    "evidence": item.evidence,
+                    "language": item.language,
+                    "analysis": "ast",
+                    "call": item.call,
+                },
+            ),
+        )
+
     for path in root_path.rglob("*"):
         if path.is_dir():
             continue
@@ -335,6 +362,8 @@ def discover_stack(
                 )
 
         for pattern, provider in MODEL_PATTERNS:
+            if path.suffix.lower() in {".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"}:
+                continue
             for match in pattern.findall(text):
                 identifier = match if isinstance(match, str) else match[0]
                 _add_node(
@@ -347,6 +376,8 @@ def discover_stack(
                 )
 
         for pattern, provider in MODEL_LOAD_PATTERNS:
+            if path.suffix.lower() in {".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"}:
+                continue
             for match in pattern.findall(text):
                 identifier = match if isinstance(match, str) else match[0]
                 inferred_source = _infer_source(identifier, provider_hint, provider)

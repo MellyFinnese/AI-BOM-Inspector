@@ -89,7 +89,7 @@ Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_
   ```bash
   pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@main"
   # Prefer a tagged release for CI:
-  pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v0.1.0"
+  pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v0.2.0"
   ```
 - **Editable dev install:**
   ```bash
