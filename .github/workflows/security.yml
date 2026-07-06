@@ -12,7 +12,7 @@ jobs:
       SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
