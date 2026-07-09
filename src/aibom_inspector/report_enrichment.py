@@ -7,7 +7,7 @@ from typing import Iterable
 from .model_risk_db import load_threat_taxonomy_db
 from .stack_discovery import MODEL_HOST_DEPENDENCIES, PROVIDER_DEPENDENCIES
 from .types import CompletenessSummary, ExecutiveRiskSummary, Report, RuntimeTrace
-from .types_risk import temporal_multiplier
+from .types_risk import temporal_penalty
 
 
 def build_model_metadata_summary(report: Report) -> dict[str, int]:
@@ -42,10 +42,7 @@ def build_score_explanation(report: Report) -> dict:
     issue_contributions: list[dict] = []
     for dep in report.dependencies:
         for issue in dep.issues:
-            temporal = round(
-                settings.penalty_for(issue.severity)
-                * (temporal_multiplier(issue.metadata, settings.temporal_multipliers) - 1)
-            )
+            temporal = temporal_penalty(issue.metadata, settings.temporal_weights)
             issue_contributions.append(
                 {
                     "type": "dependency_issue",
@@ -60,10 +57,7 @@ def build_score_explanation(report: Report) -> dict:
 
     for model in report.models:
         for issue in model.issues:
-            temporal = round(
-                settings.penalty_for(issue.severity)
-                * (temporal_multiplier(issue.metadata, settings.temporal_multipliers) - 1)
-            )
+            temporal = temporal_penalty(issue.metadata, settings.temporal_weights)
             issue_contributions.append(
                 {
                     "type": "model_issue",
@@ -120,7 +114,7 @@ def build_score_explanation(report: Report) -> dict:
         "final_score": report.stack_risk_score,
         "total_penalty": total_penalty,
         "severity_penalties": settings.severity_penalties,
-        "temporal_multipliers": settings.temporal_multipliers,
+        "temporal_weights": settings.temporal_weights,
         "missing_intel_penalty": settings.missing_intel_penalty,
         "category_weights": category_weights,
         "org_weights": org_weights,

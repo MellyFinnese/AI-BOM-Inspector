@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aibom-inspector"
-version = "0.2.0"
+version = "0.1.0"
 description = "Security and risk analysis tool for AI projects (AI-BOM)."
 authors = [
     { name = "Jordan Desjarlais", email = "jordandesjarlais.2022@gmail.com" }
