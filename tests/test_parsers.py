@@ -34,7 +34,7 @@ def test_parse_policy_file_rejects_unknown_key(tmp_path: Path) -> None:
     policy_path = tmp_path / "policy.yml"
     policy_path.write_text("min_score: 80\nunknown_field: nope\n")
 
-    with pytest.raises(Exception):
+    with pytest.raises(ParserError):
         parse_policy_file(policy_path)
 
 
@@ -75,4 +75,20 @@ def test_parse_sbom_file_invalid(tmp_path: Path) -> None:
     sbom_path.write_text("{not json")
 
     with pytest.raises(ParserError):
+        parse_sbom_file(sbom_path)
+
+
+def test_parse_policy_file_wraps_schema_errors(tmp_path: Path) -> None:
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text("min_score: high\n")
+
+    with pytest.raises(ParserError, match="min_score"):
+        parse_policy_file(policy_path)
+
+
+def test_parse_sbom_file_wraps_schema_errors(tmp_path: Path) -> None:
+    sbom_path = tmp_path / "sbom.json"
+    sbom_path.write_text(json.dumps({"bomFormat": "CycloneDX", "components": [{"version": "1.0"}]}))
+
+    with pytest.raises(ParserError, match="components.0.name"):
         parse_sbom_file(sbom_path)

@@ -7,7 +7,7 @@ from typing import Optional
 from .policy_graph import GraphPolicyViolation, GraphSnapshot
 from .types_dependencies import DependencyInfo
 from .types_models import ModelInfo
-from .types_risk import RiskSettings, temporal_penalty
+from .types_risk import RiskSettings
 
 
 @dataclass
@@ -50,9 +50,10 @@ class Report:
     def stack_risk_score(self) -> int:
         """Return an easy-to-share 0–100 risk score (100 = healthiest)."""
 
-        if self.score is None:
-            raise RuntimeError("Score has not been computed. A scoring model is required.")
-        return self.score
+        if self.score is not None:
+            return self.score
+        total_penalty = min(self.total_risk, self.risk_settings.max_score)
+        return max(0, self.risk_settings.max_score - total_penalty)
 
     @property
     def risk_breakdown(self) -> dict[str, int]:
