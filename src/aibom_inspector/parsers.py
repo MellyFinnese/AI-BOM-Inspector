@@ -3,12 +3,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, List, Mapping
+from typing import Any, Iterable, List, Mapping, TypeVar
 
-try:  # Optional dependency for YAML policy files
-    import yaml
-except Exception:  # pragma: no cover - exercised when PyYAML is missing
-    yaml = None
+import yaml
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -18,6 +15,9 @@ SAFE_MAX_BYTES = 5_000_000
 
 class ParserError(ValueError):
     pass
+
+
+SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 
 class PolicyExceptionSchema(BaseModel):
@@ -242,37 +242,49 @@ def load_json_payload(path: Path, max_bytes: int | None = None) -> Any:
 
 
 def load_yaml_payload(path: Path, max_bytes: int | None = None) -> Any:
-    if yaml is None:
-        raise ParserError("PyYAML is required to load YAML files.")
     try:
         return yaml.safe_load(read_text(path, max_bytes=max_bytes)) or {}
-    except Exception as exc:
+    except yaml.YAMLError as exc:
         raise ParserError(f"Invalid YAML in {path}: {exc}") from exc
+
+
+def _validate_payload(schema: type[SchemaT], payload: Any, path: Path) -> SchemaT:
+    try:
+        return schema.model_validate(payload)
+    except ValidationError as exc:
+        details = "; ".join(serialize_validation_errors(exc.errors()))
+        raise ParserError(f"Invalid payload in {path}: {details}") from exc
 
 
 def parse_policy_file(path: Path, max_bytes: int | None = None) -> PolicySchema:
     payload = load_yaml_payload(path, max_bytes=max_bytes)
-    return PolicySchema.model_validate(payload)
+    return _validate_payload(PolicySchema, payload, path)
 
 
 def parse_runtime_trace_file(path: Path, max_bytes: int | None = None) -> RuntimeTraceSchema:
     payload = load_json_payload(path, max_bytes=max_bytes)
-    return RuntimeTraceSchema.model_validate(payload)
+    return _validate_payload(RuntimeTraceSchema, payload, path)
 
 
 def parse_models_file(path: Path, max_bytes: int | None = None) -> ModelFileSchema:
     payload = load_json_payload(path, max_bytes=max_bytes)
     if isinstance(payload, list):
         payload = {"models": payload}
-    return ModelFileSchema.model_validate(payload)
+    return _validate_payload(ModelFileSchema, payload, path)
 
 
 def parse_sbom_file(path: Path, max_bytes: int | None = None) -> SbomPayload:
     payload = load_json_payload(path, max_bytes=max_bytes)
     if isinstance(payload, dict) and str(payload.get("bomFormat", "")).lower() == "cyclonedx":
-        return SbomPayload(kind="cyclonedx", payload=CycloneDXSchema.model_validate(payload))
+        return SbomPayload(
+            kind="cyclonedx",
+            payload=_validate_payload(CycloneDXSchema, payload, path),
+        )
     if isinstance(payload, dict) and payload.get("spdxVersion"):
-        return SbomPayload(kind="spdx", payload=SpdxSchema.model_validate(payload))
+        return SbomPayload(
+            kind="spdx",
+            payload=_validate_payload(SpdxSchema, payload, path),
+        )
     raise ParserError("Unsupported SBOM payload")
 
 

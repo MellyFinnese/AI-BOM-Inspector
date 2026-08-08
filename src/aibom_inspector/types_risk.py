@@ -36,6 +36,12 @@ class RiskSettings:
         default_factory=lambda: {"dev": 1.0, "test": 1.1, "staging": 1.3, "prod": 1.7}
     )
 
+    @property
+    def temporal_weights(self) -> dict[str, float]:
+        """Backward-compatible alias for temporal multiplier settings."""
+
+        return self.temporal_multipliers
+
     def penalty_for(self, severity: str) -> int:
         return self.severity_penalties.get(severity.lower(), 5)
 
@@ -57,6 +63,21 @@ class RiskSettings:
             "data_sensitivity_multipliers": self.data_sensitivity_multipliers,
             "environment_multipliers": self.environment_multipliers,
         }
+
+
+def temporal_penalty(metadata: dict[str, object], settings: dict[str, float] | RiskSettings) -> float:
+    """Return the legacy additive temporal penalty for issue metadata.
+
+    New scoring uses temporal multipliers, but older report-enrichment code expects
+    a standalone additive penalty. Keep that API available so callers do not fail
+    during import and active exploitation still increases the explanation penalty.
+    """
+
+    if not metadata:
+        return 0.0
+    weights = settings.temporal_multipliers if isinstance(settings, RiskSettings) else settings
+    multiplier = temporal_multiplier(metadata, weights)
+    return max(0.0, multiplier - 1.0)
 
 
 def temporal_multiplier(metadata: dict[str, object], temporal_multipliers: dict[str, float]) -> float:
