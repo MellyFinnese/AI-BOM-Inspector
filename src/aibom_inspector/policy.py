@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
 import hashlib
-from dataclasses import dataclass, field, asdict
+import json
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, List, Optional
@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from .policy_graph import GraphPolicyViolation, GraphSnapshot, evaluate_graph_policies
 from .types import DependencyIssue, ModelIssue, Report
 from .trust_root import TrustRoot, sign_payload, trust_root_fingerprint
-from .parsers import ParserError, PolicySchema, parse_policy_file, serialize_validation_errors
+from .parsers import ParserError, parse_policy_file, serialize_validation_errors
 
 
 @dataclass

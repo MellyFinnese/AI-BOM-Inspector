@@ -45,3 +45,11 @@ def test_active_exploitation_overrides_penalty() -> None:
     assert contribution["override_applied"] is True
     assert contribution["penalty"] >= settings.active_exploitation_penalty
     assert outcome.explanation["kind"] == "score_explainability"
+
+
+def test_temporal_penalty_reports_active_exploitation_delta() -> None:
+    from aibom_inspector.types_risk import RiskSettings, temporal_penalty
+
+    settings = RiskSettings(active_exploitation_penalty=25)
+
+    assert temporal_penalty({"active_exploitation": True}, settings, base_penalty=8) == 17

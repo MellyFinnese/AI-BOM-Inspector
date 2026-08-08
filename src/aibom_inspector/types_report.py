@@ -7,7 +7,7 @@ from typing import Optional
 from .policy_graph import GraphPolicyViolation, GraphSnapshot
 from .types_dependencies import DependencyInfo
 from .types_models import ModelInfo
-from .types_risk import RiskSettings, temporal_penalty
+from .types_risk import RiskSettings
 
 
 @dataclass
@@ -50,9 +50,29 @@ class Report:
     def stack_risk_score(self) -> int:
         """Return an easy-to-share 0–100 risk score (100 = healthiest)."""
 
-        if self.score is None:
-            raise RuntimeError("Score has not been computed. A scoring model is required.")
-        return self.score
+        if self.score is not None:
+            return self.score
+        total_penalty = min(self._fallback_total_penalty(), self.risk_settings.max_score)
+        return max(0, self.risk_settings.max_score - total_penalty)
+
+    def _fallback_total_penalty(self) -> int:
+        """Compute a conservative health score for reports loaded without score metadata."""
+
+        issue_penalty = sum(
+            self.risk_settings.penalty_for(issue.severity)
+            for dep in self.dependencies
+            for issue in dep.issues
+        ) + sum(
+            self.risk_settings.penalty_for(issue.severity)
+            for model in self.models
+            for issue in model.issues
+        )
+        breakdown = self.risk_breakdown
+        governance_penalty = self.risk_settings.governance_penalty * (
+            breakdown.get("unpinned_deps", 0) + breakdown.get("unverified_sources", 0)
+        )
+        cve_penalty = self.risk_settings.cve_penalty * breakdown.get("cves", 0)
+        return issue_penalty + governance_penalty + cve_penalty
 
     @property
     def risk_breakdown(self) -> dict[str, int]:

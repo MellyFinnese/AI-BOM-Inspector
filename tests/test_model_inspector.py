@@ -29,7 +29,9 @@ def test_scan_models_from_file_reads_list(tmp_path: Path):
     assert len(models) == 2
     assert models[0].identifier == "gpt2"
     assert models[1].source == "private"
-    assert models[1].issues == []
+    issue_codes = {issue.code for issue in models[1].issues}
+    assert "MODEL_LICENSE_RESTRICTED" in issue_codes
+    assert "PROPRIETARY_AI_RISK" in issue_codes
 
 
 def test_fetch_model_metadata_handles_network_failure(monkeypatch, tmp_path: Path):

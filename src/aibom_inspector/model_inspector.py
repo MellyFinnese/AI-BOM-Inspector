@@ -291,8 +291,6 @@ def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline
             if getattr(info, "lastModified", None):
                 data["last_updated"] = info.lastModified.isoformat()
         except ImportError:
-            import requests  # type: ignore[import-untyped]
-
             response = request_with_retry(
                 "GET",
                 f"https://huggingface.co/api/models/{identifier}",

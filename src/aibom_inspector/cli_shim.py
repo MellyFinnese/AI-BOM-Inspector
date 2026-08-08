@@ -180,19 +180,22 @@ def main() -> None:
 @click.option(
     "--asset-criticality",
     type=click.Choice(["low", "medium", "high", "critical"], case_sensitive=False),
-    required=True,
-    help="Asset criticality required for scoring.",
+    default="medium",
+    show_default=True,
+    help="Asset criticality used for scoring.",
 )
 @click.option(
     "--data-sensitivity",
     type=click.Choice(["public", "internal", "confidential", "restricted"], case_sensitive=False),
-    required=True,
-    help="Data sensitivity required for scoring.",
+    default="internal",
+    show_default=True,
+    help="Data sensitivity used for scoring.",
 )
 @click.option(
     "--risk-environment",
     type=click.Choice(["dev", "test", "staging", "prod"], case_sensitive=False),
-    required=True,
+    default="dev",
+    show_default=True,
     help="Environment used for risk multipliers (dev/test/staging/prod).",
 )
 @click.option(

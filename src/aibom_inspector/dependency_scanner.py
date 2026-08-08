@@ -625,8 +625,6 @@ def enrich_with_osv(
             continue
         payload = {"package": {"name": dep.name, "ecosystem": ecosystem}, "version": version}
         try:
-            import requests  # type: ignore
-
             response = request_with_retry(
                 "POST",
                 target_url,

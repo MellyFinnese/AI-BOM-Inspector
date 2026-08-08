@@ -36,6 +36,12 @@ class RiskSettings:
         default_factory=lambda: {"dev": 1.0, "test": 1.1, "staging": 1.3, "prod": 1.7}
     )
 
+    @property
+    def temporal_weights(self) -> dict[str, float]:
+        """Backward-compatible alias for temporal multiplier settings."""
+
+        return self.temporal_multipliers
+
     def penalty_for(self, severity: str) -> int:
         return self.severity_penalties.get(severity.lower(), 5)
 
@@ -57,6 +63,37 @@ class RiskSettings:
             "data_sensitivity_multipliers": self.data_sensitivity_multipliers,
             "environment_multipliers": self.environment_multipliers,
         }
+
+
+def temporal_penalty(
+    metadata: dict[str, object],
+    settings: dict[str, float] | RiskSettings,
+    *,
+    base_penalty: float = 0.0,
+) -> float:
+    """Return the additive temporal delta for legacy explanation callers.
+
+    The main scorer stores temporal risk as a multiplier plus an optional active
+    exploitation override. Older report-enrichment code expects the additional
+    penalty to add on top of the severity baseline, so this helper returns only
+    that delta while preserving the active-exploitation floor.
+    """
+
+    if not metadata:
+        return 0.0
+    if isinstance(settings, RiskSettings):
+        weights = settings.temporal_multipliers
+        active_exploitation_penalty = settings.active_exploitation_penalty
+    else:
+        weights = settings
+        active_exploitation_penalty = RiskSettings().active_exploitation_penalty
+
+    multiplied_penalty = base_penalty * temporal_multiplier(metadata, weights)
+    override_penalty = temporal_override_penalty(
+        metadata, active_exploitation_penalty=active_exploitation_penalty
+    )
+    effective_penalty = max(multiplied_penalty, override_penalty or 0.0)
+    return max(0.0, effective_penalty - base_penalty)
 
 
 def temporal_multiplier(metadata: dict[str, object], temporal_multipliers: dict[str, float]) -> float:

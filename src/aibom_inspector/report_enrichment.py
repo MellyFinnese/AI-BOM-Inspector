@@ -42,14 +42,15 @@ def build_score_explanation(report: Report) -> dict:
     issue_contributions: list[dict] = []
     for dep in report.dependencies:
         for issue in dep.issues:
-            temporal = temporal_penalty(issue.metadata, settings.temporal_weights)
+            base_penalty = settings.penalty_for(issue.severity)
+            temporal = temporal_penalty(issue.metadata, settings, base_penalty=base_penalty)
             issue_contributions.append(
                 {
                     "type": "dependency_issue",
                     "subject": dep.name,
                     "severity": issue.severity,
                     "code": issue.code,
-                    "base_penalty": settings.penalty_for(issue.severity),
+                    "base_penalty": base_penalty,
                     "temporal_penalty": temporal,
                     "metadata": issue.metadata,
                 }
@@ -57,14 +58,15 @@ def build_score_explanation(report: Report) -> dict:
 
     for model in report.models:
         for issue in model.issues:
-            temporal = temporal_penalty(issue.metadata, settings.temporal_weights)
+            base_penalty = settings.penalty_for(issue.severity)
+            temporal = temporal_penalty(issue.metadata, settings, base_penalty=base_penalty)
             issue_contributions.append(
                 {
                     "type": "model_issue",
                     "subject": model.identifier,
                     "severity": issue.severity,
                     "code": issue.code,
-                    "base_penalty": settings.penalty_for(issue.severity),
+                    "base_penalty": base_penalty,
                     "temporal_penalty": temporal,
                     "metadata": issue.metadata,
                 }
@@ -114,7 +116,7 @@ def build_score_explanation(report: Report) -> dict:
         "final_score": report.stack_risk_score,
         "total_penalty": total_penalty,
         "severity_penalties": settings.severity_penalties,
-        "temporal_weights": settings.temporal_weights,
+        "temporal_multipliers": settings.temporal_multipliers,
         "missing_intel_penalty": settings.missing_intel_penalty,
         "category_weights": category_weights,
         "org_weights": org_weights,
@@ -124,58 +126,6 @@ def build_score_explanation(report: Report) -> dict:
         "policy_metadata": report.policy_metadata,
         "intel_versions": report.intel_versions,
         "graph": {"nodes": nodes, "edges": edges},
-    }
-
-
-def build_model_metadata_summary(report: Report) -> dict[str, int]:
-    missing_lineage = 0
-    missing_training = 0
-    license_ambiguity = 0
-    risk_profiles = 0
-
-    for model in report.models:
-        if not (model.base_models or model.fine_tuned_from):
-            missing_lineage += 1
-        if not model.training_sources:
-            missing_training += 1
-        if not model.license or model.license_category == "unknown":
-            license_ambiguity += 1
-        if any(issue.code and str(issue.code).startswith("MODEL_") for issue in model.issues):
-            risk_profiles += 1
-
-    return {
-        "models_total": len(report.models),
-        "lineage_missing": missing_lineage,
-        "training_data_missing": missing_training,
-        "license_ambiguity": license_ambiguity,
-        "risk_profiles_flagged": risk_profiles,
-    }
-
-
-
-
-def build_model_metadata_summary(report: Report) -> dict[str, int]:
-    missing_lineage = 0
-    missing_training = 0
-    license_ambiguity = 0
-    risk_profiles = 0
-
-    for model in report.models:
-        if not (model.base_models or model.fine_tuned_from):
-            missing_lineage += 1
-        if not model.training_sources:
-            missing_training += 1
-        if not model.license or model.license_category == "unknown":
-            license_ambiguity += 1
-        if any(issue.code and str(issue.code).startswith("MODEL_") for issue in model.issues):
-            risk_profiles += 1
-
-    return {
-        "models_total": len(report.models),
-        "lineage_missing": missing_lineage,
-        "training_data_missing": missing_training,
-        "license_ambiguity": license_ambiguity,
-        "risk_profiles_flagged": risk_profiles,
     }
 
 
