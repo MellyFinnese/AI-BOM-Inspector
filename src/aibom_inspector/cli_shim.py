@@ -1234,5 +1234,30 @@ def graph_ask(report_path: str, question: str) -> None:
     click.echo(json.dumps({"experimental": True, "authoritative_for_score": False, "question": question, "graph_evidence": evidence}, indent=2))
 
 
+@main.group("graph")
+def graph_cmd() -> None:
+    """Experimental graph/context POC commands."""
+
+
+@graph_cmd.command("populate")
+@click.option("--report", "report_path", type=click.Path(exists=True, dir_okay=False, path_type=str), required=True)
+@click.option("--backend", type=click.Choice(["memory", "memgraph"], case_sensitive=False), default="memory", show_default=True)
+def graph_populate(report_path: str, backend: str) -> None:
+    """Populate an optional graph store from an existing JSON report."""
+    from .graph_store import InMemoryGraphStore, populate_graph_from_report
+    from .memgraph_store import MemgraphGraphStore
+
+    payload = load_json_payload(Path(report_path), max_bytes=SAFE_MAX_BYTES)
+    report = load_report_payload(payload)
+    store = MemgraphGraphStore() if backend.lower() == "memgraph" else InMemoryGraphStore()
+    try:
+        populate_graph_from_report(store, report)
+        click.echo(json.dumps({"nodes": len(store.nodes), "relationships": len(store.relationships)}, indent=2))
+    finally:
+        close = getattr(store, "close", None)
+        if close:
+            close()
+
+
 if __name__ == "__main__":
     main()
