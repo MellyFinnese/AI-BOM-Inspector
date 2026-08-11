@@ -1,0 +1,7 @@
+services:
+  memgraph:
+    image: memgraph/memgraph:latest
+    ports:
+      - "7687:7687"
+      - "3000:3000"
+    command: ["--log-level=INFO"]
