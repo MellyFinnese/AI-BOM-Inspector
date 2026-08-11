@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Iterable, Mapping, MutableMapping, Sequence
+from typing import Mapping, MutableMapping, Sequence
 
 import requests
 
@@ -27,7 +27,13 @@ def request_with_retry(
     data: Mapping[str, str] | None = None,
 ) -> requests.Response:
     config = retry_config or RetryConfig()
-    request = session.request if session else requests.request
+
+    if session:
+        request = session.request
+    else:
+        method_func = getattr(requests, method.lower(), None)
+        request = method_func if method_func is not None else requests.request
+
     last_error: Exception | None = None
 
     for attempt in range(config.retries + 1):
@@ -41,18 +47,27 @@ def request_with_retry(
                 json=json_payload,
                 data=dict(data) if data else None,
             )
-            if response.status_code in config.status_forcelist and attempt < config.retries:
+
+            if (
+                response.status_code in config.status_forcelist
+                and attempt < config.retries
+            ):
                 _sleep_with_backoff(attempt, config.backoff_factor)
                 continue
+
             return response
+
         except requests.RequestException as exc:
             last_error = exc
+
             if attempt >= config.retries:
                 break
+
             _sleep_with_backoff(attempt, config.backoff_factor)
 
     if last_error:
         raise last_error
+
     raise RuntimeError("request_with_retry failed without a captured exception")
 
 
