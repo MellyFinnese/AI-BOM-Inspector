@@ -40,6 +40,7 @@ Repository = "https://github.com/aibom-inspector/AI-BOM-Inspector"
 
 [project.optional-dependencies]
 huggingface = ["huggingface_hub>=0.26.0"]
+memgraph = ["neo4j>=5.20.0"]
 dev = [
     "build>=1.2.1",
     "pytest>=8.0.0",

@@ -1185,6 +1185,53 @@ def diff(base: str, target: str) -> None:
         f"  Changed risk: {', '.join(summary['changed_dependencies']) if summary['changed_dependencies'] else 'none'}"
     )
     click.echo(f"Stack risk delta: {summary['stack_risk_delta']}")
+@main.group("graph")
+def graph_cmd() -> None:
+    """Experimental graph/context POC commands."""
+
+
+@graph_cmd.command("populate")
+@click.option("--report", "report_path", type=click.Path(exists=True, dir_okay=False, path_type=str), required=True)
+@click.option("--backend", type=click.Choice(["memory", "memgraph"], case_sensitive=False), default="memory", show_default=True)
+def graph_populate(report_path: str, backend: str) -> None:
+    """Populate an optional graph store from an existing JSON report."""
+    from .graph_store import InMemoryGraphStore, populate_graph_from_report
+    from .memgraph_store import MemgraphGraphStore
+
+    payload = load_json_payload(Path(report_path), max_bytes=SAFE_MAX_BYTES)
+    report = load_report_payload(payload)
+    store = MemgraphGraphStore() if backend.lower() == "memgraph" else InMemoryGraphStore()
+    try:
+        populate_graph_from_report(store, report)
+        click.echo(json.dumps({"nodes": len(store.nodes), "relationships": len(store.relationships)}, indent=2))
+    finally:
+        close = getattr(store, "close", None)
+        if close:
+            close()
+
+
+@graph_cmd.command("ask")
+@click.option("--report", "report_path", type=click.Path(exists=True, dir_okay=False, path_type=str), required=True)
+@click.option("--question", required=True, help="Experimental GraphRAG-style question over graph-derived evidence.")
+def graph_ask(report_path: str, question: str) -> None:
+    """Experimental GraphRAG-style evidence retrieval without changing risk scores."""
+    from .graph_store import InMemoryGraphStore, populate_graph_from_report
+
+    payload = load_json_payload(Path(report_path), max_bytes=SAFE_MAX_BYTES)
+    report = load_report_payload(payload)
+    store = InMemoryGraphStore()
+    populate_graph_from_report(store, report)
+    q = question.lower()
+    evidence: dict[str, object]
+    if "provenance" in q or "missing" in q:
+        evidence = {"models_with_missing_provenance": [n.properties for n in store.models_with_missing_provenance()]}
+    elif "package" in q or "dependency" in q:
+        tokens = [part.strip(" ?.,") for part in question.split()]
+        package = tokens[-1] if tokens else ""
+        evidence = {"downstream_applications": [n.properties for n in store.downstream_applications_for_dependency(package)], "models": [n.properties for n in store.models_depending_on_package(package)]}
+    else:
+        evidence = {"summary": {"nodes": len(store.nodes), "relationships": len(store.relationships)}}
+    click.echo(json.dumps({"experimental": True, "authoritative_for_score": False, "question": question, "graph_evidence": evidence}, indent=2))
 
 
 if __name__ == "__main__":

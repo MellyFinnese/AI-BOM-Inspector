@@ -355,3 +355,67 @@ Use `/usr/bin/time -p` or your CI timing metrics to capture project-specific num
 - See `CODE_OF_CONDUCT.md` for community standards.
 - See `CONTRIBUTING.md` for development conventions and how to propose changes.
 - `CHANGELOG.md` tracks notable updates.
+
+## Graph Architecture and Memgraph POC
+
+AI-BOM Inspector is an AI/software supply-chain security and governance platform that analyzes AI assets, dependencies, provenance, vulnerabilities, licenses, and organizational context to produce explainable risk and policy decisions. Its optional graph layer provides relationship-aware context for impact analysis and explainability.
+
+```text
+Input
+  ↓
+Parsing / Normalization
+  ↓
+Enrichment
+  ↓
+Optional Graph Context
+  ↓
+Risk Engine
+  ↓
+Policy
+  ↓
+Reports / CI
+```
+
+The graph layer is optional. The scanner does not require Memgraph, and deterministic risk scoring remains authoritative. The current implementation exposes a `GraphStore` interface, an in-memory adapter for tests/local development, and an experimental Memgraph adapter for persistence/querying.
+
+### Why graph?
+
+Graph traversal is useful where the AI-BOM domain is genuinely relationship-heavy: dependency impact analysis, downstream application discovery, vulnerability propagation, model lineage, provenance/training-source relationships, ownership relationships, and explainable risk chains. Conventional files, reports, document stores, and relational storage remain appropriate for scan artifacts, immutable evidence, audit logs, and tabular reporting.
+
+### Memgraph integration
+
+Run Memgraph locally:
+
+```bash
+docker compose -f examples/memgraph/docker-compose.yml up -d
+pip install '.[memgraph]'
+```
+
+Populate the graph from an existing JSON report:
+
+```bash
+aibom graph populate --report examples/demo/aibom-report.json --backend memgraph
+```
+
+Configuration is environment based: `AIBOM_MEMGRAPH_URI`, `AIBOM_MEMGRAPH_USER`, and `AIBOM_MEMGRAPH_PASSWORD`. Omit graph commands entirely to disable graph functionality.
+
+Example Cypher queries:
+
+```cypher
+MATCH (m:GraphEntity {label: 'Model'})-[:AFFECTED_BY]->(v:GraphEntity {id: 'Vulnerability:CVE-2026-0001'}) RETURN m;
+MATCH (m:GraphEntity)-[:USES_DEPENDENCY]->(d:GraphEntity {id: 'Dependency:torch'}) RETURN m;
+MATCH p=(f:GraphEntity {id: 'Finding:CVE-2026-0001'})-[*1..5]-(n:GraphEntity) RETURN p;
+```
+
+### Experimental GraphRAG
+
+`aibom graph ask --report <report.json> --question "..."` is an experimental proof of concept that retrieves graph-derived evidence. It does not call an LLM in the core scanner, does not calculate security risk, and does not override deterministic scores.
+
+### Current status
+
+- **Production/current:** parsing, enrichment, deterministic scoring, policy evaluation, graph policy guardrails, reporting, integrity, and evidence workflows already implemented in the project.
+- **Experimental graph:** `GraphStore`, in-memory graph, Memgraph adapter, report ingestion, and relationship queries.
+- **Experimental GraphRAG:** structured graph-evidence retrieval only.
+- **Future roadmap:** first-class application/owner data, Memgraph CI integration, batching/indexes, tenant isolation, and richer explainability paths.
+
+See [`docs/ARCHITECTURE_GRAPH_MEMGRAPH.md`](docs/ARCHITECTURE_GRAPH_MEMGRAPH.md) for the repository audit, boundaries, security notes, and limitations.

@@ -21,6 +21,7 @@ from .dependency_scanner import (
     scan_requirements,
 )
 from .framework_mapping import framework_mapping_metadata
+from .graph_store import InMemoryGraphStore, populate_graph_from_report
 from .integrity import enforce_lockfile_checksums, verify_expected_hashes
 from .model_inspector import enrich_models_with_cves, scan_models_from_file, summarize_models
 from .model_risk_db import (
@@ -539,6 +540,20 @@ def run_scan(config: ScanConfig) -> ScanResult:
     )
     report.score = score_outcome.final_score
     report.score_explanation = score_outcome.explanation
+    graph_context = InMemoryGraphStore()
+    populate_graph_from_report(graph_context, report)
+    if report.score_explanation is not None:
+        report.score_explanation["relationship_context"] = {
+            "kind": "graph_context_summary",
+            "version": "v1",
+            "node_count": len(graph_context.nodes),
+            "relationship_count": len(graph_context.relationships),
+            "missing_provenance_models": [
+                node.properties.get("identifier", node.id)
+                for node in graph_context.models_with_missing_provenance()
+            ],
+            "note": "Graph context is explanatory only; deterministic scoring remains authoritative.",
+        }
 
     report.completeness = completeness
     report.executive_summary = build_executive_summary(report)
