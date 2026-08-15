@@ -2,21 +2,63 @@
 
 ![AI-BOM Inspector CI](https://img.shields.io/badge/AI--BOM%20Inspector-Scan%20your%20AI%20stack%20in%20CI-blue)
 
-Offline-first SBOM + AI supply-chain risk and license scanner. Privacy posture: default is `--offline` (no network calls) unless you opt into `--online`. Local-first; optional enrichment (OSV/HF/Shadow-UEFI) can be enabled explicitly. Fully offline supported. The "AI" is transparent rules + heuristics with a deterministic executive summary that runs offline; teams can still layer in their own LLM if desired.
+What is it?
 
-## Architecture at a glance
+AI-BOM Inspector is an offline-first deterministic risk engine for AI supply chains. Give it an AI project (SBOM + model artifacts) and it returns a policy decision, an evidence-backed report, and CI-friendly outputs.
+
+Killer workflow (single command demo)
+
+AI project
+ ↓
+SBOM + model artifacts
+ ↓
+AI-BOM Inspector
+ ├── Dependency analysis
+ ├── Model analysis
+ ├── Vulnerability intelligence
+ ├── Provenance
+ └── License analysis
+ ↓
+Deterministic risk engine
+ ↓
+Policy decision
+ ↓
+Evidence + report + CI result
+
+Architecture (data flow)
 
 ```mermaid
-graph TD
-    A["CLI / API"] --> B["Manifest & SBOM parsers"]
-    A --> C["Model metadata loaders"]
-    B --> D["Risk engine"]
-    C --> D
-    D --> E["Report renderers<br/>(JSON, Markdown, HTML, CycloneDX, SPDX)"]
-    E --> F["CI gates<br/>(fail-on-score, diff)"]
+graph LR
+  Input["SBOM / Models / Metadata / Intel"] --> Engine["Deterministic Risk Engine"]
+  Engine --> Policy["Policy Decision"]
+  Engine --> Graph["Evidence Graph Context (optional)"]
+  Policy --> Output["Report / CI / Enforcement"]
 ```
 
-The scanner defaults to local-only analysis: it ingests manifests/SBOMs, can layer in optional OSV/Hugging Face lookups, and emits reports that CI can enforce. Network enrichment (OSV, Hugging Face, Shadow-UEFI-Intel metadata) only occurs when you deliberately pass `--online` and enable the relevant feature flag.
+One-command golden demo
+
+1. Add a demo project: `demo/golden-vulnerable-ai` (included).
+2. Run:
+
+```bash
+bash demo/golden-vulnerable-ai/run_demo.sh
+```
+
+Expected concise answer (what you get immediately):
+- What is wrong? e.g. legacy .pkl model, outdated dependency, questionable license.
+- Why it matters? policy block, integrity or legal risk.
+- What is affected? model path and dependent services.
+- Evidence: models.json entry, sandbox trace (if enabled), report.json.
+- Policy violated: e.g. `block_legacy_pickles` (configured by policy).
+
+Why this matters (differentiators)
+
+- Deterministic offline risk engine (no black-box inference required).
+- Standards-ready SBOM outputs (CycloneDX / SPDX).
+- Sandbox-first model inspection (opcode VM + hardened runner).
+- CI-first: automated PR comments, checks, and remediation guidance.
+
+Full feature list and deeper docs follow below.
 
 ## Repository layout
 
