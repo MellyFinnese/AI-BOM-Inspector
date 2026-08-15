@@ -39,7 +39,7 @@ def build_image(context_dir: Path) -> None:
     ])
 
 
-def run_sandbox(target_file: Path, output_json: Path, timeout: int = 30) -> int:
+def run_sandbox(target_file: Path, output_json: Path, timeout: int = 30, seccomp: str | None = None, apparmor: str | None = None) -> int:
     # Build the inline python command to run inside the container
     cmd = (
         "import sys, json, pathlib; sys.path.insert(0, '/app/src'); "
@@ -58,13 +58,21 @@ def run_sandbox(target_file: Path, output_json: Path, timeout: int = 30) -> int:
         "--cap-drop",
         "ALL",
         "--read-only",
+    ]
+
+    if seccomp:
+        docker_cmd.extend(["--security-opt", f"seccomp={seccomp}"])
+    if apparmor:
+        docker_cmd.extend(["--security-opt", f"apparmor={apparmor}"])
+
+    docker_cmd.extend([
         "-v",
         f"{str(target_file)}:/workspace/target:ro",
         "-v",
         f"{str(Path.cwd())}:/app:ro",
         IMAGE_TAG,
         cmd,
-    ]
+    ])
 
     print("Running sandboxed tracer...")
     proc = subprocess.run(docker_cmd, capture_output=True, text=True, timeout=timeout)
@@ -84,6 +92,8 @@ def main():
     parser.add_argument("file", type=Path, help="Path to the pickle file to analyze")
     parser.add_argument("--output", type=Path, default=Path("scripts/pickle_sandbox_output.json"))
     parser.add_argument("--no-build", action="store_true", help="Skip rebuilding the sandbox image")
+    parser.add_argument("--seccomp", type=str, default=None, help="Path to seccomp profile JSON to apply inside docker --security-opt seccomp=<path>")
+    parser.add_argument("--apparmor", type=str, default=None, help="AppArmor profile name to apply via --security-opt apparmor=<profile>")
     args = parser.parse_args()
 
     if not docker_available():
@@ -99,7 +109,7 @@ def main():
             print("Failed to build sandbox image:", exc, file=sys.stderr)
             sys.exit(3)
 
-    rc = run_sandbox(args.file, args.output)
+    rc = run_sandbox(args.file, args.output, seccomp=args.seccomp, apparmor=args.apparmor)
     sys.exit(rc)
 
 
