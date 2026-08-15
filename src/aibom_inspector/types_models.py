@@ -28,6 +28,8 @@ class ModelInfo:
     hashes: List[str] = field(default_factory=list)
     # Optional application the model is deployed to (string name for simplicity)
     deployed_to: Optional[str] = None
+    # List of artifact file paths associated with the model
+    artifacts: List[str] = field(default_factory=list)
     issues: List[ModelIssue] = field(default_factory=list)
     trust_signals: List[ModelIssue] = field(default_factory=list)
 

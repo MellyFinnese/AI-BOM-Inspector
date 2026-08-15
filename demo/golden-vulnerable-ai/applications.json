@@ -1,0 +1,13 @@
+[
+  {
+    "name": "demo-app",
+    "environment": "prod",
+    "criticality": "high",
+    "data_sensitivity": "confidential",
+    "owner": {
+      "name": "Alice Example",
+      "email": "alice@example.com",
+      "team": "AI Platform"
+    }
+  }
+]

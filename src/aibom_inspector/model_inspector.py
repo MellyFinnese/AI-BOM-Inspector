@@ -80,7 +80,8 @@ def _collect_declared_hashes(entry: dict) -> list[str]:
 
 
 def _coerce_artifacts(entry: dict) -> list[dict]:
-    artifacts = entry.get("artifacts") or []
+    # Support multiple shapes: 'artifacts' list, single 'artifact' dict, or legacy top-level 'path'
+    artifacts = entry.get("artifacts") or entry.get("artifact") or []
     if isinstance(artifacts, dict):
         artifacts = [artifacts]
     normalized: list[dict] = []
@@ -90,6 +91,9 @@ def _coerce_artifacts(entry: dict) -> list[dict]:
                 normalized.append({"path": item})
             elif isinstance(item, dict):
                 normalized.append(dict(item))
+    # Fallback: support legacy single 'path' key on the model entry
+    if not normalized and isinstance(entry.get("path"), str):
+        normalized.append({"path": entry.get("path")})
     return normalized
 
 
@@ -432,6 +436,7 @@ def parse_model_entry(entry: dict) -> ModelInfo:
         fine_tuned_from=fine_tuned_from,
         training_sources=training_sources,
         hashes=sorted({value for value in hashes if value}),
+        artifacts=[artifact.get("path") for artifact in _coerce_artifacts(entry)],
         issues=issues,
         trust_signals=trust_signals,
     )

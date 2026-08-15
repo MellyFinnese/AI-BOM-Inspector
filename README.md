@@ -4,9 +4,11 @@
 
 What is it?
 
-AI-BOM Inspector is an offline-first deterministic risk engine for AI supply chains. Give it an AI project (SBOM + model artifacts) and it returns a policy decision, an evidence-backed report, and CI-friendly outputs.
+AI-BOM Inspector is an offline-first, deterministic risk engine for AI supply chains. Feed it an AI project (SBOM + model artifacts) and it returns a policy decision, an evidence-backed report, and CI-friendly outputs designed for automated enforcement.
 
-Killer workflow (single command demo)
+Killer workflow (one command demo)
+
+Give AI-BOM Inspector an AI project's SBOM and model artifacts → it determines supply-chain risk → explains why → maps affected systems → produces evidence → enforces policy.
 
 AI project
  ↓
@@ -19,7 +21,7 @@ AI-BOM Inspector
  ├── Provenance
  └── License analysis
  ↓
-Deterministic risk engine
+Deterministic risk engine (single source of truth)
  ↓
 Policy decision
  ↓
@@ -29,34 +31,50 @@ Architecture (data flow)
 
 ```mermaid
 graph LR
-  Input["SBOM / Models / Metadata / Intel"] --> Engine["Deterministic Risk Engine"]
-  Engine --> Policy["Policy Decision"]
-  Engine --> Graph["Evidence Graph Context (optional)"]
-  Policy --> Output["Report / CI / Enforcement"]
+  Input["SBOM / Models / Metadata / Threat Intel"] --> Engine["Deterministic Risk Engine"]
+  Engine --> Policy["Policy Decision (block/allow/flag)"]
+  Engine --> Graph["Evidence Graph Context (impact & explain)"]
+  Policy --> Output["Report / CI / Enforcement / Annotations"]
 ```
 
 One-command golden demo
 
-1. Add a demo project: `demo/golden-vulnerable-ai` (included).
-2. Run:
+1. Demo project is included at `demo/golden-vulnerable-ai`.
+2. The demo now includes an application->owner mapping at `demo/golden-vulnerable-ai/applications.json`; the runner merges it into the generated report so impact analysis can map models → apps → owners.
+3. Run the demo (offline, reproducible):
 
 ```bash
-bash demo/golden-vulnerable-ai/run_demo.sh
+PYTHONPATH=src bash demo/golden-vulnerable-ai/run_demo.sh
 ```
 
-Expected concise answer (what you get immediately):
-- What is wrong? e.g. legacy .pkl model, outdated dependency, questionable license.
-- Why it matters? policy block, integrity or legal risk.
-- What is affected? model path and dependent services.
-- Evidence: models.json entry, sandbox trace (if enabled), report.json.
-- Policy violated: e.g. `block_legacy_pickles` (configured by policy).
+Quick impact example (after the run):
+
+```bash
+# Show merged applications in the report
+jq '.applications' demo/golden-vulnerable-ai/report.json
+
+# Run a blast-radius check for a CVE using the built-in graph impact helper
+python -c "from aibom_inspector.graph import impact; exit(impact('demo/golden-vulnerable-ai/report.json','CVE-2024-XXXX'))"
+```
+
+What changed in this branch (enterprise upgrades)
+
+- Standards: CycloneDX 1.7 exporter and SPDX 3.0 tag-value output so reports plug into enterprise SBOM pipelines.
+- Hardened dynamic inspection: prototype Pickle VM emulator, Docker sandbox runner, and baseline seccomp/AppArmor profiles under `.github/security` for safer runtime tracing.
+- Policy & CI: `block_legacy_pickles` policy, `scripts/check_for_pickles.py`, and GitHub Actions to run validators and demo tests; CI emits `policy_action` and `policy_failures` in report JSON for easy automation.
+- Attestation groundwork: sigstore-friendly attestation helper with deterministic SHA256 fallback (requires ops provisioning for full sigstore use).
+- Compatibility: pydantic v1/v2 normalization helpers across parsers and inspectors to keep CLI runnable from source.
 
 Why this matters (differentiators)
 
-- Deterministic offline risk engine (no black-box inference required).
-- Standards-ready SBOM outputs (CycloneDX / SPDX).
-- Sandbox-first model inspection (opcode VM + hardened runner).
-- CI-first: automated PR comments, checks, and remediation guidance.
+- Single, explainable deterministic risk engine (graph provides context, not score).
+- Standards-first outputs (CycloneDX/SPDX) for enterprise pipelines and procurement.
+- Sandbox-first model inspection with CI enforcement to prevent risky artifacts from merging.
+- Reproducible golden demo and tests that turn product claims into verifiable proofs.
+
+Quick show-me
+
+Run the demo, open `demo/golden-vulnerable-ai/report.json`, and run `pytest tests/test_golden_demo.py` to see the claim→proof assertion.
 
 Full feature list and deeper docs follow below.
 

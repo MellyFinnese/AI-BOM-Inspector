@@ -61,6 +61,7 @@ class PolicySchema(BaseModel):
     active_exploitation_penalty: int | None = None
     policy_version: str | None = None
     change_log: List[Mapping[str, Any]] = Field(default_factory=list)
+    block_legacy_pickles: bool = False
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -97,6 +98,9 @@ class ModelEntrySchema(BaseModel):
     training_sources: List[str] = Field(default_factory=list)
     hashes: List[str] = Field(default_factory=list)
     artifacts: List[ModelArtifactSchema] = Field(default_factory=list)
+    # Support legacy single file entries using 'path' or 'artifact'
+    path: str | None = None
+    artifact: Mapping[str, Any] | None = None
 
     model_config = ConfigDict(extra="forbid", strict=True)
 

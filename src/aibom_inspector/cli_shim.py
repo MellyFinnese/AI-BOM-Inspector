@@ -20,7 +20,7 @@ from .ip_protection import protect_ip
 from .parsers import SAFE_MAX_BYTES, ParserError, load_json_payload
 from .pickle_inspector import PickleFileTooLargeError, inspect_pickle_files
 from .policy import diff_reports, evaluate_policy, load_policy, write_evidence_pack, write_github_check
-from .renderers import render_report_outputs
+from .renderers import render_report_outputs, RenderedOutputs
 from .report_loader import load_report_payload
 from .risk_engine import ScanConfig, parse_metadata_entries, run_scan
 from .scoring_models import OrgContext
@@ -579,6 +579,36 @@ def scan(
         sarif_output=sarif_output,
         sign_report=sign_report,
     )
+
+    # If the scan produced a policy-aware JSON payload (result.report_json), prefer that
+    # when writing JSON output so CI and demos receive the policy_action and failures fields.
+    if fmt.lower() == "json" and output and hasattr(result, "report_json") and result.report_json:
+        out_path = Path(output)
+        report_text = json.dumps(result.report_json, indent=2)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report_text)
+        # Recompute hashes / signature state for downstream attestations if needed
+        report_hash = compute_output_hash(report_text)
+        output_hashes = dict(rendered_outputs.output_hashes)
+        output_hashes[str(out_path)] = report_hash
+        signature_text = rendered_outputs.signature_text
+        # If sign_report was requested, update the signature to match the new content
+        if sign_report:
+            import hashlib
+
+            digest = hashlib.sha256(report_text.encode()).hexdigest()
+            sig_path = out_path.with_suffix(out_path.suffix + ".sha256")
+            sig_path.write_text(digest)
+            signature_text = digest
+        rendered_outputs = RenderedOutputs(
+            rendered=report_text,
+            report_path=out_path,
+            report_hash=report_hash,
+            output_hashes=output_hashes,
+            signature_text=signature_text,
+            markdown_payload=rendered_outputs.markdown_payload,
+            sarif_payload=rendered_outputs.sarif_payload,
+        )
 
     if output is None and not (sbom_output and fmt.lower() in {"cyclonedx", "spdx"}):
         click.echo(rendered_outputs.rendered)

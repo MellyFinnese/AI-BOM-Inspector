@@ -2,10 +2,12 @@
   "models": [
     {
       "name": "vulnerable-model",
+      "id": "vulnerable-model",
       "path": "models/vulnerable_model.pkl",
+      "deployed_to": "demo-app",
       "license": "GPL-3.0-or-later",
       "provenance": null,
-      "notes": "Deliberately legacy .pkl to trigger policy checks"
+      "notes": "Deliberately legacy .pkl to trigger policy checks and demonstrate app/owner mapping"
     }
   ]
 }
