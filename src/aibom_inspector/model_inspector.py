@@ -451,7 +451,14 @@ def scan_models_from_file(path: Path, *, max_bytes: int | None = None) -> List[M
 
     models: List[ModelInfo] = []
     for entry in entries:
-        models.append(parse_model_entry(entry.model_dump()))
+        # Support pydantic v2 (model_dump) and v1 (dict)
+        if hasattr(entry, "model_dump"):
+            entry_dict = entry.model_dump()
+        elif hasattr(entry, "dict"):
+            entry_dict = entry.dict()
+        else:
+            entry_dict = dict(entry)
+        models.append(parse_model_entry(entry_dict))
     return models
 
 

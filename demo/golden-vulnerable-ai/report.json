@@ -1,0 +1,5217 @@
+{
+  "generated_at": "2026-08-15T18:48:24.927355",
+  "ai_summary": null,
+  "total_risk": 78,
+  "stack_risk_score": 0,
+  "risk_breakdown": {
+    "unpinned_deps": 13,
+    "unverified_sources": 1,
+    "unknown_licenses": 14,
+    "stale_models": 0,
+    "cves": 0,
+    "model_lineage_missing": 15,
+    "training_data_missing": 15,
+    "license_ambiguity": 14,
+    "model_risk_profiles": 0
+  },
+  "risk_settings": {
+    "max_score": 100,
+    "severity_penalties": {
+      "high": 8,
+      "medium": 4,
+      "low": 2
+    },
+    "governance_penalty": 3,
+    "cve_penalty": 7,
+    "missing_intel_penalty": 2,
+    "active_exploitation_penalty": 25,
+    "scoring_model": "default",
+    "scoring_model_version": "v1",
+    "category_weights": {},
+    "weight_scale": 10.0,
+    "org_weights": {},
+    "temporal_multipliers": {
+      "active_exploitation": 1.8,
+      "mature": 1.4,
+      "poc": 1.2
+    },
+    "asset_criticality_multipliers": {
+      "low": 1.0,
+      "medium": 1.2,
+      "high": 1.5,
+      "critical": 2.0
+    },
+    "data_sensitivity_multipliers": {
+      "public": 1.0,
+      "internal": 1.2,
+      "confidential": 1.5,
+      "restricted": 2.0
+    },
+    "environment_multipliers": {
+      "dev": 1.0,
+      "test": 1.1,
+      "staging": 1.3,
+      "prod": 1.7
+    }
+  },
+  "provenance": {
+    "git_commit": "81897a15dd53372b02da24dd31a01747e1c07948",
+    "inputs": [
+      {
+        "path": "demo/golden-vulnerable-ai/requirements.txt",
+        "sha256": "68df6752c34a2d3e12014e23e9d43165cac378ca12276e859f6c42374435ec39"
+      },
+      {
+        "path": "pyproject.toml",
+        "sha256": "365ca81bcceec37439e7acc46dff5ef404d7b902df5f21899674419d7cf1db6c"
+      },
+      {
+        "path": "demo/golden-vulnerable-ai/models.json",
+        "sha256": "16cd3818022976fc4b05d0691d3d356d515604fb05dfc74e346ac2a8c1ee87cd"
+      },
+      {
+        "path": "demo/golden-vulnerable-ai/policy.yml",
+        "sha256": "829eb3036c6307f6a55e5f4bc889fbd21327a712d6bdaf38eae7266134ed6128"
+      }
+    ]
+  },
+  "approvals": [],
+  "runtime_trace": null,
+  "completeness": {
+    "static_coverage_pct": 100.0,
+    "runtime_coverage_pct": 0.0,
+    "static_visibility": true,
+    "runtime_visibility": false,
+    "unobservable_areas": [
+      "Runtime model loading: unknown (no runtime trace supplied)",
+      "Environment-based model selection detected; runtime resolution required"
+    ]
+  },
+  "executive_summary": {
+    "governance_risk": "High",
+    "regulatory_exposure": "High",
+    "supply_chain_blast_radius": "Medium",
+    "rationale": [
+      "14 governance flags (unpinned deps or unverified sources)",
+      "14 unknown license items"
+    ]
+  },
+  "framework_mapping": {
+    "version": "2024.09-owned",
+    "source": "/home/crypto/copilot-worktrees/AI-BOM-Inspector/mellyfinnese-fictional-invention/policies/framework_mappings.json"
+  },
+  "sbom_correlations": [
+    {
+      "model": "unmapped",
+      "source": "unknown",
+      "supporting_dependencies": [],
+      "note": "No direct SBOM \u2194 AI-BOM correlation detected; add runtime traces or provider metadata."
+    }
+  ],
+  "threat_summary": null,
+  "model_metadata_summary": {
+    "models_total": 15,
+    "lineage_missing": 15,
+    "training_data_missing": 15,
+    "license_ambiguity": 14,
+    "risk_profiles_flagged": 0
+  },
+  "policy_metadata": {
+    "version": null,
+    "scoring_model": null,
+    "scoring_model_version": null,
+    "change_log": [],
+    "policy_hash": "829eb3036c6307f6a55e5f4bc889fbd21327a712d6bdaf38eae7266134ed6128"
+  },
+  "intel_versions": {
+    "model_advisory_db": {
+      "version": "2024.10",
+      "sha256": "aaa05fdb0fbe797126f7cf5dae23a08a024608158a6bac505746731d3141bb7e"
+    },
+    "model_hash_db": {
+      "version": "2024.10",
+      "sha256": "64df615bcff8ab232df2f1f85ef621eda0fd6c8bc1654690940cb7bcfb439f8a"
+    },
+    "threat_taxonomy_db": {
+      "version": "2024.10",
+      "sha256": "e4d918bb6dc9d328e455bd3648e8e60c9f11beef34260c1017a6c75127cd5d0f"
+    },
+    "training_source_db": {
+      "version": "2024.10",
+      "sha256": "d5c877cc2b1c2b85b31fedfded3d0475e09f299ef706684802dc640fa1a57b51"
+    }
+  },
+  "score_explanation": {
+    "kind": "score_explainability",
+    "version": "v1",
+    "generated_at": "2026-08-15T18:48:24.927565",
+    "scoring_model": "default",
+    "scoring_model_version": "v1",
+    "final_score": 0,
+    "total_penalty": 452,
+    "org_multiplier": 1.44,
+    "org_context": {
+      "asset_criticality": "medium",
+      "data_sensitivity": "internal",
+      "environment": "dev"
+    },
+    "severity_penalties": {
+      "high": 8,
+      "medium": 4,
+      "low": 2
+    },
+    "temporal_multipliers": {
+      "active_exploitation": 1.8,
+      "mature": 1.4,
+      "poc": 1.2
+    },
+    "active_exploitation_penalty": 25,
+    "missing_intel_penalty": 2,
+    "category_weights": [],
+    "org_weights": [],
+    "weight_scale": 10.0,
+    "governance_penalty": 42,
+    "cve_penalty": 0,
+    "missing_intel": [
+      {
+        "model": "vulnerable-model",
+        "signal": "lineage"
+      },
+      {
+        "model": "vulnerable-model",
+        "signal": "training_data"
+      },
+      {
+        "model": "meta-llama/Llama-3-8B",
+        "signal": "lineage"
+      },
+      {
+        "model": "meta-llama/Llama-3-8B",
+        "signal": "training_data"
+      },
+      {
+        "model": "meta-llama/Llama-3-8B",
+        "signal": "license"
+      },
+      {
+        "model": "gpt-4o",
+        "signal": "lineage"
+      },
+      {
+        "model": "gpt-4o",
+        "signal": "training_data"
+      },
+      {
+        "model": "gpt-4o",
+        "signal": "license"
+      },
+      {
+        "model": "claude-sonnet",
+        "signal": "lineage"
+      },
+      {
+        "model": "claude-sonnet",
+        "signal": "training_data"
+      },
+      {
+        "model": "claude-sonnet",
+        "signal": "license"
+      },
+      {
+        "model": "gpt2",
+        "signal": "lineage"
+      },
+      {
+        "model": "gpt2",
+        "signal": "training_data"
+      },
+      {
+        "model": "gpt2",
+        "signal": "license"
+      },
+      {
+        "model": "claude",
+        "signal": "lineage"
+      },
+      {
+        "model": "claude",
+        "signal": "training_data"
+      },
+      {
+        "model": "claude",
+        "signal": "license"
+      },
+      {
+        "model": "llama-index",
+        "signal": "lineage"
+      },
+      {
+        "model": "llama-index",
+        "signal": "training_data"
+      },
+      {
+        "model": "llama-index",
+        "signal": "license"
+      },
+      {
+        "model": "llama",
+        "signal": "lineage"
+      },
+      {
+        "model": "llama",
+        "signal": "training_data"
+      },
+      {
+        "model": "llama",
+        "signal": "license"
+      },
+      {
+        "model": "unmapped",
+        "signal": "lineage"
+      },
+      {
+        "model": "unmapped",
+        "signal": "training_data"
+      },
+      {
+        "model": "unmapped",
+        "signal": "license"
+      },
+      {
+        "model": "llama-2",
+        "signal": "lineage"
+      },
+      {
+        "model": "llama-2",
+        "signal": "training_data"
+      },
+      {
+        "model": "llama-2",
+        "signal": "license"
+      },
+      {
+        "model": "llama-3",
+        "signal": "lineage"
+      },
+      {
+        "model": "llama-3",
+        "signal": "training_data"
+      },
+      {
+        "model": "llama-3",
+        "signal": "license"
+      },
+      {
+        "model": "claude-v2",
+        "signal": "lineage"
+      },
+      {
+        "model": "claude-v2",
+        "signal": "training_data"
+      },
+      {
+        "model": "claude-v2",
+        "signal": "license"
+      },
+      {
+        "model": "llamaindex-sample",
+        "signal": "lineage"
+      },
+      {
+        "model": "llamaindex-sample",
+        "signal": "training_data"
+      },
+      {
+        "model": "llamaindex-sample",
+        "signal": "license"
+      },
+      {
+        "model": "llama-index-team/llamaindex",
+        "signal": "lineage"
+      },
+      {
+        "model": "llama-index-team/llamaindex",
+        "signal": "training_data"
+      },
+      {
+        "model": "llama-index-team/llamaindex",
+        "signal": "license"
+      },
+      {
+        "model": "llama/llama_index_examples",
+        "signal": "lineage"
+      },
+      {
+        "model": "llama/llama_index_examples",
+        "signal": "training_data"
+      },
+      {
+        "model": "llama/llama_index_examples",
+        "signal": "license"
+      }
+    ],
+    "issue_contributions": [
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "insecure-demo-package",
+        "severity": "medium",
+        "code": "UNSTABLE_VERSION",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "click",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "jinja2",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "pydantic",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "requests",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "packaging",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "PyYAML",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "tomli",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "huggingface_hub",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "huggingface_hub",
+        "severity": "medium",
+        "code": "UNSTABLE_VERSION",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "build",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "pytest",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "ruff",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "ruff",
+        "severity": "medium",
+        "code": "UNSTABLE_VERSION",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "mypy",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "dependency_issue",
+        "subject": "types-requests",
+        "severity": "medium",
+        "code": "LOOSE_PIN",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "model_issue",
+        "subject": "vulnerable-model",
+        "severity": "medium",
+        "code": "LICENSE_RISK",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 4,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 4.0,
+        "type": "model_issue",
+        "subject": "vulnerable-model",
+        "severity": "medium",
+        "code": "UNVERIFIED_SOURCE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "meta-llama/Llama-3-8B",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "gpt-4o",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "claude-sonnet",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "gpt2",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "claude",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "llama-index",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "llama",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "unmapped",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "llama-2",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "llama-3",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "claude-v2",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "llamaindex-sample",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "llama-index-team/llamaindex",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      },
+      {
+        "base_penalty": 8,
+        "temporal_multiplier": 1.0,
+        "override_penalty": null,
+        "override_applied": false,
+        "penalty": 8.0,
+        "type": "model_issue",
+        "subject": "llama/llama_index_examples",
+        "severity": "high",
+        "code": "UNKNOWN_LICENSE",
+        "metadata": {}
+      }
+    ],
+    "policy_metadata": {
+      "version": null,
+      "scoring_model": null,
+      "scoring_model_version": null,
+      "change_log": [],
+      "policy_hash": "829eb3036c6307f6a55e5f4bc889fbd21327a712d6bdaf38eae7266134ed6128"
+    },
+    "intel_versions": {
+      "model_advisory_db": {
+        "version": "2024.10",
+        "sha256": "aaa05fdb0fbe797126f7cf5dae23a08a024608158a6bac505746731d3141bb7e"
+      },
+      "model_hash_db": {
+        "version": "2024.10",
+        "sha256": "64df615bcff8ab232df2f1f85ef621eda0fd6c8bc1654690940cb7bcfb439f8a"
+      },
+      "threat_taxonomy_db": {
+        "version": "2024.10",
+        "sha256": "e4d918bb6dc9d328e455bd3648e8e60c9f11beef34260c1017a6c75127cd5d0f"
+      },
+      "training_source_db": {
+        "version": "2024.10",
+        "sha256": "d5c877cc2b1c2b85b31fedfded3d0475e09f299ef706684802dc640fa1a57b51"
+      }
+    },
+    "model_snapshot": {
+      "count": 15,
+      "sha256": "bad1efa0851c5f5663c3bd36b92ba0625695be3f8a08f574b5af565914eb7d90",
+      "models": [
+        {
+          "id": "vulnerable-model",
+          "source": null,
+          "hashes": []
+        },
+        {
+          "id": "meta-llama/Llama-3-8B",
+          "source": "meta",
+          "hashes": []
+        },
+        {
+          "id": "gpt-4o",
+          "source": "openai",
+          "hashes": []
+        },
+        {
+          "id": "claude-sonnet",
+          "source": "anthropic",
+          "hashes": []
+        },
+        {
+          "id": "gpt2",
+          "source": "huggingface",
+          "hashes": []
+        },
+        {
+          "id": "claude",
+          "source": "anthropic",
+          "hashes": []
+        },
+        {
+          "id": "llama-index",
+          "source": "meta",
+          "hashes": []
+        },
+        {
+          "id": "llama",
+          "source": "meta",
+          "hashes": []
+        },
+        {
+          "id": "unmapped",
+          "source": "inferred",
+          "hashes": []
+        },
+        {
+          "id": "llama-2",
+          "source": "meta",
+          "hashes": []
+        },
+        {
+          "id": "llama-3",
+          "source": "meta",
+          "hashes": []
+        },
+        {
+          "id": "claude-v2",
+          "source": "anthropic",
+          "hashes": []
+        },
+        {
+          "id": "llamaindex-sample",
+          "source": "meta",
+          "hashes": []
+        },
+        {
+          "id": "llama-index-team/llamaindex",
+          "source": "meta",
+          "hashes": []
+        },
+        {
+          "id": "llama/llama_index_examples",
+          "source": "meta",
+          "hashes": []
+        }
+      ]
+    },
+    "graph": {
+      "nodes": [
+        {
+          "id": "score",
+          "label": "stack_risk_score",
+          "value": 0
+        },
+        {
+          "id": "dependency_issue:insecure-demo-package:UNSTABLE_VERSION",
+          "label": "insecure-demo-package",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:click:LOOSE_PIN",
+          "label": "click",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:jinja2:LOOSE_PIN",
+          "label": "jinja2",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:pydantic:LOOSE_PIN",
+          "label": "pydantic",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:requests:LOOSE_PIN",
+          "label": "requests",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:packaging:LOOSE_PIN",
+          "label": "packaging",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:PyYAML:LOOSE_PIN",
+          "label": "PyYAML",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:tomli:LOOSE_PIN",
+          "label": "tomli",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:huggingface_hub:LOOSE_PIN",
+          "label": "huggingface_hub",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:huggingface_hub:UNSTABLE_VERSION",
+          "label": "huggingface_hub",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:build:LOOSE_PIN",
+          "label": "build",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:pytest:LOOSE_PIN",
+          "label": "pytest",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:ruff:LOOSE_PIN",
+          "label": "ruff",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:ruff:UNSTABLE_VERSION",
+          "label": "ruff",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:mypy:LOOSE_PIN",
+          "label": "mypy",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "dependency_issue:types-requests:LOOSE_PIN",
+          "label": "types-requests",
+          "type": "dependency_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "model_issue:vulnerable-model:LICENSE_RISK",
+          "label": "vulnerable-model",
+          "type": "model_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "model_issue:vulnerable-model:UNVERIFIED_SOURCE",
+          "label": "vulnerable-model",
+          "type": "model_issue",
+          "severity": "medium",
+          "penalty": 4.0
+        },
+        {
+          "id": "model_issue:meta-llama/Llama-3-8B:UNKNOWN_LICENSE",
+          "label": "meta-llama/Llama-3-8B",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:gpt-4o:UNKNOWN_LICENSE",
+          "label": "gpt-4o",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:claude-sonnet:UNKNOWN_LICENSE",
+          "label": "claude-sonnet",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:gpt2:UNKNOWN_LICENSE",
+          "label": "gpt2",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:claude:UNKNOWN_LICENSE",
+          "label": "claude",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:llama-index:UNKNOWN_LICENSE",
+          "label": "llama-index",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:llama:UNKNOWN_LICENSE",
+          "label": "llama",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:unmapped:UNKNOWN_LICENSE",
+          "label": "unmapped",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:llama-2:UNKNOWN_LICENSE",
+          "label": "llama-2",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:llama-3:UNKNOWN_LICENSE",
+          "label": "llama-3",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:claude-v2:UNKNOWN_LICENSE",
+          "label": "claude-v2",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:llamaindex-sample:UNKNOWN_LICENSE",
+          "label": "llamaindex-sample",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:llama-index-team/llamaindex:UNKNOWN_LICENSE",
+          "label": "llama-index-team/llamaindex",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "model_issue:llama/llama_index_examples:UNKNOWN_LICENSE",
+          "label": "llama/llama_index_examples",
+          "type": "model_issue",
+          "severity": "high",
+          "penalty": 8.0
+        },
+        {
+          "id": "missing:vulnerable-model:lineage",
+          "label": "vulnerable-model",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:vulnerable-model:training_data",
+          "label": "vulnerable-model",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:meta-llama/Llama-3-8B:lineage",
+          "label": "meta-llama/Llama-3-8B",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:meta-llama/Llama-3-8B:training_data",
+          "label": "meta-llama/Llama-3-8B",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:meta-llama/Llama-3-8B:license",
+          "label": "meta-llama/Llama-3-8B",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:gpt-4o:lineage",
+          "label": "gpt-4o",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:gpt-4o:training_data",
+          "label": "gpt-4o",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:gpt-4o:license",
+          "label": "gpt-4o",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude-sonnet:lineage",
+          "label": "claude-sonnet",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude-sonnet:training_data",
+          "label": "claude-sonnet",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude-sonnet:license",
+          "label": "claude-sonnet",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:gpt2:lineage",
+          "label": "gpt2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:gpt2:training_data",
+          "label": "gpt2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:gpt2:license",
+          "label": "gpt2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude:lineage",
+          "label": "claude",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude:training_data",
+          "label": "claude",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude:license",
+          "label": "claude",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-index:lineage",
+          "label": "llama-index",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-index:training_data",
+          "label": "llama-index",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-index:license",
+          "label": "llama-index",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama:lineage",
+          "label": "llama",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama:training_data",
+          "label": "llama",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama:license",
+          "label": "llama",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:unmapped:lineage",
+          "label": "unmapped",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:unmapped:training_data",
+          "label": "unmapped",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:unmapped:license",
+          "label": "unmapped",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-2:lineage",
+          "label": "llama-2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-2:training_data",
+          "label": "llama-2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-2:license",
+          "label": "llama-2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-3:lineage",
+          "label": "llama-3",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-3:training_data",
+          "label": "llama-3",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-3:license",
+          "label": "llama-3",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude-v2:lineage",
+          "label": "claude-v2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude-v2:training_data",
+          "label": "claude-v2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:claude-v2:license",
+          "label": "claude-v2",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llamaindex-sample:lineage",
+          "label": "llamaindex-sample",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llamaindex-sample:training_data",
+          "label": "llamaindex-sample",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llamaindex-sample:license",
+          "label": "llamaindex-sample",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-index-team/llamaindex:lineage",
+          "label": "llama-index-team/llamaindex",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-index-team/llamaindex:training_data",
+          "label": "llama-index-team/llamaindex",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama-index-team/llamaindex:license",
+          "label": "llama-index-team/llamaindex",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama/llama_index_examples:lineage",
+          "label": "llama/llama_index_examples",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama/llama_index_examples:training_data",
+          "label": "llama/llama_index_examples",
+          "type": "missing_intel"
+        },
+        {
+          "id": "missing:llama/llama_index_examples:license",
+          "label": "llama/llama_index_examples",
+          "type": "missing_intel"
+        }
+      ],
+      "edges": [
+        {
+          "from": "dependency_issue:insecure-demo-package:UNSTABLE_VERSION",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:click:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:jinja2:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:pydantic:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:requests:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:packaging:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:PyYAML:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:tomli:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:huggingface_hub:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:huggingface_hub:UNSTABLE_VERSION",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:build:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:pytest:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:ruff:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:ruff:UNSTABLE_VERSION",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:mypy:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "dependency_issue:types-requests:LOOSE_PIN",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "model_issue:vulnerable-model:LICENSE_RISK",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "model_issue:vulnerable-model:UNVERIFIED_SOURCE",
+          "to": "score",
+          "penalty": 4.0
+        },
+        {
+          "from": "model_issue:meta-llama/Llama-3-8B:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:gpt-4o:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:claude-sonnet:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:gpt2:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:claude:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:llama-index:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:llama:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:unmapped:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:llama-2:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:llama-3:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:claude-v2:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:llamaindex-sample:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:llama-index-team/llamaindex:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "model_issue:llama/llama_index_examples:UNKNOWN_LICENSE",
+          "to": "score",
+          "penalty": 8.0
+        },
+        {
+          "from": "missing:vulnerable-model:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:vulnerable-model:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:meta-llama/Llama-3-8B:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:meta-llama/Llama-3-8B:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:meta-llama/Llama-3-8B:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:gpt-4o:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:gpt-4o:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:gpt-4o:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude-sonnet:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude-sonnet:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude-sonnet:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:gpt2:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:gpt2:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:gpt2:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-index:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-index:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-index:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:unmapped:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:unmapped:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:unmapped:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-2:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-2:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-2:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-3:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-3:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-3:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude-v2:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude-v2:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:claude-v2:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llamaindex-sample:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llamaindex-sample:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llamaindex-sample:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-index-team/llamaindex:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-index-team/llamaindex:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama-index-team/llamaindex:license",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama/llama_index_examples:lineage",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama/llama_index_examples:training_data",
+          "to": "score",
+          "penalty": 2
+        },
+        {
+          "from": "missing:llama/llama_index_examples:license",
+          "to": "score",
+          "penalty": 2
+        }
+      ]
+    }
+  },
+  "org_context": {
+    "asset_criticality": "medium",
+    "data_sensitivity": "internal",
+    "environment": "dev"
+  },
+  "dependencies": [
+    {
+      "name": "insecure-demo-package",
+      "version": "==0.1.0",
+      "source": "requirements.txt",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNSTABLE_VERSION] Pre-1.0 release may be unstable",
+          "severity": "medium",
+          "code": "UNSTABLE_VERSION",
+          "metadata": {},
+          "frameworks": []
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "click",
+      "version": ">=8.1.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "jinja2",
+      "version": ">=3.1.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "pydantic",
+      "version": ">=2.6.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "requests",
+      "version": ">=2.31.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "packaging",
+      "version": ">=23.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "PyYAML",
+      "version": ">=6.0.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "tomli",
+      "version": ">=2.0.1",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "huggingface_hub",
+      "version": ">=0.26.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned",
+        "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        },
+        {
+          "message": "[UNSTABLE_VERSION] Pre-1.0 release may be unstable",
+          "severity": "medium",
+          "code": "UNSTABLE_VERSION",
+          "metadata": {},
+          "frameworks": []
+        }
+      ],
+      "risk": 4,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "build",
+      "version": ">=1.2.1",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "pytest",
+      "version": ">=8.0.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "ruff",
+      "version": ">=0.6.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned",
+        "[UNSTABLE_VERSION] Pre-1.0 release may be unstable"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        },
+        {
+          "message": "[UNSTABLE_VERSION] Pre-1.0 release may be unstable",
+          "severity": "medium",
+          "code": "UNSTABLE_VERSION",
+          "metadata": {},
+          "frameworks": []
+        }
+      ],
+      "risk": 4,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "mypy",
+      "version": ">=1.10.0",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "name": "types-requests",
+      "version": ">=2.32.0.20240622",
+      "source": "pyproject.toml",
+      "license": "unknown",
+      "license_category": "unknown",
+      "issues": [
+        "[LOOSE_PIN] Version is not strictly pinned"
+      ],
+      "issue_details": [
+        {
+          "message": "[LOOSE_PIN] Version is not strictly pinned",
+          "severity": "medium",
+          "code": "LOOSE_PIN",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.6"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.3"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC8.1"
+            }
+          ]
+        }
+      ],
+      "risk": 2,
+      "trust_signals": [],
+      "trust_score": 100
+    }
+  ],
+  "models": [
+    {
+      "id": "vulnerable-model",
+      "source": null,
+      "license": "GPL-3.0-or-later",
+      "license_category": "copyleft",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[LICENSE_RISK] Copyleft/reciprocal terms may apply",
+        "[UNVERIFIED_SOURCE] Unrecognized source 'None'"
+      ],
+      "issue_details": [
+        {
+          "message": "[LICENSE_RISK] Copyleft/reciprocal terms may apply",
+          "severity": "medium",
+          "code": "LICENSE_RISK",
+          "metadata": {},
+          "frameworks": []
+        },
+        {
+          "message": "[UNVERIFIED_SOURCE] Unrecognized source 'None'",
+          "severity": "medium",
+          "code": "UNVERIFIED_SOURCE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "MAP 1.4"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.6.7"
+            },
+            {
+              "framework": "OWASP LLM Top 10",
+              "control": "LLM05"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC5.2"
+            }
+          ]
+        }
+      ],
+      "risk": 4,
+      "trust_signals": [],
+      "trust_score": 100
+    },
+    {
+      "id": "meta-llama/Llama-3-8B",
+      "source": "meta",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in README.md",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/sboms/transformers-sample.cdx.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 0
+    },
+    {
+      "id": "gpt-4o",
+      "source": "openai",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_policy_graph.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_policy_graph.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_policy_enforcement_graph.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_policy_enforcement_graph.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/sboms/langchain-sample.cdx.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 0
+    },
+    {
+      "id": "claude-sonnet",
+      "source": "anthropic",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_policy_graph.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_policy_graph.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 0
+    },
+    {
+      "id": "gpt2",
+      "source": "huggingface",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in tests/test_cli.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 80
+    },
+    {
+      "id": "claude",
+      "source": "anthropic",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in src/aibom_inspector/stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/README.md",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 0
+    },
+    {
+      "id": "llama-index",
+      "source": "meta",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in src/aibom_inspector/stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/README.md",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/sboms/llamaindex-sample.cdx.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/sboms/llamaindex-sample.cdx.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 0
+    },
+    {
+      "id": "llama",
+      "source": "meta",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in src/aibom_inspector/stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in src/aibom_inspector/stack_discovery.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in .venv/lib/python3.12/site-packages/pip/_vendor/rich/_emoji_codes.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 0
+    },
+    {
+      "id": "unmapped",
+      "source": "inferred",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in src/aibom_inspector/report_enrichment.py",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 76
+    },
+    {
+      "id": "llama-2",
+      "source": "meta",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in src/aibom_inspector/data/license_risk_db.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 4
+    },
+    {
+      "id": "llama-3",
+      "source": "meta",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in src/aibom_inspector/data/license_risk_db.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 4
+    },
+    {
+      "id": "claude-v2",
+      "source": "anthropic",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/sboms/llamaindex-sample.cdx.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 4
+    },
+    {
+      "id": "llamaindex-sample",
+      "source": "meta",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/README.md",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 0
+    },
+    {
+      "id": "llama-index-team/llamaindex",
+      "source": "meta",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/README.md",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 4
+    },
+    {
+      "id": "llama/llama_index_examples",
+      "source": "meta",
+      "license": "unknown",
+      "license_category": "unknown",
+      "last_updated": "unknown",
+      "base_models": [],
+      "fine_tuned_from": [],
+      "training_sources": [],
+      "hashes": [],
+      "issues": [
+        "[UNKNOWN_LICENSE] Missing license information"
+      ],
+      "issue_details": [
+        {
+          "message": "[UNKNOWN_LICENSE] Missing license information",
+          "severity": "high",
+          "code": "UNKNOWN_LICENSE",
+          "metadata": {},
+          "frameworks": [
+            {
+              "framework": "NIST AI RMF",
+              "control": "GOVERN 1.2"
+            },
+            {
+              "framework": "ISO/IEC 42001",
+              "control": "A.5.2"
+            },
+            {
+              "framework": "SOC 2",
+              "control": "CC1.2"
+            }
+          ]
+        }
+      ],
+      "risk": 3,
+      "trust_signals": [
+        {
+          "message": "[INFERRED_MODEL] Model reference auto-discovered from project files",
+          "severity": "low",
+          "code": "INFERRED_MODEL"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in demo/golden-vulnerable-ai/report.json",
+          "severity": "low",
+          "code": "EVIDENCE"
+        },
+        {
+          "message": "[EVIDENCE] discovered in docs/credibility-pack/README.md",
+          "severity": "low",
+          "code": "EVIDENCE"
+        }
+      ],
+      "trust_score": 4
+    }
+  ],
+  "stack": {
+    "nodes": [
+      {
+        "id": "vulnerable-model",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": null,
+          "evidence": "demo/golden-vulnerable-ai/report.json",
+          "provider": "inferred"
+        }
+      },
+      {
+        "id": "meta-llama/Llama-3-8B",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "meta",
+          "evidence": "docs/credibility-pack/sboms/transformers-sample.cdx.json",
+          "provider": "meta"
+        }
+      },
+      {
+        "id": "gpt-4o",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "openai",
+          "evidence": "docs/credibility-pack/sboms/langchain-sample.cdx.json",
+          "provider": "openai"
+        }
+      },
+      {
+        "id": "claude-sonnet",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "anthropic",
+          "evidence": "demo/golden-vulnerable-ai/report.json",
+          "provider": "anthropic"
+        }
+      },
+      {
+        "id": "gpt2",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "huggingface",
+          "evidence": "demo/golden-vulnerable-ai/report.json",
+          "provider": "openai"
+        }
+      },
+      {
+        "id": "claude",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "anthropic",
+          "evidence": "docs/credibility-pack/README.md",
+          "provider": "anthropic"
+        }
+      },
+      {
+        "id": "llama-index",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "meta",
+          "evidence": "docs/credibility-pack/sboms/llamaindex-sample.cdx.json",
+          "provider": "meta"
+        }
+      },
+      {
+        "id": "llama",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "meta",
+          "evidence": "demo/golden-vulnerable-ai/report.json",
+          "provider": "meta"
+        }
+      },
+      {
+        "id": "unmapped",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "inferred",
+          "evidence": "demo/golden-vulnerable-ai/report.json",
+          "provider": "inferred"
+        }
+      },
+      {
+        "id": "llama-2",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "meta",
+          "evidence": "demo/golden-vulnerable-ai/report.json",
+          "provider": "meta"
+        }
+      },
+      {
+        "id": "llama-3",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "meta",
+          "evidence": "demo/golden-vulnerable-ai/report.json",
+          "provider": "meta"
+        }
+      },
+      {
+        "id": "claude-v2",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "anthropic",
+          "evidence": "docs/credibility-pack/sboms/llamaindex-sample.cdx.json",
+          "provider": "anthropic"
+        }
+      },
+      {
+        "id": "llamaindex-sample",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "meta",
+          "evidence": "docs/credibility-pack/README.md",
+          "provider": "meta"
+        }
+      },
+      {
+        "id": "llama-index-team/llamaindex",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "meta",
+          "evidence": "docs/credibility-pack/README.md",
+          "provider": "meta"
+        }
+      },
+      {
+        "id": "llama/llama_index_examples",
+        "kind": "Model",
+        "metadata": {
+          "version": "",
+          "source": "meta",
+          "evidence": "docs/credibility-pack/README.md",
+          "provider": "meta"
+        }
+      },
+      {
+        "id": "test_policy_graph",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true,
+            "fs.write": true
+          },
+          "evidence": "tests/test_policy_graph.py"
+        }
+      },
+      {
+        "id": "OPENAI_API_KEY",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "docs/credibility-pack/README.md"
+        }
+      },
+      {
+        "id": "check_for_pickles",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": "scripts/check_for_pickles.py"
+        }
+      },
+      {
+        "id": "pickle_sandbox_runner",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": "scripts/pickle_sandbox_runner.py"
+        }
+      },
+      {
+        "id": "POLICY",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true,
+            "fs.write": true
+          },
+          "evidence": "docs/POLICY.md"
+        }
+      },
+      {
+        "id": "dependency_scanner",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": "src/aibom_inspector/dependency_scanner.py"
+        }
+      },
+      {
+        "id": "ip_protection",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": "src/aibom_inspector/ip_protection.py"
+        }
+      },
+      {
+        "id": "policy_graph",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true,
+            "fs.write": true
+          },
+          "evidence": "src/aibom_inspector/policy_graph.py"
+        }
+      },
+      {
+        "id": "OPENAI_MODEL",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "AWS_SECRET_ACCESS_KEY",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "MODEL_ID",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "docs/credibility-pack/README.md"
+        }
+      },
+      {
+        "id": "HF_HOME",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "ANTHROPIC_MODEL",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "MCP_CONFIG",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "ANTHROPIC_API_KEY",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "AWS_ACCESS_KEY_ID",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "VERTEXAI_PROJECT",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "AZURE_OPENAI_ENDPOINT",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "TRANSFORMERS_CACHE",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "GOOGLE_API_KEY",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "AZURE_OPENAI_API_KEY",
+        "kind": "EnvVar",
+        "metadata": {
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      },
+      {
+        "id": "stack_discovery",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true,
+            "fs.write": true
+          },
+          "evidence": "src/aibom_inspector/stack_discovery.py"
+        }
+      },
+      {
+        "id": "bidi_guard",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": "src/aibom_inspector/bidi_guard.py"
+        }
+      },
+      {
+        "id": "attestation",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": "src/aibom_inspector/attestation.py"
+        }
+      },
+      {
+        "id": "dynamic_analysis",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": "src/aibom_inspector/dynamic_analysis.py"
+        }
+      },
+      {
+        "id": "_musllinux",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_vendor/packaging/_musllinux.py"
+        }
+      },
+      {
+        "id": "tags",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_vendor/packaging/tags.py"
+        }
+      },
+      {
+        "id": "shell_completion",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/click/shell_completion.py"
+        }
+      },
+      {
+        "id": "_termui_impl",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true,
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/click/_termui_impl.py"
+        }
+      },
+      {
+        "id": "junitxml",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/_pytest/junitxml.py"
+        }
+      },
+      {
+        "id": "capture",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/_pytest/capture.py"
+        }
+      },
+      {
+        "id": "helpconfig",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/_pytest/helpconfig.py"
+        }
+      },
+      {
+        "id": "pytester",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true,
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/_pytest/pytester.py"
+        }
+      },
+      {
+        "id": "cacheprovider",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/_pytest/cacheprovider.py"
+        }
+      },
+      {
+        "id": "dist",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/dist.py"
+        }
+      },
+      {
+        "id": "wheel",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/wheel.py"
+        }
+      },
+      {
+        "id": "_bdist_wheel",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_vendor/wheel/_bdist_wheel.py"
+        }
+      },
+      {
+        "id": "wheelfile",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_vendor/wheel/wheelfile.py"
+        }
+      },
+      {
+        "id": "unistring",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_vendor/pygments/unistring.py"
+        }
+      },
+      {
+        "id": "configuration",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_internal/configuration.py"
+        }
+      },
+      {
+        "id": "console",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_vendor/rich/console.py"
+        }
+      },
+      {
+        "id": "_impl",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_vendor/pyproject_hooks/_impl.py"
+        }
+      },
+      {
+        "id": "util",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_distutils/util.py"
+        }
+      },
+      {
+        "id": "_in_process",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_vendor/pyproject_hooks/_in_process/_in_process.py"
+        }
+      },
+      {
+        "id": "main_parser",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_internal/cli/main_parser.py"
+        }
+      },
+      {
+        "id": "auth",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_internal/network/auth.py"
+        }
+      },
+      {
+        "id": "install",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_internal/commands/install.py"
+        }
+      },
+      {
+        "id": "mercurial",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_internal/vcs/mercurial.py"
+        }
+      },
+      {
+        "id": "build_tracker",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pip/_internal/operations/build/build_tracker.py"
+        }
+      },
+      {
+        "id": "path",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/_pytest/_py/path.py"
+        }
+      },
+      {
+        "id": "setopt",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/command/setopt.py"
+        }
+      },
+      {
+        "id": "install_scripts",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/command/install_scripts.py"
+        }
+      },
+      {
+        "id": "editable_wheel",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/command/editable_wheel.py"
+        }
+      },
+      {
+        "id": "bdist_egg",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/command/bdist_egg.py"
+        }
+      },
+      {
+        "id": "build_ext",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/command/build_ext.py"
+        }
+      },
+      {
+        "id": "file_util",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_distutils/file_util.py"
+        }
+      },
+      {
+        "id": "install_egg_info",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_distutils/command/install_egg_info.py"
+        }
+      },
+      {
+        "id": "build_scripts",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_distutils/command/build_scripts.py"
+        }
+      },
+      {
+        "id": "config",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_distutils/command/config.py"
+        }
+      },
+      {
+        "id": "base",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/setuptools/_distutils/compilers/C/base.py"
+        }
+      },
+      {
+        "id": "test_deprecations",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/jsonschema/tests/test_deprecations.py"
+        }
+      },
+      {
+        "id": "html",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pygments/formatters/html.py"
+        }
+      },
+      {
+        "id": "_sourcemod_builtins",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pygments/lexers/_sourcemod_builtins.py"
+        }
+      },
+      {
+        "id": "_mysql_builtins",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pygments/lexers/_mysql_builtins.py"
+        }
+      },
+      {
+        "id": "_postgres_builtins",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pygments/lexers/_postgres_builtins.py"
+        }
+      },
+      {
+        "id": "_scilab_builtins",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pygments/lexers/_scilab_builtins.py"
+        }
+      },
+      {
+        "id": "_php_builtins",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pygments/lexers/_php_builtins.py"
+        }
+      },
+      {
+        "id": "_lua_builtins",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "fs.write": true
+          },
+          "evidence": ".venv/lib/python3.12/site-packages/pygments/lexers/_lua_builtins.py"
+        }
+      },
+      {
+        "id": "report",
+        "kind": "Tool",
+        "metadata": {
+          "capabilities": {
+            "exec.shell": true,
+            "fs.write": true
+          },
+          "evidence": "demo/golden-vulnerable-ai/report.json"
+        }
+      }
+    ],
+    "edges": [],
+    "context": {
+      "env": "dev"
+    }
+  }
+}
