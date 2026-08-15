@@ -250,9 +250,20 @@ def load_yaml_payload(path: Path, max_bytes: int | None = None) -> Any:
 
 def _validate_payload(schema: type[SchemaT], payload: Any, path: Path) -> SchemaT:
     try:
-        return schema.model_validate(payload)
+        # Support both pydantic v2 (model_validate) and v1 (parse_obj)
+        if hasattr(schema, "model_validate"):
+            return schema.model_validate(payload)
+        if hasattr(schema, "parse_obj"):
+            return schema.parse_obj(payload)
+        # Fallback: instantiate directly
+        return schema(**(payload or {}))
     except ValidationError as exc:
-        details = "; ".join(serialize_validation_errors(exc.errors()))
+        # pydantic v2 ValidationError has .errors(); v1 also exposes errors()
+        try:
+            errs = exc.errors()
+        except Exception:
+            errs = []
+        details = "; ".join(serialize_validation_errors(errs))
         raise ParserError(f"Invalid payload in {path}: {details}") from exc
 
 
@@ -290,7 +301,11 @@ def parse_sbom_file(path: Path, max_bytes: int | None = None) -> SbomPayload:
 
 def validate_or_none(schema: type[BaseModel], payload: Any) -> BaseModel | None:
     try:
-        return schema.model_validate(payload)
+        if hasattr(schema, "model_validate"):
+            return schema.model_validate(payload)
+        if hasattr(schema, "parse_obj"):
+            return schema.parse_obj(payload)
+        return schema(**(payload or {}))
     except ValidationError:
         return None
 
