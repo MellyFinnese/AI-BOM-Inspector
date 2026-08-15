@@ -22,6 +22,9 @@ class DependencyInfo:
     license: Optional[str] = None
     registry: Optional[str] = None
     signature_verified: Optional[bool] = None
+    # Optional temporal window when this dependency relation is active on a model
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     issues: List[DependencyIssue] = field(default_factory=list)
     license_category: str | None = None
     trust_signals: List[DependencyIssue] = field(default_factory=list)

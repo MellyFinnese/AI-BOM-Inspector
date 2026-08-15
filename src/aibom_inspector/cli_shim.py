@@ -1187,5 +1187,28 @@ def diff(base: str, target: str) -> None:
     click.echo(f"Stack risk delta: {summary['stack_risk_delta']}")
 
 
+@main.group()
+def graph() -> None:
+    """Graph utilities for impact and diffs."""
+
+
+@graph.command("impact")
+@click.option(
+    "--report",
+    "report_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=str),
+    required=True,
+    help="Report file to analyze.",
+)
+@click.argument("cve_id")
+def graph_impact(report_path: str, cve_id: str) -> None:
+    """Compute blast radius for a CVE from a report JSON file."""
+    from .graph import impact as _impact
+
+    rc = _impact(report_path, cve_id)
+    if rc != 0:
+        raise SystemExit(rc)
+
+
 if __name__ == "__main__":
     main()

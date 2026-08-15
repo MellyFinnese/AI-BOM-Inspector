@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from .policy_graph import GraphPolicyViolation, GraphSnapshot
 from .types_dependencies import DependencyInfo
@@ -20,10 +20,26 @@ class IntegrityFinding:
 
 
 @dataclass
+class Application:
+    name: str
+    environment: Optional[str] = None
+    criticality: Optional[str] = None
+    data_sensitivity: Optional[str] = None
+    owner: Optional[str] = None
+
+
+@dataclass
+class Owner:
+    name: str
+    contact: Optional[str] = None
+
+
+@dataclass
 class Report:
     dependencies: list[DependencyInfo]
     models: list[ModelInfo]
     generated_at: datetime
+    applications: list[Application] = field(default_factory=list)
     ai_summary: Optional[str] = None
     risk_settings: RiskSettings = field(default_factory=RiskSettings)
     stack_snapshot: GraphSnapshot | None = None
