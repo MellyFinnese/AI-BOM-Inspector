@@ -1,0 +1,26 @@
+{
+  "summary": "Policy violation: legacy pickle model detected",
+  "policy_action": "block",
+  "findings": [
+    {
+      "id": "PICKLE_DANGEROUS_GLOBALS",
+      "severity": "High",
+      "path": "demo/golden-vulnerable-ai/models/vulnerable_model.pkl",
+      "evidence": [
+        "models.json entry",
+        "static-pickle-inspector: suspicious GLOBAL opcodes"
+      ]
+    },
+    {
+      "id": "MISSING_PROVENANCE",
+      "severity": "Medium",
+      "path": "demo/golden-vulnerable-ai/models.json",
+      "evidence": ["models.json missing provenance field"]
+    }
+  ],
+  "next_steps": [
+    "Convert model to safetensors",
+    "Add provenance metadata to models.json",
+    "Replace or pin vulnerable dependencies"
+  ]
+}
