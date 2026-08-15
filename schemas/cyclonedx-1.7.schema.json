@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CycloneDX 1.7 minimal schema for AI-BOM-Inspector",
+  "type": "object",
+  "required": ["bomFormat", "specVersion", "version", "metadata", "components"],
+  "properties": {
+    "bomFormat": {"type": "string", "const": "CycloneDX"},
+    "specVersion": {"type": "string"},
+    "version": {"type": "integer"},
+    "metadata": {"type": "object"},
+    "components": {"type": "array"},
+    "dependencies": {"type": "array"},
+    "vulnerabilities": {"type": "array"}
+  },
+  "additionalProperties": true
+}
