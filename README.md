@@ -16,6 +16,18 @@ graph TD
     E --> F["CI gates<br/>(fail-on-score, diff)"]
 ```
 
+### Graph-first architecture (optional)
+
+```mermaid
+flowchart TD
+    I["AI-BOM Input"] --> J["Parsing / Enrichment"]
+    J --> K["Deterministic GraphStore"]
+    J --> L["Risk Engine / Memory / Memgraph"]
+    K --> M["Evidence / Policy"]
+    L --> M
+    M --> N["Output"]
+```
+
 The scanner defaults to local-only analysis: it ingests manifests/SBOMs, can layer in optional OSV/Hugging Face lookups, and emits reports that CI can enforce. Network enrichment (OSV, Hugging Face, Shadow-UEFI-Intel metadata) only occurs when you deliberately pass `--online` and enable the relevant feature flag.
 
 ## Repository layout
