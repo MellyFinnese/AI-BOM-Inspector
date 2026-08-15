@@ -9,7 +9,7 @@ from types import ModuleType
 from typing import Callable, Iterable
 
 from .types import RuntimeTrace
-from .parsers import ParserError, parse_runtime_trace_file
+from .parsers import ParserError, parse_runtime_trace_file, model_to_dict
 
 
 def _wrap_callable(target: object, name: str, record: Callable[[str], None]) -> Callable[[], None]:
@@ -126,7 +126,8 @@ def trace_python(script: Path, args: Iterable[str]) -> RuntimeTrace:
 
 def load_runtime_trace(path: Path) -> RuntimeTrace:
     try:
-        data = parse_runtime_trace_file(path).model_dump()
+        raw = parse_runtime_trace_file(path)
+        data = model_to_dict(raw)
     except ParserError as exc:
         raise RuntimeError(str(exc)) from exc
     return RuntimeTrace(

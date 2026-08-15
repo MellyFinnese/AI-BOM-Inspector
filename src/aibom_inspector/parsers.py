@@ -317,3 +317,22 @@ def serialize_validation_errors(errors: Iterable[Any]) -> List[str]:
         location = ".".join(str(entry) for entry in error.get("loc", []))
         details.append(f"{location}: {message}" if location else message)
     return details
+
+
+def model_to_dict(obj: Any) -> dict:
+    """Normalize a pydantic model instance to a plain dict in a v1/v2 compatible way."""
+    if obj is None:
+        return {}
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    if hasattr(obj, "dict"):
+        try:
+            return obj.dict()
+        except TypeError:
+            # some implementations may require no args
+            return obj.dict()
+    # Fallback: try to cast to dict
+    try:
+        return dict(obj)
+    except Exception:
+        return {}

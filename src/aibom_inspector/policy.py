@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from .policy_graph import GraphPolicyViolation, GraphSnapshot, evaluate_graph_policies
 from .types import DependencyIssue, ModelIssue, Report
 from .trust_root import TrustRoot, sign_payload, trust_root_fingerprint
-from .parsers import ParserError, PolicySchema, parse_policy_file, serialize_validation_errors
+from .parsers import ParserError, PolicySchema, parse_policy_file, serialize_validation_errors, model_to_dict
 
 
 @dataclass
@@ -115,7 +115,12 @@ def load_policy(path: Path, *, max_bytes: int | None = None) -> Policy:
         detail_text = "; ".join(details) if details else "invalid policy schema"
         raise RuntimeError(f"Invalid policy schema: {detail_text}") from exc
 
-    raw = raw_payload.model_dump()
+    # Normalize pydantic v1/v2 models to plain dicts
+    try:
+        raw = model_to_dict(raw_payload)
+    except Exception:
+        # Fallback to attributes if model_to_dict is unavailable
+        raw = getattr(raw_payload, "dict", lambda: {})()
     exceptions: list[PolicyException] = []
     for entry in raw.get("exceptions", []) or []:
         expires_at = entry.get("expires") if isinstance(entry, dict) else None

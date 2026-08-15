@@ -22,7 +22,7 @@ from .types import (
     apply_license_category_dependency,
 )
 from .network import RetryConfig, request_with_retry
-from .parsers import ParserError, parse_sbom_file, read_text
+from .parsers import ParserError, parse_sbom_file, read_text, model_to_dict
 
 
 KNOWN_BAD_VERSIONS = {
@@ -696,7 +696,7 @@ def parse_sbom(path: Path, *, max_bytes: int | None = None) -> List[DependencyIn
             )
         ]
 
-    data = sbom_payload.payload.model_dump()
+    data = model_to_dict(sbom_payload.payload)
     if sbom_payload.kind == "cyclonedx":
         deps: list[DependencyInfo] = []
         for comp in data.get("components", []) or []:
