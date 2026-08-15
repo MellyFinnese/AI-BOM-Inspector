@@ -40,10 +40,21 @@ graph LR
 One-command golden demo
 
 1. Demo project is included at `demo/golden-vulnerable-ai`.
-2. Run the demo (offline, reproducible):
+2. The demo now includes an application->owner mapping at `demo/golden-vulnerable-ai/applications.json`; the runner merges it into the generated report so impact analysis can map models → apps → owners.
+3. Run the demo (offline, reproducible):
 
 ```bash
 PYTHONPATH=src bash demo/golden-vulnerable-ai/run_demo.sh
+```
+
+Quick impact example (after the run):
+
+```bash
+# Show merged applications in the report
+jq '.applications' demo/golden-vulnerable-ai/report.json
+
+# Run a blast-radius check for a CVE using the built-in graph impact helper
+python -c "from aibom_inspector.graph import impact; exit(impact('demo/golden-vulnerable-ai/report.json','CVE-2024-XXXX'))"
 ```
 
 What changed in this branch (enterprise upgrades)
