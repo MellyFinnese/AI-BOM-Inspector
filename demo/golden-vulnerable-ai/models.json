@@ -1,0 +1,11 @@
+{
+  "models": [
+    {
+      "name": "vulnerable-model",
+      "path": "models/vulnerable_model.pkl",
+      "license": "GPL-3.0-or-later",
+      "provenance": null,
+      "notes": "Deliberately legacy .pkl to trigger policy checks"
+    }
+  ]
+}

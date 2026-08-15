@@ -1,0 +1,3 @@
+# Intentionally outdated package (demo only)
+# Replace with a real vulnerable dependency for more realistic demos
+insecure-demo-package==0.1.0
