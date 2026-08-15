@@ -26,6 +26,8 @@ class ModelInfo:
     fine_tuned_from: List[str] = field(default_factory=list)
     training_sources: List[str] = field(default_factory=list)
     hashes: List[str] = field(default_factory=list)
+    # Optional application the model is deployed to (string name for simplicity)
+    deployed_to: Optional[str] = None
     issues: List[ModelIssue] = field(default_factory=list)
     trust_signals: List[ModelIssue] = field(default_factory=list)
 

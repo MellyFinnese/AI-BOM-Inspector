@@ -7,7 +7,7 @@ import re
 
 from .types_dependencies import DependencyInfo, DependencyIssue, apply_license_category_dependency
 from .types_models import ModelInfo, ModelIssue, apply_license_category_model
-from .types_report import Report
+from .types_report import Report, Application
 from .types_risk import RiskSettings
 from .parsers import ReportPayloadSchema, validate_or_none
 
@@ -66,6 +66,8 @@ def load_report_payload(payload: dict) -> Report:
             license=dep_payload.get("license"),
             registry=dep_payload.get("registry"),
             signature_verified=dep_payload.get("signature_verified"),
+            start_date=dep_payload.get("start_date"),
+            end_date=dep_payload.get("end_date"),
             issues=issues,
             trust_signals=signals,
             license_category=dep_payload.get("license_category"),
@@ -96,6 +98,7 @@ def load_report_payload(payload: dict) -> Report:
             fine_tuned_from=model_payload.get("fine_tuned_from") or [],
             training_sources=model_payload.get("training_sources") or [],
             hashes=model_payload.get("hashes") or [],
+            deployed_to=model_payload.get("deployed_to"),
             issues=issues,
             trust_signals=signals,
         )
@@ -122,9 +125,23 @@ def load_report_payload(payload: dict) -> Report:
         environment_multipliers=risk_payload.get("environment_multipliers", {}),
     )
 
+    # Parse optional applications section
+    applications: list[Application] = []
+    for app in payload.get("applications", []):
+        applications.append(
+            Application(
+                name=app.get("name"),
+                environment=app.get("environment"),
+                criticality=app.get("criticality"),
+                data_sensitivity=app.get("data_sensitivity"),
+                owner=app.get("owner"),
+            )
+        )
+
     report = Report(
         dependencies=dependencies,
         models=models,
+        applications=applications,
         generated_at=_parse_datetime(payload.get("generated_at")),
         ai_summary=payload.get("ai_summary"),
         risk_settings=risk_settings,
