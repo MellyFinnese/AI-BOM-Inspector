@@ -27,5 +27,10 @@ fi
 
 # Print a short human summary when available
 if [ -f demo/golden-vulnerable-ai/report.json ]; then
+  # If an applications mapping exists, merge it into the generated report so impact/owner mapping works
+  if [ -f demo/golden-vulnerable-ai/applications.json ]; then
+    tmpfile=$(mktemp)
+    jq --argfile apps demo/golden-vulnerable-ai/applications.json '.applications = $apps' demo/golden-vulnerable-ai/report.json > "$tmpfile" && mv "$tmpfile" demo/golden-vulnerable-ai/report.json || true
+  fi
   jq '.summary // "N/A", .policy_action // "N/A", (.findings[]?.id // "")' demo/golden-vulnerable-ai/report.json || true
 fi
