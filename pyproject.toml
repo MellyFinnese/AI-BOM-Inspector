@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aibom-inspector"
 version = "0.1.0"
 description = "Security and risk analysis tool for AI projects (AI-BOM)."
+license = "Apache-2.0"
 authors = [
     { name = "Jordan Desjarlais", email = "jordandesjarlais.2022@gmail.com" }
 ]
@@ -24,7 +25,6 @@ keywords = ["ai", "security", "supply-chain", "bom", "risk"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",

@@ -1,0 +1,10 @@
+AI-BOM Inspector
+Copyright 2026 Jordan Desjarlais
+
+Licensed under the Apache License, Version 2.0.
+See LICENSE for the full license text.
+
+This project is distributed under the Apache License, Version 2.0.
+Third-party software and licensing details are documented in the
+project's dependency and provenance records, including the generated
+SBOM and the licensing audit documentation in docs/LICENSING_AND_PROVENANCE_AUDIT.md.
