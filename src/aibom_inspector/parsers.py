@@ -61,6 +61,7 @@ class PolicySchema(BaseModel):
     active_exploitation_penalty: int | None = None
     policy_version: str | None = None
     change_log: List[Mapping[str, Any]] = Field(default_factory=list)
+    block_legacy_pickles: bool = False
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
