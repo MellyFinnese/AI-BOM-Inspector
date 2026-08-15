@@ -6,6 +6,7 @@ set -euo pipefail
 
 SCANNER_CMD="aibom scan --requirements demo/golden-vulnerable-ai/requirements.txt \
   --models-file demo/golden-vulnerable-ai/models.json \
+  --policy demo/golden-vulnerable-ai/policy.yml \
   --format json --output demo/golden-vulnerable-ai/report.json --fail-on-score 70"
 
 echo "Running golden demo scan..."

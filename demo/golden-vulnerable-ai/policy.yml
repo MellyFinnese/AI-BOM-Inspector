@@ -1,0 +1,2 @@
+block_legacy_pickles: true
+# Demo policy that blocks legacy pickle artifacts
