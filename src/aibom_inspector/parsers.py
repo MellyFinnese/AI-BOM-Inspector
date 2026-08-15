@@ -98,6 +98,9 @@ class ModelEntrySchema(BaseModel):
     training_sources: List[str] = Field(default_factory=list)
     hashes: List[str] = Field(default_factory=list)
     artifacts: List[ModelArtifactSchema] = Field(default_factory=list)
+    # Support legacy single file entries using 'path' or 'artifact'
+    path: str | None = None
+    artifact: Mapping[str, Any] | None = None
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
