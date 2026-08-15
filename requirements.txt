@@ -5,3 +5,4 @@ packaging==26.2
 tomli==2.4.0
 PyYAML==6.0.2
 pydantic==2.13.4
+jsonschema==4.19.0

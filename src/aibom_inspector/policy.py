@@ -42,6 +42,7 @@ class Policy:
     plugin_signatures: dict[str, str] = field(default_factory=dict)
     exceptions: List[PolicyException] = field(default_factory=list)
     enforce_graph_policies: bool = False
+    block_legacy_pickles: bool = False
     scoring_model: str | None = None
     scoring_model_version: str | None = None
     category_weights: dict[str, float] = field(default_factory=dict)
@@ -163,6 +164,7 @@ def load_policy(path: Path, *, max_bytes: int | None = None) -> Policy:
         missing_intel_penalty=raw.get("missing_intel_penalty"),
         active_exploitation_penalty=raw.get("active_exploitation_penalty"),
         policy_version=raw.get("policy_version") or raw.get("version"),
+        block_legacy_pickles=bool(raw.get("block_legacy_pickles", False)),
         change_log=raw.get("change_log") or [],
     )
 
@@ -249,6 +251,24 @@ def evaluate_policy(
         if exc.expires and exc.expires < now:
             expired.append(exc)
             warnings.append(f"Exception for {exc.subject} ({exc.code}) expired on {exc.expires.isoformat()}")
+
+    # Policy: block legacy pickle formats if configured. Scan reported models and integrity findings.
+    if policy.block_legacy_pickles:
+        prohibited_exts = {".pkl", ".pt"}
+        for model in report.models:
+            identifier = (model.identifier or "").lower()
+            for ext in prohibited_exts:
+                if identifier.endswith(ext):
+                    failures.append(
+                        f"Model '{model.identifier}' uses legacy format '{ext}'. Blocked by policy; use Safetensors or GGUF instead."
+                    )
+        for finding in report.integrity_findings:
+            path = (finding.path or "").lower()
+            for ext in prohibited_exts:
+                if path.endswith(ext):
+                    failures.append(
+                        f"Integrity finding at '{finding.path}' references legacy format '{ext}'. Blocked by policy; prefer Safetensors or GGUF."
+                    )
 
     graph_violations: list[GraphPolicyViolation] = []
     if graph_snapshot and enforce_graph:
