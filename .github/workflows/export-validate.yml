@@ -29,6 +29,10 @@ jobs:
           pip install -r requirements.txt
           pip install pytest jsonschema
 
+      - name: Check for legacy pickles (fail PR if present)
+        run: |
+          python3 scripts/check_for_pickles.py
+
       - name: Run pytest
         run: |
           pytest -q
