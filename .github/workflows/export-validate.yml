@@ -35,15 +35,15 @@ jobs:
         run: |
           python3 scripts/check_for_pickles.py
 
-      - name: Post remediation comment if legacy pickles detected
+      - name: Post remediation comment and create check annotations if legacy pickles detected
         if: steps.pickles_check.conclusion == 'failure'
         uses: actions/github-script@v6
         with:
           script: |
             const fs = require('fs');
-            const core = require('@actions/core');
             const path = 'scripts/pickles_violations.json';
             let body = '';
+            let annotations = [];
             if (fs.existsSync(path)) {
               const data = JSON.parse(fs.readFileSync(path, 'utf8'));
               const violations = data.violations || [];
@@ -63,15 +63,45 @@ jobs:
               body += '- If conversion is not possible, add justification and request an exception following the repository policy.\n\n';
               body += 'If you want, request a security review and include the model provenance and a signed attestation (Sigstore/in-toto).';
 
+              // Create annotations for the Checks API (limited to 50 annotations)
+              for (const v of violations.slice(0, 50)) {
+                annotations.push({
+                  path: v,
+                  start_line: 1,
+                  end_line: 1,
+                  annotation_level: 'failure',
+                  message: `Legacy Pickle artifact detected: ${v}. Convert to Safetensors/GGUF or request exception.`,
+                  title: 'Legacy Pickle format detected',
+                });
+              }
+
             } else {
               body = 'Policy check failed but no violation file was produced; please inspect the CI logs.';
             }
 
+            // Post PR comment
             await github.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: body,
+            });
+
+            // Create a Check Run with annotations so they appear inline in the Files/Checks view
+            const maxAnnotations = 50;
+            const head_sha = context.sha;
+            await github.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'AI-BOM-Inspector: Pickle Policy',
+              head_sha: head_sha,
+              status: 'completed',
+              conclusion: 'failure',
+              output: {
+                title: 'Legacy Pickle artifacts detected',
+                summary: 'One or more legacy Pickle artifacts (.pkl, .pt) were found in this PR and are blocked by policy.',
+                annotations: annotations.slice(0, maxAnnotations),
+              },
             });
 
       - name: Run pytest
