@@ -19,6 +19,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e .[dev]
+      - name: Check dependency consistency
+        run: |
+          python - <<'PY'
+          import tomllib, sys, re
+          py = tomllib.loads(open('pyproject.toml','rb').read())
+          deps = {re.split(r'[<=>]', d.strip())[0].lower() for d in py.get('project', {}).get('dependencies', [])}
+          reqs_lines = [l.strip() for l in open('requirements.txt').read().splitlines() if l.strip()]
+          reqs = {re.split(r'[<=>]', r)[0].lower() for r in reqs_lines}
+          missing = deps - reqs
+          extra = reqs - deps
+          if missing or extra:
+              print('Dependency mismatch detected')
+              if missing: print('in pyproject not in requirements:', missing)
+              if extra: print('in requirements not in pyproject:', extra)
+              sys.exit(1)
+          print('Dependencies consistent')
+          PY
       - name: Run ruff format
         run: ruff format --check .
       - name: Run ruff
