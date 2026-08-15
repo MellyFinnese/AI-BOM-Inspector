@@ -20,10 +20,21 @@ for f in diff_out:
         if low.endswith(ext):
             violations.append(f)
 
+import json
 if violations:
     print("Detected legacy model artifacts in PR:\n" + "\n".join(violations))
+    # write a small JSON artifact for the workflow to consume
+    out = {"violations": violations}
+    with open("scripts/pickles_violations.json", "w") as fh:
+        json.dump(out, fh)
     print("Blocking merge: legacy Pickle formats are disallowed. Use Safetensors or GGUF instead.")
     sys.exit(1)
 
 print("No legacy pickle artifacts detected in PR.")
+# ensure previous artifact is removed if present
+try:
+    import os
+    os.remove("scripts/pickles_violations.json")
+except Exception:
+    pass
 sys.exit(0)

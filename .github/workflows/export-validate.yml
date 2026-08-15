@@ -30,8 +30,49 @@ jobs:
           pip install pytest jsonschema
 
       - name: Check for legacy pickles (fail PR if present)
+        id: pickles_check
+        continue-on-error: true
         run: |
           python3 scripts/check_for_pickles.py
+
+      - name: Post remediation comment if legacy pickles detected
+        if: steps.pickles_check.conclusion == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const core = require('@actions/core');
+            const path = 'scripts/pickles_violations.json';
+            let body = '';
+            if (fs.existsSync(path)) {
+              const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+              const violations = data.violations || [];
+              body += '⚠️ **Policy enforcement:** legacy Pickle artifacts were detected in this PR.\n\n';
+              body += '**Files:**\n';
+              for (const v of violations) { body += `- ${v}\n`; }
+              body += '\n**Why this is blocked:** Pickle formats (.pkl, .pt) are unsafe and can execute arbitrary code during deserialization. For security and supply-chain hygiene, these formats are disallowed by policy.\n\n';
+              body += '**Remediation (recommended):**\n';
+              body += '- Convert weights to a secure, static format such as Safetensors or GGUF. Example (PyTorch -> Safetensors using safetensors):\n';
+              body += '  ```bash\n';
+              body += '  # example using safetensors (install safetensors first)\n';
+              body += "  python -c \"import torch; from safetensors.torch import save_file; w=torch.load('model.pt', map_location='cpu'); save_file(w, 'model.safetensors')\"\n";
+              body += '  ```\n\n';
+              body += '- If the artifact must be included, open a policy exception request and provide provenance/attestation (why, who approved, and fallback plan).\n\n';
+              body += '**Next steps for maintainers:**\n';
+              body += '- Remove legacy artifacts from the PR or replace them with a converted safetensors/gguf artifact.\n';
+              body += '- If conversion is not possible, add justification and request an exception following the repository policy.\n\n';
+              body += 'If you want, request a security review and include the model provenance and a signed attestation (Sigstore/in-toto).';
+
+            } else {
+              body = 'Policy check failed but no violation file was produced; please inspect the CI logs.';
+            }
+
+            await github.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body,
+            });
 
       - name: Run pytest
         run: |
