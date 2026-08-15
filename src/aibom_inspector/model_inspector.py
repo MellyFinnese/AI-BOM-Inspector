@@ -432,6 +432,7 @@ def parse_model_entry(entry: dict) -> ModelInfo:
         fine_tuned_from=fine_tuned_from,
         training_sources=training_sources,
         hashes=sorted({value for value in hashes if value}),
+        artifacts=[artifact.get("path") for artifact in _coerce_artifacts(entry)],
         issues=issues,
         trust_signals=trust_signals,
     )
