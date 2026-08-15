@@ -4,10 +4,10 @@ set -euo pipefail
 # Single-command demo: runs the scanner over the tiny vulnerable project and writes demo/report.json
 # This demo is offline by default and shows policy enforcement for legacy .pkl artifacts.
 
-SCANNER_CMD="aibom scan --requirements demo/golden-vulnerable-ai/requirements.txt \
+SCANNER_CMD="PYTHONPATH=src python -m aibom_inspector.cli_shim scan --requirements demo/golden-vulnerable-ai/requirements.txt \
   --models-file demo/golden-vulnerable-ai/models.json \
   --policy demo/golden-vulnerable-ai/policy.yml \
-  --format json --output demo/golden-vulnerable-ai/report.json --fail-on-score 70"
+  --format json --output demo/golden-vulnerable-ai/report.json --fail-on-score 70 --offline"
 
 echo "Running golden demo scan..."
 # Allow the scanner to fail (policy block) but still produce the report
