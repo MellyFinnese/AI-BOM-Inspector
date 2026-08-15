@@ -561,6 +561,14 @@ def run_scan(config: ScanConfig) -> ScanResult:
 
     report_json = json.loads(render_report(report, "json"))
 
+    # Expose a top-level policy action field to make CI/demo workflows easier to consume
+    if policy_evaluation:
+        report_json["policy_action"] = "block" if not policy_evaluation.passed else "allow"
+        report_json["policy_failures"] = policy_evaluation.failures
+    else:
+        report_json["policy_action"] = None
+        report_json["policy_failures"] = []
+
     baseline_diff = None
     if config.baseline_report:
         try:
