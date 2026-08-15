@@ -107,3 +107,42 @@ jobs:
       - name: Run pytest
         run: |
           pytest -q
+
+  sandbox-inspect:
+    name: Sandbox dynamic inspection (self-hosted)
+    runs-on: [self-hosted, linux, sandbox]
+    needs: test
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Re-run pickles check to discover artifacts
+        run: |
+          python3 scripts/check_for_pickles.py || true
+
+      - name: Run sandbox tracer for each violation (self-hosted only)
+        if: always()
+        run: |
+          set -e
+          if [ -f scripts/pickles_violations.json ]; then
+            mkdir -p sandbox_traces
+            jq -r '.violations[]' scripts/pickles_violations.json | while read -r f; do
+              echo "Running sandbox for $f"
+              python3 scripts/pickle_sandbox_runner.py "$f" --no-build --output "sandbox_traces/$(basename $f).trace.json" --seccomp ".github/security/seccomp/aibom-sandbox.json" --apparmor "aibom-sandbox" || true
+            done
+          else
+            echo "No violations file found; skipping sandbox run"
+          fi
+
+      - name: Upload sandbox traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sandbox-traces
+          path: sandbox_traces/**

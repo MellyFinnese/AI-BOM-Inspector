@@ -1,0 +1,10 @@
+{
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "architectures": [
+    "SCMP_ARCH_X86_64"
+  ],
+  "syscalls": [
+    {"names": ["read","write","exit","futex","close","fstat","mmap","munmap","brk"], "action": "SCMP_ACT_ALLOW"},
+    {"names": ["rt_sigreturn","rt_sigaction","rt_sigprocmask"], "action": "SCMP_ACT_ALLOW"}
+  ]
+}
