@@ -355,3 +355,21 @@ Use `/usr/bin/time -p` or your CI timing metrics to capture project-specific num
 - See `CODE_OF_CONDUCT.md` for community standards.
 - See `CONTRIBUTING.md` for development conventions and how to propose changes.
 - `CHANGELOG.md` tracks notable updates.
+
+## Recent enterprise upgrades
+
+The following capabilities were recently added to support enterprise-grade AI supply-chain workflows. Quick enablement notes are included where relevant.
+
+- CycloneDX 1.7 & SPDX 3.0 exporters: canonical JSON exporters and a CycloneDX 1.7 schema validator. Use `--format cyclonedx` or `--format spdx` and see `schemas/cyclonedx-1.7.schema.json` for validation rules.
+
+- Policy enforcement to block legacy Pickle formats (.pkl/.pt): enable with a policy that sets `block_legacy_pickles: true` or run the CI check (`scripts/check_for_pickles.py`) which fails PRs and posts remediation guidance.
+
+- Read-only Pickle VM & containerized sandbox: a pickle opcode emulator (`src/aibom_inspector/pickle_vm.py`) and a Docker-based sandbox runner (`scripts/pickle_sandbox_runner.py`) produce guarded traces (no deserialization). For hardened runs, the runner accepts `--seccomp` and `--apparmor` options; self-hosted runners are recommended.
+
+- Dynamic findings integration: sandbox traces are parsed and converted into integrity findings and fed into the policy/risk engine (see `src/aibom_inspector/dynamic_analysis.py` and `src/aibom_inspector/pickle_sandbox.py`). Dynamic findings affect `stack_risk_score` and policy evaluations.
+
+- Attestation helpers (sigstore-friendly): attestation payload builders and a sigstore-friendly signing fallback (`src/aibom_inspector/attestation_sigstore.py`) so CI can emit provenance artifacts. Enable full Sigstore signing by provisioning signing keys / OIDC in CI.
+
+- CI automation: `.github/workflows/export-validate.yml` runs exporter tests, policy checks, posts remediation PR comments, creates Checks API annotations, and (on self-hosted runners) runs the sandbox and uploads traces.
+
+See the linked docs for detailed configuration and operational guidance (Enterprise Control Plane, Enterprise Trust Baseline, and POLICY_COOKBOOK).
