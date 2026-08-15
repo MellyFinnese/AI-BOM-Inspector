@@ -41,19 +41,70 @@ class MemgraphGraphStore(InMemoryGraphStore):
         self.uri = uri or os.getenv("AIBOM_MEMGRAPH_URI", "bolt://localhost:7687")
         self.user = user if user is not None else os.getenv("AIBOM_MEMGRAPH_USER", "")
         self.password = password if password is not None else os.getenv("AIBOM_MEMGRAPH_PASSWORD", "")
+
+        # Pool sizing/config for async driver
+        self._pool_size = int(os.getenv("AIBOM_MEMGRAPH_POOL_SIZE", "10"))
+
         try:
             from neo4j import GraphDatabase  # type: ignore
         except ImportError as exc:
             raise GraphStoreError("Memgraph support requires the optional 'neo4j' package.") from exc
+
+        # create sync driver for CLI/legacy code
         try:
             auth = (self.user, self.password) if self.user or self.password else None
             self._driver = GraphDatabase.driver(self.uri, auth=auth)
+            # verify connectivity for sync driver
             self._driver.verify_connectivity()
         except Exception as exc:
             raise GraphStoreError(f"Could not connect to Memgraph at {self.uri}.") from exc
 
+        # attempt to create an async driver if available (neo4j.AsyncGraphDatabase)
+        self._async_driver = None
+        try:
+            from neo4j import AsyncGraphDatabase  # type: ignore
+
+            try:
+                # create async driver with a connection pool size
+                self._async_driver = AsyncGraphDatabase.driver(
+                    self.uri,
+                    auth=auth,
+                    # Allow driver to configure pools via this argument if supported
+                    max_connection_pool_size=self._pool_size,
+                )
+            except TypeError:
+                # older neo4j versions may not accept pool args; fall back to driver() call
+                self._async_driver = AsyncGraphDatabase.driver(self.uri, auth=auth)
+        except Exception:
+            # async driver not available or failed to initialize; that's okay — async APIs will be unavailable
+            self._async_driver = None
+
     def close(self) -> None:
-        self._driver.close()
+        """Close sync driver and attempt to close async driver if present.
+
+        For CLI use the sync driver is closed immediately. If an async driver exists and an
+        event loop is running we schedule its close; otherwise we run it to completion.
+        """
+        try:
+            self._driver.close()
+        except Exception:
+            pass
+
+        if self._async_driver:
+            # Async close: if an event loop is running, create a task; otherwise run to completion.
+            import asyncio
+
+            try:
+                loop = asyncio.get_running_loop()
+                # schedule close in background
+                loop.create_task(self._async_driver.close())
+            except RuntimeError:
+                # no running loop
+                try:
+                    asyncio.run(self._async_driver.close())
+                except Exception:
+                    # swallow errors on close
+                    pass
 
     def clear(self) -> None:
         self.nodes.clear()
@@ -184,12 +235,43 @@ class MemgraphGraphStore(InMemoryGraphStore):
         return {record["dependency_id"]: sorted(record["findings"]) for record in records}
 
     def _run_write(self, query: str, **parameters: Any) -> None:
+        """Synchronous write for CLI and existing callers."""
         with self._driver.session() as session:
             session.execute_write(lambda tx: tx.run(query, **parameters).consume())
 
     def _run_read(self, query: str, **parameters: Any) -> list[Any]:
+        """Synchronous read for CLI and existing callers."""
         with self._driver.session() as session:
             return session.execute_read(lambda tx: list(tx.run(query, **parameters)))
+
+    # Async helpers for non-blocking web/service usage. These require the optional
+    # async driver (neo4j.AsyncGraphDatabase). They return the same payloads as
+    # the synchronous counterparts but should be awaited by async callers.
+    async def run_write_async(self, query: str, **parameters: Any) -> None:
+        if not self._async_driver:
+            raise GraphStoreError("Async neo4j driver unavailable; install neo4j>=5.x")
+
+        async def _tx_run(tx, q, params):
+            cursor = await tx.run(q, **params)
+            # consume to ensure write applied
+            await cursor.consume()
+
+        async with self._async_driver.session() as session:
+            await session.execute_write(_tx_run, query, parameters)
+
+    async def run_read_async(self, query: str, **parameters: Any) -> list[Any]:
+        if not self._async_driver:
+            raise GraphStoreError("Async neo4j driver unavailable; install neo4j>=5.x")
+
+        async def _tx_run_list(tx, q, params):
+            cursor = await tx.run(q, **params)
+            results = []
+            async for rec in cursor:
+                results.append(rec)
+            return results
+
+        async with self._async_driver.session() as session:
+            return await session.execute_read(_tx_run_list, query, parameters)
 
 
 def _record_to_node(node: Any) -> GraphNodeRecord:

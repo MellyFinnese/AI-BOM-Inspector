@@ -64,6 +64,89 @@ class GraphPolicyViolation:
     suggested_fixes: List[str] = field(default_factory=list)
 
 
+# Simple LRU cache used to memoize expensive subgraph queries
+import os
+import threading
+import time
+from collections import OrderedDict
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.lower() not in ("0", "false", "no")
+
+
+class LRUCache:
+    """Thread-safe LRU cache with optional TTL.
+
+    Simple implementation using OrderedDict. Keys are stored as-is; callers should
+    serialize complex arguments into a stable key (e.g., tuple or string).
+    """
+
+    def __init__(self, maxsize: int = 1024, ttl_seconds: Optional[int] = None):
+        self.maxsize = int(maxsize)
+        self.ttl = int(ttl_seconds) if ttl_seconds is not None else None
+        self.lock = threading.Lock()
+        self._data: "OrderedDict[object, tuple[float, object]]" = OrderedDict()
+
+    def get(self, key: object):
+        with self.lock:
+            entry = self._data.get(key)
+            if not entry:
+                return None
+            ts, value = entry
+            if self.ttl and (time.time() - ts) > self.ttl:
+                # expired
+                del self._data[key]
+                return None
+            # mark as recently used
+            del self._data[key]
+            self._data[key] = (ts, value)
+            return value
+
+    def set(self, key: object, value: object):
+        with self.lock:
+            if key in self._data:
+                del self._data[key]
+            elif len(self._data) >= self.maxsize:
+                # evict oldest
+                self._data.popitem(last=False)
+            self._data[key] = (time.time(), value)
+
+    def clear(self):
+        with self.lock:
+            self._data.clear()
+
+
+# module-level cache configured via env vars
+_POLICY_CACHE_ENABLED = _env_bool("AIBOM_POLICY_GRAPH_CACHE_ENABLED", True)
+_POLICY_CACHE_MAXSIZE = int(os.getenv("AIBOM_POLICY_GRAPH_CACHE_MAXSIZE", "1024"))
+_POLICY_CACHE_TTL = os.getenv("AIBOM_POLICY_GRAPH_CACHE_TTL")
+_POLICY_CACHE_TTL = int(_POLICY_CACHE_TTL) if _POLICY_CACHE_TTL is not None else None
+_policy_cache = LRUCache(maxsize=_POLICY_CACHE_MAXSIZE, ttl_seconds=_POLICY_CACHE_TTL)
+
+
+def _snapshot_key(snapshot: GraphSnapshot, *args) -> tuple:
+    """Create a stable cache key for a snapshot + optional args.
+
+    The key is intentionally lightweight: sorted node (id, kind, metadata keys) plus
+    a stable representation of the context. This avoids caching based on object
+    identity which would be ineffective across equivalent snapshots.
+    """
+    node_tuples = tuple(sorted((n.id, n.kind, tuple(sorted(n.metadata.keys()))) for n in snapshot.nodes))
+    # context may contain non-hashable values; coerce to repr for stability
+    ctx = repr(sorted(snapshot.context.items()))
+    return (node_tuples, ctx, args)
+
+
+def clear_policy_graph_cache():
+    """Clear the policy graph LRU cache (useful in tests)."""
+    _policy_cache.clear()
+
+
+# keep original implementation but wrap with a cache lookup
 def evaluate_graph_policies(snapshot: GraphSnapshot) -> List[GraphPolicyViolation]:
     """Evaluate high-signal default policies against a graph snapshot.
 
@@ -72,8 +155,25 @@ def evaluate_graph_policies(snapshot: GraphSnapshot) -> List[GraphPolicyViolatio
     - No tool combining tool-calling with broad filesystem write.
     - No agent using a shell/exec-capable tool in prod.
     - Models must be pinned in prod.
+
+    When cache is enabled the results for identical snapshots (by node ids/kinds and
+    context) are memoized for a short TTL to speed repeated evaluations during CI
+    and bulk ingestion where the same subgraphs are evaluated repeatedly.
     """
 
+    # cache key
+    try:
+        key = _snapshot_key(snapshot)
+    except Exception:
+        # fallback: do not cache if keying fails
+        key = None
+
+    if _POLICY_CACHE_ENABLED and key is not None:
+        cached = _policy_cache.get(key)
+        if cached is not None:
+            return cached
+
+    # --- Begin actual evaluation logic (unchanged) ---
     env = str(snapshot.context.get("env", "dev")).lower()
     violations: list[GraphPolicyViolation] = []
 
@@ -167,5 +267,10 @@ def evaluate_graph_policies(snapshot: GraphSnapshot) -> List[GraphPolicyViolatio
                         ],
                     )
                 )
+
+    # --- End actual evaluation logic ---
+
+    if _POLICY_CACHE_ENABLED and key is not None:
+        _policy_cache.set(key, violations)
 
     return violations
