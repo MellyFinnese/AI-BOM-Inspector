@@ -145,11 +145,9 @@ The default reports only use deterministic heuristics; the "AI summary" field is
 Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_API_TIMEOUT` / `SHADOW_UEFI_INTEL_TIMEOUT` environment variables.
 
 ## Installation
-- **Pinned release from GitHub (current canonical path):**
+- **Pinned release from GitHub:**
   ```bash
-  pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@main"
-  # Prefer a tagged release for CI:
-  pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v0.1.0"
+  pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v.2.0"
   ```
 - **Editable dev install:**
   ```bash

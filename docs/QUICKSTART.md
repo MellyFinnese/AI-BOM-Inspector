@@ -5,8 +5,8 @@ Follow these steps to run AI-BOM Inspector locally in offline mode, then layer i
 ## Install
 
 ```bash
-# Install from a tagged GitHub release (current canonical path)
-pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v0.1.0"
+# Install from the pinned GitHub release
+pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v.2.0"
 
 # Or develop locally
 pip install -e .[dev]
