@@ -37,7 +37,7 @@ jobs:
 
       - name: Post remediation comment and create check annotations if legacy pickles detected
         if: steps.pickles_check.conclusion == 'failure'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
