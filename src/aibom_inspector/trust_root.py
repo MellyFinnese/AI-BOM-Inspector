@@ -99,9 +99,30 @@ def sign_trust_root(trust_root: TrustRoot) -> str:
 
 
 def verify_trust_root(trust_root: TrustRoot) -> bool:
+    """Verify the root's internal signature for backward compatibility.
+
+    This proves consistency with the secret embedded in the file, not
+    authenticity of the root itself. Use ``verify_trust_root_against`` when
+    the trust-root file is untrusted input.
+    """
     if not trust_root.signature:
         return False
     return verify_payload(trust_root.public_metadata(), trust_root.signature, trust_root)
+
+
+def verify_trust_root_against(trust_root: TrustRoot, trusted_fingerprint: str) -> bool:
+    """Verify an untrusted trust-root file against an external trust anchor.
+
+    The trusted fingerprint must come from a separately trusted configuration
+    or deployment secret. This prevents an attacker who can replace the trust
+    root file from also replacing the authority used to authenticate it.
+    """
+    if not trusted_fingerprint or not trust_root.signature:
+        return False
+    actual = trust_root_fingerprint(trust_root)
+    if not hmac.compare_digest(actual, trusted_fingerprint.lower()):
+        return False
+    return verify_trust_root(trust_root)
 
 
 def trust_root_fingerprint(trust_root: TrustRoot) -> str:
