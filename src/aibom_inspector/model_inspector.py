@@ -16,7 +16,7 @@ from .model_risk_db import (
 from .pickle_inspector import PickleScanError, inspect_pickle_file
 from .tensor_fuzz import SafetensorsDataError, SafetensorsHeaderError, inspect_weight_files
 from .types import ModelInfo, ModelIssue, apply_license_category_model, categorize_license
-from .parsers import ParserError, parse_models_file
+from .parsers import SAFE_MAX_BYTES, ParserError, parse_models_file
 
 
 STALE_DAYS = 270
@@ -444,7 +444,7 @@ def parse_model_entry(entry: dict) -> ModelInfo:
     return model
 
 
-def scan_models_from_file(path: Path, *, max_bytes: int | None = None) -> List[ModelInfo]:
+def scan_models_from_file(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> List[ModelInfo]:
     if not path or not path.exists():
         return []
 

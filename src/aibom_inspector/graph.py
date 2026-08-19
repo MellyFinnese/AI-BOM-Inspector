@@ -57,6 +57,63 @@ def _normalize_dep_name(name: str) -> str:
     return name.lower().split("/")[-1]
 
 
+def _component_identity(entry: Dict[str, Any]) -> Dict[str, Optional[str]]:
+    """Extract the strongest available canonical identity for a component.
+
+    Blast-radius matching is security-critical, so it should prefer a PURL or
+    an explicit ecosystem/namespace/name/version tuple over a bare normalized
+    package-name suffix, which is trivially spoofable (e.g. an unrelated
+    "evil/lodash" or a same-named package in a different ecosystem/registry).
+    """
+    purl = entry.get("purl")
+    ecosystem = entry.get("ecosystem") or entry.get("registry")
+    namespace = entry.get("namespace") or entry.get("scope")
+    name = entry.get("name") or entry.get("package") or entry.get("id")
+    version = entry.get("version")
+
+    return {
+        "purl": str(purl).strip().lower() if purl else None,
+        "ecosystem": str(ecosystem).strip().lower() if ecosystem else None,
+        "namespace": str(namespace).strip().lower() if namespace else None,
+        "name": _normalize_dep_name(str(name)) if name else None,
+        "version": str(version).strip().lower() if version else None,
+    }
+
+
+def _identity_matches(a: Dict[str, Optional[str]], b: Dict[str, Optional[str]]) -> bool:
+    """Compare two component identities, preferring canonical identity.
+
+    - If both sides carry a PURL, that is authoritative.
+    - Else if both sides carry an explicit ecosystem + name, compare on
+      ecosystem/namespace/name(/version when both present); a mismatched
+      ecosystem or namespace is a hard non-match even if the bare name is
+      the same string.
+    - Only when neither side has any canonical identity information does
+      this fall back to the legacy weak comparison by normalized name
+      suffix, to preserve behavior for reports that don't carry richer
+      package metadata.
+    """
+    if a["purl"] and b["purl"]:
+        return a["purl"] == b["purl"]
+
+    if a["ecosystem"] and b["ecosystem"]:
+        if a["ecosystem"] != b["ecosystem"]:
+            return False
+        if a["namespace"] and b["namespace"] and a["namespace"] != b["namespace"]:
+            return False
+        if not a["name"] or a["name"] != b["name"]:
+            return False
+        if a["version"] and b["version"] and a["version"] != b["version"]:
+            return False
+        return True
+
+    # Weak fallback: neither side declared canonical identity. Still refuse
+    # a match if one side declares an ecosystem the other explicitly lacks
+    # information to confirm would be unsafe to assume equal; simply compare
+    # normalized names as before.
+    return bool(a["name"]) and a["name"] == b["name"]
+
+
 def _model_dep_entries(model: Dict[str, Any]) -> List[Any]:
     # model may list supporting dependencies in several shapes
     for key in ("supporting_dependencies", "dependencies", "observed_dependencies", "supporting"):
@@ -86,10 +143,12 @@ def impact(report_path: str, cve_id: str) -> int:
 
     deps = payload.get("dependencies", []) or []
     vuln_dep_names: Set[str] = set()
+    vuln_dep_identities: List[Dict[str, Optional[str]]] = []
     for dep in deps:
         if _dep_has_cve(dep, cve):
             name = dep.get("name") or dep.get("id") or "unknown"
             vuln_dep_names.add(name)
+            vuln_dep_identities.append(_component_identity(dep))
 
     if not vuln_dep_names:
         print(f"VULNERABILITY: {cve}")
@@ -110,12 +169,14 @@ def impact(report_path: str, cve_id: str) -> int:
         for entry in deps_entries:
             # entry can be a string or a dict
             if isinstance(entry, str):
-                if any(_normalize_dep_name(entry) == _normalize_dep_name(d) for d in vuln_dep_names):
+                entry_identity = _component_identity({"name": entry})
+                if any(_identity_matches(entry_identity, vd) for vd in vuln_dep_identities):
                     matched = True
                     evidence.append(str(entry))
             elif isinstance(entry, dict):
                 name = entry.get("name") or entry.get("package") or entry.get("id")
-                if name and any(_normalize_dep_name(name) == _normalize_dep_name(d) for d in vuln_dep_names):
+                entry_identity = _component_identity(entry)
+                if name and any(_identity_matches(entry_identity, vd) for vd in vuln_dep_identities):
                     # temporal filtering
                     start = _parse_date(entry.get("start_date") or entry.get("start"))
                     end = _parse_date(entry.get("end_date") or entry.get("end"))

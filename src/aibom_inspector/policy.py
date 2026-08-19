@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from .policy_graph import GraphPolicyViolation, GraphSnapshot, evaluate_graph_policies
 from .types import DependencyIssue, ModelIssue, Report
 from .trust_root import TrustRoot, sign_payload, trust_root_fingerprint
-from .parsers import ParserError, PolicySchema, parse_policy_file, serialize_validation_errors, model_to_dict
+from .parsers import SAFE_MAX_BYTES, ParserError, PolicySchema, parse_policy_file, serialize_validation_errors, model_to_dict
 
 
 @dataclass
@@ -105,7 +105,7 @@ class PolicyEvaluation:
         }
 
 
-def load_policy(path: Path, *, max_bytes: int | None = None) -> Policy:
+def load_policy(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> Policy:
     try:
         raw_payload = parse_policy_file(path, max_bytes=max_bytes)
     except ParserError as exc:
@@ -213,9 +213,10 @@ def evaluate_policy(
     if policy.required_approvals:
         approvals = {approval.lower() for approval in report.approvals}
         required = {approval.lower() for approval in policy.required_approvals}
-        if not approvals.intersection(required):
+        missing = required - approvals
+        if missing:
             failures.append(
-                f"Missing required approvals: {', '.join(sorted(policy.required_approvals))}"
+                f"Missing required approvals: {', '.join(sorted(missing))}"
             )
 
     def _check_subject(
@@ -237,7 +238,7 @@ def evaluate_policy(
     for dep in report.dependencies:
         _check_subject(dep.name, dep.issues + dep.trust_signals, dep.trust_score)
         expected_publisher = policy.publisher_expectations.get(dep.name)
-        if expected_publisher and expected_publisher not in dep.source:
+        if expected_publisher and expected_publisher not in (dep.source or ""):
             failures.append(
                 f"{dep.name}: publisher/source '{dep.source}' did not match expected '{expected_publisher}'"
             )

@@ -13,18 +13,38 @@ DANGEROUS_NAMES = {
     "popen3",
     "popen4",
     "call",
+    "run",
     "check_call",
     "check_output",
     "eval",
     "exec",
+    "execl",
+    "execle",
+    "execlp",
+    "execlpe",
+    "execv",
+    "execve",
+    "execvp",
+    "execvpe",
+    "posix_spawn",
+    "posix_spawnp",
     "spawn",
+    "spawnl",
+    "spawnle",
     "spawnlp",
     "spawnlpe",
     "spawnv",
     "spawnve",
+    "spawnvp",
+    "spawnvpe",
 }
 
-DANGEROUS_MODULES = {"os", "posix", "subprocess", "builtins"}
+# "commands" is the deprecated Python 2 shell-execution module (getoutput /
+# getstatusoutput, itself built on os.popen). Some pickle protocols resolve
+# stdlib process-launch classes to this legacy alias instead of their modern
+# module name, which would otherwise let a dangerous reference silently slip
+# past the module allowlist below.
+DANGEROUS_MODULES = {"os", "posix", "subprocess", "builtins", "commands"}
 
 
 @dataclass
@@ -73,6 +93,14 @@ def _is_dangerous(module: Optional[str], name: Optional[str]) -> bool:
     if module_l in {"builtins", "__builtin__"} and name_l in {"eval", "exec"}:
         return True
     return False
+
+
+def is_dangerous_global(module: Optional[str], name: Optional[str]) -> bool:
+    """Public helper: whether a pickle GLOBAL/STACK_GLOBAL (module, name)
+    reference is considered dangerous. Shared with dynamic_analysis.py so
+    pickle-VM trace classification stays consistent with the static scanner.
+    """
+    return _is_dangerous(module, name)
 
 
 def _scan_globals(data: bytes) -> List[PickleFinding]:
