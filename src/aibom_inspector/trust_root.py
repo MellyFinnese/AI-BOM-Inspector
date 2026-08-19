@@ -26,7 +26,7 @@ class TrustRoot:
         }
 
     def as_dict(self) -> dict:
-        payload = {
+        return {
             "key_id": self.key_id,
             "secret": self.secret,
             "algorithm": self.algorithm,
@@ -34,14 +34,14 @@ class TrustRoot:
             "signature": self.signature,
             "fingerprint": self.fingerprint,
         }
-        return payload
 
 
 def create_trust_root() -> TrustRoot:
     key_id = secrets.token_hex(8)
     secret = secrets.token_hex(32)
     created_at = datetime.utcnow().isoformat()
-    fingerprint = _fingerprint_payload({"key_id": key_id, "created_at": created_at})
+    root = TrustRoot(key_id=key_id, secret=secret, created_at=created_at)
+    fingerprint = trust_root_fingerprint(root)
     root = TrustRoot(
         key_id=key_id,
         secret=secret,
@@ -54,7 +54,7 @@ def create_trust_root() -> TrustRoot:
         secret=root.secret,
         algorithm=root.algorithm,
         created_at=root.created_at,
-        fingerprint=root.fingerprint,
+        fingerprint=fingerprint,
         signature=signature,
     )
 
@@ -85,8 +85,7 @@ def _fingerprint_payload(payload: dict) -> str:
 
 
 def sign_payload(payload: dict, trust_root: TrustRoot) -> str:
-    message = _canonical_json(payload)
-    return hmac.new(trust_root.secret.encode(), message, sha256).hexdigest()
+    return hmac.new(trust_root.secret.encode(), _canonical_json(payload), sha256).hexdigest()
 
 
 def verify_payload(payload: dict, signature: str, trust_root: TrustRoot) -> bool:
@@ -111,12 +110,7 @@ def verify_trust_root(trust_root: TrustRoot) -> bool:
 
 
 def verify_trust_root_against(trust_root: TrustRoot, trusted_fingerprint: str) -> bool:
-    """Verify an untrusted trust-root file against an external trust anchor.
-
-    The trusted fingerprint must come from a separately trusted configuration
-    or deployment secret. This prevents an attacker who can replace the trust
-    root file from also replacing the authority used to authenticate it.
-    """
+    """Verify an untrusted trust-root file against an external trust anchor."""
     if not trusted_fingerprint or not trust_root.signature:
         return False
     actual = trust_root_fingerprint(trust_root)
@@ -126,5 +120,9 @@ def verify_trust_root_against(trust_root: TrustRoot, trusted_fingerprint: str) -
 
 
 def trust_root_fingerprint(trust_root: TrustRoot) -> str:
-    payload = trust_root.public_metadata()
-    return trust_root.fingerprint or _fingerprint_payload(payload)
+    """Return a fingerprint derived from authoritative public metadata.
+
+    Never trust the serialized ``fingerprint`` field when authenticating a
+    root: it is attacker-controlled if the root file has been replaced.
+    """
+    return _fingerprint_payload(trust_root.public_metadata())
