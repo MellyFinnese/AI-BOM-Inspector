@@ -2,432 +2,356 @@
 
 ![AI-BOM Inspector CI](https://img.shields.io/badge/AI--BOM%20Inspector-Scan%20your%20AI%20stack%20in%20CI-blue)
 
-What is it?
+**Deterministic AI supply-chain risk analysis.**
 
-AI-BOM Inspector is an offline-first, deterministic risk engine for AI supply chains. Feed it an AI project (SBOM + model artifacts) and it returns a policy decision, an evidence-backed report, and CI-friendly outputs designed for automated enforcement.
+AI-BOM Inspector analyzes an AI project's dependencies, SBOMs, models, metadata, and artifacts, then turns the resulting evidence into a risk score, impact context, policy decision, and CI-friendly report.
 
-Killer workflow (one command demo)
+The core design is **offline-first, deterministic, explainable, and enforceable**.
 
-Give AI-BOM Inspector an AI project's SBOM and model artifacts → it determines supply-chain risk → explains why → maps affected systems → produces evidence → enforces policy.
+## The problem
 
+Traditional SBOM tooling tells you what components exist.
+
+AI systems need more context:
+
+- What AI assets actually exist?
+- What evidence indicates risk?
+- How does a vulnerability propagate through dependencies and models?
+- Which applications and owners are affected?
+- Should the change be allowed, warned on, or blocked?
+- Can the decision be explained and reproduced?
+
+AI-BOM Inspector is built around that decision loop.
+
+## The core flow
+
+```text
 AI project
- ↓
-SBOM + model artifacts
- ↓
-AI-BOM Inspector
- ├── Dependency analysis
- ├── Model analysis
- ├── Vulnerability intelligence
- ├── Provenance
- └── License analysis
- ↓
-Deterministic risk engine (single source of truth)
- ↓
-Policy decision
- ↓
-Evidence + report + CI result
-
-Architecture (data flow)
-
-```mermaid
-graph LR
-  Input["SBOM / Models / Metadata / Threat Intel"] --> Engine["Deterministic Risk Engine"]
-  Engine --> Policy["Policy Decision (block/allow/flag)"]
-  Engine --> Graph["Evidence Graph Context (impact & explain)"]
-  Policy --> Output["Report / CI / Enforcement / Annotations"]
+   |
+   +--> SBOM / manifests / model metadata / artifacts
+   |
+   v
+Discovery + parsing
+   |
+   v
+Normalization
+   |
+   v
+Evidence + relationship context
+   |
+   v
+Deterministic risk engine
+   |
+   v
+Policy engine
+   |
+   v
+Report / CI decision / evidence pack
 ```
 
-One-command golden demo
+### The important architectural boundary
 
-1. Demo project is included at `demo/golden-vulnerable-ai`.
-2. The demo now includes an application->owner mapping at `demo/golden-vulnerable-ai/applications.json`; the runner merges it into the generated report so impact analysis can map models → apps → owners.
-3. Run the demo (offline, reproducible):
+```text
+                    Relationship context
+                           |
+SBOM / Models -> Evidence + Graph -> Risk -> Policy -> Enforcement
+                                      ^
+                                      |
+                         deterministic source of truth
+```
+
+The graph/context layer supplies impact, traversal, and explanation. **The deterministic risk engine remains the scoring source of truth.** A graph database such as Memgraph is optional rather than a requirement of the core engine.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the complete model and trust boundaries.
+
+## One-command proof
+
+The repository contains a reproducible vulnerable AI project:
 
 ```bash
 PYTHONPATH=src bash demo/golden-vulnerable-ai/run_demo.sh
 ```
 
-Quick impact example (after the run):
+The demo exercises the end-to-end path:
+
+```text
+vulnerable AI project
+      -> scan
+      -> findings
+      -> risk decision
+      -> policy evaluation
+      -> evidence/report
+      -> CI-style enforcement
+```
+
+The demo also includes application-to-owner context so graph impact can answer questions such as:
+
+```text
+CVE
+ -> package
+ -> model
+ -> application
+ -> owner
+```
+
+The goal is **claim -> proof**, not just feature-list documentation.
+
+## What the core engine covers
+
+### AI supply-chain analysis
+
+- Python, JavaScript, Go, and Java dependency manifests
+- CycloneDX and SPDX SBOM ingestion
+- AI model metadata and model-reference discovery
+- dependency pinning and version posture
+- model freshness and provenance signals
+- license and governance analysis
+- local and optional remote advisory enrichment
+
+### Model and artifact security
+
+- model artifact hashing
+- Safetensors inspection
+- pickle/global analysis
+- guarded dynamic inspection groundwork
+- legacy pickle policy enforcement
+- integrity findings and audit evidence
+
+### Risk and governance
+
+- deterministic risk scoring
+- score explanations and risk breakdowns
+- organizational context such as criticality and data sensitivity
+- policy-as-code controls
+- CI blocking / warning decisions
+- diffing between scan results
+- evidence packs and audit-oriented outputs
+
+### Graph and impact reasoning
+
+The internal graph/context model is designed for relationship questions rather than opaque scoring:
+
+```text
+vulnerability
+   -> package
+   -> AI framework
+   -> model
+   -> application
+   -> owner
+```
+
+This supports blast-radius analysis, evidence traversal, and attack-path reasoning.
+
+### Enterprise interoperability
+
+- CycloneDX 1.7 output
+- SPDX 3.0 output
+- JSON / Markdown / HTML
+- SARIF / GitHub-oriented CI outputs
+- schema validation
+- policy examples and governance mappings
+
+## Security is part of the product
+
+AI-BOM Inspector does not treat passing functional tests as enough for a security tool.
+
+The project uses an adversarial loop:
+
+```text
+Build
+  -> attack assumptions
+  -> reproduce failures safely
+  -> add regression tests
+  -> fix confirmed issues
+  -> rerun the suite
+  -> repeat
+```
+
+Recent adversarial hardening has targeted:
+
+- policy bypasses
+- resource-exhaustion paths
+- malformed policy input
+- dangerous pickle references
+- dynamic-analysis severity inflation
+- graph identity confusion
+- trust-root replacement
+- attestation/signature ambiguity
+
+See [docs/SECURITY_VALIDATION.md](docs/SECURITY_VALIDATION.md).
+
+## Security invariants
+
+The project explicitly distinguishes:
+
+- **integrity digest** from **cryptographic signature**
+- **self-consistent trust root** from **externally trusted root**
+- **missing evidence** from **positive evidence**
+- **canonical component identity** from **name-only matching**
+- **controlled policy failure** from **silent exceptions**
+
+These distinctions matter because the scanner itself is a security boundary.
+
+## Core vs experimental
+
+| Capability | Status |
+| --- | --- |
+| Deterministic risk engine | **Core** |
+| Policy enforcement | **Core** |
+| SBOM / manifest parsing | **Core** |
+| Model and artifact analysis | **Core** |
+| Graph-based impact context | **Core** |
+| Golden vulnerable-AI demo | **Core proof path** |
+| Adversarial regression coverage | **Core security practice** |
+| CycloneDX / SPDX reporting | **Core** |
+| GitHub / CI integration | **Core integration** |
+| Memgraph adapter | **Optional / experimental** |
+| Sigstore signing | **Requires signing/provisioning; unsigned state is explicit when unavailable** |
+| Enterprise control plane | **Roadmap / deployment architecture** |
+
+## Security posture
+
+The default posture is offline:
 
 ```bash
-# Show merged applications in the report
-jq '.applications' demo/golden-vulnerable-ai/report.json
-
-# Run a blast-radius check for a CVE using the built-in graph impact helper
-python -c "from aibom_inspector.graph import impact; exit(impact('demo/golden-vulnerable-ai/report.json','CVE-2024-XXXX'))"
+ aibom scan --format json
 ```
 
-What changed in this branch (enterprise upgrades)
+Use `--online` only when a specific enrichment source is needed. Use `--local-only` / safe mode when an environment must not perform outbound requests.
 
-- Standards: CycloneDX 1.7 exporter and SPDX 3.0 tag-value output so reports plug into enterprise SBOM pipelines.
-- Hardened dynamic inspection: prototype Pickle VM emulator, Docker sandbox runner, and baseline seccomp/AppArmor profiles under `.github/security` for safer runtime tracing.
-- Policy & CI: `block_legacy_pickles` policy, `scripts/check_for_pickles.py`, and GitHub Actions to run validators and demo tests; CI emits `policy_action` and `policy_failures` in report JSON for easy automation.
-- Attestation groundwork: sigstore-friendly attestation helper with deterministic SHA256 fallback (requires ops provisioning for full sigstore use).
-- Compatibility: pydantic v1/v2 normalization helpers across parsers and inspectors to keep CLI runnable from source.
+The README intentionally does not describe a SHA-256 digest as a signature. Where real Sigstore signing is unavailable, attestations make the unsigned state explicit.
 
-Why this matters (differentiators)
+## Quick start
 
-- Single, explainable deterministic risk engine (graph provides context, not score).
-- Standards-first outputs (CycloneDX/SPDX) for enterprise pipelines and procurement.
-- Sandbox-first model inspection with CI enforcement to prevent risky artifacts from merging.
-- Reproducible golden demo and tests that turn product claims into verifiable proofs.
+Install for development:
 
-Quick show-me
-
-Run the demo, open `demo/golden-vulnerable-ai/report.json`, and run `pytest tests/test_golden_demo.py` to see the claim→proof assertion.
-
-Full feature list and deeper docs follow below.
-
-## Repository layout
-
-```
-ai-bom-inspector/
-  crates/
-    core/                       # parsing, normalization, scoring (Rust extension)
-    licenses/                   # license rules, SPDX mapping
-    advisories/                 # CVE ingestion adapters (OSV/NVD/etc)
-    report/                     # JSON/MD/SARIF outputs + diff support
-  src/                          # Python package (aibom_inspector)
-  policies/
-    examples/
-      default.yml
-      strict.yml
-      oss-friendly.yml
-  schemas/
-    policy.schema.json
-    report.schema.json
-  integrations/
-    github-action/              # composite action wrapper for CI
-    pre-commit/                 # reusable hook definition
-  docs/
-    QUICKSTART.md
-    POLICY.md
-    SCORING.md
-    FAQ.md
-  .github/
-    workflows/
-      ci.yml
-      scan-pr.yml               # runs on PR and posts summary
-  tests/
-  README.md
-```
-
-## What it does
-- Parse dependency manifests across Python (`requirements.txt`, `pyproject.toml`), JavaScript (`package.json` / `package-lock.json`), Go (`go.mod`), and Java (`pom.xml`)
-- Ingest existing SBOMs (`--sbom-file`) and export CycloneDX or SPDX alongside AI-BOM extensions
-- Gather AI model metadata from JSON or explicit Hugging Face IDs and auto-discover model references (OpenAI/Anthropic calls, `from_pretrained` loads, pipeline configs) directly from your repo
-- Apply heuristics for pins, stale models, license posture (permissive vs copyleft vs proprietary vs unknown), and optional CVE lookups via OSV
-- Surface AI model lineage, training data provenance, license ambiguity, and model risk profiles so AI-BOM metadata is front-and-center for governance reviews
-- Inspect model artifacts (safetensors/pickle checkpoints) for poisoned weights or unsafe globals and compute hashes for reputation checks
-- Cross-check models against local vulnerability/advisory feeds, training source fingerprints, and map findings to STRIDE + MITRE ATLAS categories
-- Emit JSON, Markdown, HTML, CycloneDX, or SPDX reports with risk breakdowns driven by explainable heuristics plus a deterministic, offline AI summary (optionally replaceable by your own LLM if desired)
-- Optionally pull firmware research context from [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) when `--online --enable-shadow-uefi-intel` is used
-- Maintain evidence chain-of-custody with attestations, audit logs, and integrity checks so governance teams can trace decisions end-to-end
-- Provide score explainability artifacts (policy version, intel versions, weight breakdowns, temporal multipliers) to make risk outcomes audit-ready
-- Require org context (asset criticality, data sensitivity, environment) so scores cannot be generated without enterprise context
-
-The default reports only use deterministic heuristics; the "AI summary" field is generated offline from the scan findings so teams get an executive-ready summary without hosted inference.
-
-## Network behavior
-- Global posture: `--offline` is the default and hard-blocks every remote call. Expect `[OFFLINE_MODE]` / `[CVE_LOOKUP_SKIPPED]` annotations in reports when enrichment is skipped.
-- Opt-in enrichment: add `--online` to allow outbound calls, then enable specific feeds (e.g., `--with-cves`, `--model-id`, `--enable-shadow-uefi-intel`) to choose what actually dials out.
-- Local-only hardening: pass `--local-only` (or keep `--safe-mode` enabled) to enforce zero outbound fetches even if `--online` is set.
-- Endpoints and payloads:
-
-| Endpoint | When it fires | Data sent | How to disable |
-| --- | --- | --- | --- |
-| `https://api.osv.dev/v1/query` (or `OSV_API_URL`) | `--online` **and** `--with-cves` | JSON body containing `package.name`, `package.ecosystem`, and `version` for each dependency | Default offline; omit `--with-cves`; keep `--offline`; or point `OSV_API_URL` to an internal mirror |
-| `https://huggingface.co/api/models/<id>` (or `huggingface_hub` SDK) | `--online` with `--model-id` or models whose `source` is `huggingface` | Model identifier only; response cached locally | Default offline; avoid `--online`; or provide a fully populated `models.json` |
-| GitHub API for [Shadow-UEFI-Intel](https://github.com/MellyFinnese/Shadow-UEFI-Intel) | `--online` **and** `--enable-shadow-uefi-intel` | Repository metadata fetch; no project data sent | Default is disabled; leave `--enable-shadow-uefi-intel` off or keep `--offline` enabled |
-| Local model advisory/hash databases (`model_vulnerability_db.json`, `model_hash_reputation.json`) | Always local unless you point to a custom URL | None (local JSON only) | Use defaults or pass `--model-advisory-db` / `--model-hash-db` |
-| Future feeds | Any new integrations (documented as added) | Varies by feed | Default offline; disable the specific feature flag; or run with `--offline` |
-
-Timeouts can be tuned via `--osv-timeout`, `--shadow-uefi-timeout`, or the `OSV_API_TIMEOUT` / `SHADOW_UEFI_INTEL_TIMEOUT` environment variables.
-
-## Installation
-- **Pinned release from GitHub:**
-  ```bash
-  pip install "aibom-inspector @ git+https://github.com/aibom-inspector/AI-BOM-Inspector.git@v.2.0"
-  ```
-- **Editable dev install:**
-  ```bash
-  pip install -e .[dev]
-  ```
-- **Wheels:** the Rust extension ships as a wheel when you build from source—`python -m build` will produce a `.whl` under `dist/` for airgapped installs.
-- **PyPI readiness:** packaging metadata and wheels are production-ready for internal or public registries; use GitHub release pins above for stable CI installs or build a wheel locally for airgapped environments.
-
-## Build + SBOM generation
-- Build a wheel for offline installs:
-  ```bash
-  python -m build
-  ```
-- Generate a CycloneDX SBOM for this tool:
-  ```bash
-  pip install cyclonedx-bom
-  cyclonedx-py -o aibom-inspector-sbom.json
-  ```
-
-## Getting started
-1. Create a `models.json` file if you want to include model metadata (auto-discovery will still pull model IDs out of your code/configs when this is omitted). A ready-to-use sample lives in `examples/models.sample.json`:
-   ```json
-   [
-     {"id": "gpt2", "source": "huggingface", "license": "mit", "last_updated": "2024-01-01"},
-     {"id": "custom-embedder", "source": "private"}
-   ]
-   ```
-2. Run the scanner (auto-detects dependency files when present):
-   ```bash
-   aibom scan --models-file models.json --format html --output report.html
-   ```
-   Run `aibom scan --help` for the full list of options and supported formats.
-
-   Network calls are off by default; add `--online` (plus flags like `--with-cves` or `--model-id`) if you want remote enrichment.
-
-### Who is this for?
-- AppSec and security engineers who want CI/CD-friendly AI-BOMs without shipping code to a third party
-- MLOps/platform teams who need model metadata (license, freshness, advisories) next to dependencies
-- Builders who want tweakable, explainable rules instead of black-box scanners
-
-### Why this vs. Snyk & friends?
-- **Small, OSS, local-first**: zero data leaves your laptop or CI box.
-- **AI-stack aware**: treats models as first-class assets instead of opaque blobs.
-- **Customizable rules**: heuristics are readable Python, not black-box policies.
-- **Offline gates + allowlists + model-as-asset scoring**: enforce allowlisted model sources, run fully offline by default, and score models/dependencies together—capabilities that hosted scanners often treat as optional add-ons.
-
-## Examples
-- **End-to-end demo** (`examples/demo/`): tiny app with `requirements.txt`, `pyproject.toml`, `package-lock.json`, `go.mod`, `models.json`, and generated `aibom-report.json/md/html`.
-  - HTML report snapshot: open `examples/demo/aibom-report.html`
-  - Markdown rendering snapshot: see `examples/demo/aibom-report.md`
-  - Before/after hygiene comparison: `docs/screenshots/before-after.html`
-
-  Small JSON excerpt (full file in `examples/demo/aibom-report.json`):
-  ```json
-  {
-    "stack_risk_score": 30,
-    "risk_breakdown": {"unpinned_deps": 3, "unverified_sources": 0, "unknown_licenses": 1, "stale_models": 1},
-    "dependencies": [{"name": "urllib3", "issues": ["[KNOWN_VULN] CVE-2019-11324: CRLF injection when retrieving HTTP headers"]}],
-    "models": [{"id": "gpt2", "issues": ["[STALE_MODEL] Model metadata is stale", "[MODEL_VULNERABILITY] Advisory feed match (model_vulnerability_db.json)"]}]
-  }
-  ```
-- **Screenshots:**
-  - HTML report: open `examples/demo/aibom-report.html`
-  - Markdown rendering: view `examples/demo/aibom-report.md`
-  - Before vs. after: open `docs/screenshots/before-after.html`
-- **Sample models file:** `examples/models.sample.json`
-- **Sample Markdown report:** `examples/report.sample.md`
-- **Example commands:**
-  - Only dependency scan with autodetection: `aibom scan --format json`
-- Include models from a file: `aibom scan --models-file examples/models.sample.json --format markdown --output report.md`
-- Specify models inline: `aibom scan --online --model-id gpt2 --model-id meta-llama/Llama-3-8B --format html`
-- Enrich CVEs during the scan: `aibom scan --online --with-cves --format json`
-- Use local model advisory and hash feeds: `aibom scan --models-file models.json --model-advisory-db feeds/model_vulnerability_db.json --model-hash-db feeds/model_hash_reputation.json`
-- Apply training source fingerprints: `aibom scan --models-file models.json --training-source-db feeds/training_source_fingerprints.json`
-- Include non-Python manifests: `aibom scan --manifest package-lock.json --manifest go.mod --format json`
-- Import an SBOM: `aibom scan --sbom-file path/to/cyclonedx.json --format html --output merged-report.html`
-- Run fully offline (no OSV/HF calls): `aibom scan --format markdown`
-- Require inputs or fail fast: `aibom scan --require-input`
-- Export CycloneDX: `aibom scan --format cyclonedx --sbom-output aibom-cyclonedx.json`
-- Fail CI if health score < 70: `aibom scan --fail-on-score 70 --format html`
-- Inspect model weights directly (detect NaNs/LSB steganography): `aibom weights my_model.safetensors --json`
-  - Quick comparison of two runs: `aibom diff aibom-report-old.json aibom-report-new.json`
-
-## Highest-impact capabilities
-See [docs/HIGHEST_IMPACT_NEXT_MOVES.md](docs/HIGHEST_IMPACT_NEXT_MOVES.md) for the capabilities that enable the end-to-end `discover → enforce` loop, policy-as-code UX, and GitHub-native SARIF outputs.
-
-## Enterprise trust baseline
-See [docs/ENTERPRISE_TRUST_BASELINE.md](docs/ENTERPRISE_TRUST_BASELINE.md) for the deal-maker controls around provenance/signing, artifact integrity, and dependency trust enforcement that enterprises expect in CI/CD rollouts.
-
-## Enterprise control plane
-- [Enterprise Control Plane](docs/ENTERPRISE_CONTROL_PLANE.md): multi-tenant governance, evidence storage, and CI/CD enforcement.
-- [Enterprise roadmap](docs/ENTERPRISE_ROADMAP.md): central policy server, org audit features, dashboards, and web UI milestones.
-- [Open-core boundary](docs/OPEN_CORE_BOUNDARY.md): commercial vs OSS separation and packaging.
-- [AI supply chain threat model](docs/AI_SUPPLY_CHAIN_THREAT_MODEL.md): sales-ready threat taxonomy and control mapping.
-- [Deployment reference](docs/DEPLOYMENT_REFERENCE.md): SaaS/on-prem parity and isolation model.
-- [Policy engine deep dive](docs/POLICY_ENGINE_DEEP_DIVE.md): deterministic enforcement and explainability.
-
-### 30-second sample report (before vs. after)
-- **Input SBOM**: lightweight CycloneDX with a few Python and npm components plus a Hugging Face model ID.
-- **Before (messy state)**:
-  - Command: `aibom scan --sbom-file examples/demo/aibom-report.json --format markdown --output before.md --fail-on-score 70`
-  - Top findings: `MISSING_PIN` for multiple deps, `UNKNOWN_LICENSE` on the model, `STALE_MODEL`, demo `KNOWN_VULN` entry, and `UNVERIFIED_SOURCE`.
-  - Outcome: `stack_risk_score` ≈ 50 and exit code **1** because it failed the `--fail-on-score 70` gate.
-- **After (hardened state)**:
-  - Command: `aibom scan --sbom-file examples/demo/aibom-report.json --models-file examples/models.sample.json --format markdown --output after.md --fail-on-score 70 --online --with-cves`
-  - Top findings: `CVE` hits (if any) plus minor governance nits; pins and licenses quiet down once manifests and model metadata are cleaned up.
-  - Outcome: `stack_risk_score` in the high 80s and exit code **0**, making it CI-safe.
-
-### AI-BOM extensions
-
-CycloneDX and SPDX exports include AI-BOM extension data (e.g., `aibom:source`, license category, risk score, and issues) alongside the standard SBOM fields. See `docs/ai-bom-extensions.md` for the JSON schema and how each extension maps into CycloneDX properties and SPDX summaries.
-
-### Standards alignment
-- **AI-BOM schema mapping**: `schemas/report.schema.json` tracks the AI-BOM JSON conventions and is structured to align with the TAIBOM-style trust/attestation fields emerging in the community (e.g., explicit model source, license, provenance, and risk signals).
-- **CycloneDX/SPDX bridges**: the CycloneDX/SPDX exporters project `aibom:*` properties into vendor-neutral fields so the output can slot into existing SBOM pipelines without custom parsers.
-- **Reference-first posture**: schema updates aim to follow the AI-BOM working drafts; additions are scoped so teams can diff their SBOMs against the schema and treat this project as a reference implementation rather than a one-off tool.
-- **Credibility pack**: `docs/credibility-pack/` ships SBOM slices, a repo list, and a scoreboard you can rerun to validate detection heuristics and false-positive rates.
-
-### Output formats at a glance
-See `docs/OUTPUTS.md` for a side-by-side JSON, SARIF, and CycloneDX example plus guidance on when to use each.
-
-### Adoption defaults
-- **Gates to start with**: fail CI on `--fail-on-score 70`, require allowlisted model sources (`--require-input` plus allowlist rules in `policies/examples/*`), and keep `--offline` as the default posture.
-- **CI vs. local**: run `aibom scan --format json --output aibom-report.json --fail-on-score 70` in CI, then publish CycloneDX/SPDX via `--format cyclonedx` or `--format spdx` for downstream compliance jobs. Locally, add `--format html` or `--format markdown` for readability and iterate with `--diff` against previous runs.
-- **Policy cookbook**: see `docs/POLICY_COOKBOOK.md` for OSS-friendly, enterprise-strict, and regulated defaults that can be copied into your own policy file (HIPAA, SOC 2, ISO/IEC 42001 packs are in `policies/examples/`).
-
-Configuration tips:
-
-- OSV enrichment uses the public API by default; override with `--osv-url` or `OSV_API_URL` and adjust the HTTP timeout via `--osv-timeout` or `OSV_API_TIMEOUT`.
-- Model risk databases can be swapped via `--model-advisory-db`, `--model-hash-db`, `--license-risk-db`, and `--training-source-db` when you want to point at internal mirrors or curated feeds.
-
-## Heuristics & Risk Signals
-AI-BOM Inspector ships with lightweight, explainable checks that map to common AI supply-chain issues:
-
-| Code | What it means | Severity |
-| --- | --- | --- |
-| `MISSING_PIN` | Dependency version not pinned with `==`/`~=` | High |
-| `LOOSE_PIN` | Dependency uses a range (`>=`, `<=`, etc.) | Medium |
-| `UNSTABLE_VERSION` | Pre-1.0 releases that may churn | Medium |
-| `KNOWN_VULN` / `CVE` | Known vulnerable versions (built-in heuristics + optional OSV lookup; recommends safer versions when known) | High |
-| `LICENSE_RISK` | Copyleft / reciprocal terms detected for a model | Medium |
-| `MODEL_LICENSE_RESTRICTED` | Restricted or custom model license detected (OpenRAIL, research-only, etc.) | Medium |
-| `PROPRIETARY_AI_RISK` | Proprietary model license may limit auditability or reuse | Medium |
-| `UNKNOWN_LICENSE` | Model or SBOM component lacks license metadata | High |
-| `STALE_MODEL` | Model metadata older than ~9 months | Medium |
-| `UNVERIFIED_SOURCE` | Non-standard model source value | Medium |
-| `MODEL_VULNERABILITY` | Model flagged by a vulnerability/advisory feed | High |
-| `MODEL_HASH_MALICIOUS` | Model hash matches a malicious fingerprint | High |
-| `MODEL_WEIGHT_ANOMALY` | Safetensors inspection detected poisoned/steganographic weights | High |
-| `PICKLE_DANGEROUS_GLOBALS` | Pickle checkpoint references dangerous globals | High |
-| `MODEL_LINEAGE_RISK` | Base model lineage contains license or vulnerability risk | Medium |
-| `MODEL_LINEAGE_UNKNOWN` | Base model lineage not present in scan context | Medium |
-| `FINE_TUNE_INHERITANCE_RISK` | Fine-tune inherits high-risk findings from base model | High |
-| `DATASET_CONTAMINATION_RISK` | Training sources suggest contamination or policy exposure | High |
-| `TRAINING_SOURCE_RISK` | Training source requires additional governance review | Medium |
-| `SUPPLY_CHAIN_ANOMALY` | Model hash mismatch or artifact integrity anomaly detected | High |
-| `MODEL_HASH_INVALID` | Declared model hash is not a valid SHA256 fingerprint | Medium |
-| `MODEL_HASH_MISSING` | Model artifacts present without declared hashes | Medium |
-| `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED` | Scan ran offline or without network dependencies; no remote enrichment performed | Low |
-| `METADATA_UNAVAILABLE` | Model registry/API could not be reached; metadata reused from cache with a warning | Low |
-| `INVALID_SBOM` | SBOM could not be parsed; flagged as an issue instead of crashing the scan | Medium |
-
-The report shows a `stack_risk_score` (0–100, higher is healthier) and a `risk_breakdown` capturing unpinned deps, unverified sources, unknown licenses, stale models, and CVE hits. Tune the scoring with `--risk-max-score`, per-severity `--risk-penalty-*` flags, and governance/CVE penalties so teams can calibrate what “red” means for them. Conceptually, this is a health score: penalties are subtracted from the maximum, so `--fail-on-score 70` means “fail if health drops below 70/100.”
-
-### How the risk score is computed
-- Start from `risk_settings.max_score` (default 100) and subtract penalties instead of adding danger points.
-- Every dependency/model issue subtracts `risk_settings.penalty_for(severity)` (default high=8, medium=4, low=2).
-- Governance penalties subtract an extra `governance_penalty` for each unpinned dependency and unverified model source; CVE hits subtract `cve_penalty` to emphasize known exploit paths.
-- Active exploitation flags override baseline scoring with `active_exploitation_penalty`, ensuring live exploitation signals dominate baseline severity math.
-- The resulting value is clamped between 0–`max_score`, giving you a “health score” you can fail CI on via `--fail-on-score`.
-
-### Recommended scoring policy
-- **Start conservative**: gate on `--fail-on-score 70` while teams pilot the tool; after triage, ratchet up to **80** once noisy signals are addressed.
-- **Respond by signal type**:
-  - `MISSING_PIN` / `LOOSE_PIN`: add explicit `==` pins (or `~=` if you must) and commit lockfiles.
-  - `UNKNOWN_LICENSE` / `LICENSE_RISK`: annotate licenses in `models.json` and prefer permissive alternatives when available.
-  - `STALE_MODEL`: update to a fresher model release or document a waiver in `models.json`.
-  - `KNOWN_VULN` / `CVE`: upgrade to the suggested safe version; if blocked, add a comment in your SBOM or pin to a patched fork.
-  - `UNVERIFIED_SOURCE`: source models from trusted registries (Hugging Face, internal artifactory) and record provenance.
-  - `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED`: rerun with network access before shipping to ensure enrichment isn’t missing critical advisories.
-
-### Assumptions and known limitations
-- **Offline mode trades fidelity for privacy:** metadata/CVE lookups are skipped; issues are marked with `OFFLINE_MODE` / `CVE_LOOKUP_SKIPPED` so reviewers know enrichment was suppressed.
-- **SBOM trust but verify:** malformed SBOMs are surfaced as `INVALID_SBOM` issues and ignored otherwise; well-formed CycloneDX/SPDX inputs are merged into the dependency set.
-- **Model metadata freshness depends on registries:** network failures are tolerated and recorded as `METADATA_UNAVAILABLE`, but license/freshness signals may be stale until the registry is reachable again.
-- **Weight inspection is heuristic:** the safetensors scanner samples bits and looks for NaNs/Inf/LSB bias; unusual dtypes or truncated files raise clear errors instead of silently passing.
-
-### Threat taxonomy + MITRE ATLAS mapping
-AI-BOM Inspector attaches explicit AI threat categories and STRIDE classifications to model findings. Mappings are surfaced in the report framework section and can be tailored via a local taxonomy file:
-- Default taxonomy: `src/aibom_inspector/data/ai_threat_taxonomy.json`
-- Override: `aibom scan --threat-taxonomy-db path/to/ai_threat_taxonomy.json`
-- MITRE ATLAS controls appear alongside NIST AI RMF, ISO/IEC 42001, OWASP LLM Top 10, SOC 2, and EU AI Act mappings.
-See `docs/THREAT_TAXONOMY.md` for the default taxonomy and extension guidance.
-
-### Model risk databases
-Model risk intelligence is local-first. You can ship curated JSON feeds in-repo or pull them from internal mirrors:
-- **Model vulnerability DB:** `model_vulnerability_db.json` (use `--model-advisory-db` to override)
-- **Model hash reputation DB:** `model_hash_reputation.json` (use `--model-hash-db` to override)
-- **License risk DB:** `license_risk_db.json` (use `--license-risk-db` to override)
-- **Training source fingerprints:** `training_source_fingerprints.json` (use `--training-source-db` to override)
-
-### Before vs. after hardening
-
-| Scenario | Risk score | Signals |
-| --- | --- | --- |
-| **Messy AI stack** | 48/100 | Unpinned `package-lock.json`, unknown model license, stale model metadata |
-| **Hardened AI stack** | 88/100 | All deps pinned, permissive licenses, fresh model metadata, no advisories |
-
-### Example: scanning a real project
 ```bash
-aibom scan --requirements requirements.txt --models-file models.json --with-cves --format html --output report.html \
-  --risk-penalty-high 10 --risk-penalty-medium 5 --risk-penalty-low 2
+pip install -e '.[dev]'
 ```
-Pair it with `aibom diff report-old.json report-new.json` to highlight PR drift, or run in CI with `--fail-on-score 70`.
 
-## Performance & scale signals
-Baseline timings below were captured on the included demo project to give teams a starting point. Re-run in your own CI to capture local baselines:
+Run a scan:
 
-| Scenario | Command | Result |
-| --- | --- | --- |
-| Demo project scan | `PYTHONPATH=src python -m aibom_inspector.cli scan --requirements examples/demo/requirements.txt --pyproject examples/demo/pyproject.toml --manifest examples/demo/package-lock.json --manifest examples/demo/go.mod --models-file examples/demo/models.json --format json --output /tmp/aibom-report.json` | 2.16s real (container, Python 3.10.19) |
+```bash
+aibom scan --models-file models.json --format html --output report.html
+```
 
-Use `/usr/bin/time -p` or your CI timing metrics to capture project-specific numbers (dependency count, model count, and total runtime).
+Import an SBOM:
 
+```bash
+aibom scan --sbom-file path/to/cyclonedx.json --format html --output report.html
+```
 
-## Testing and CI
-- Run unit tests: `pytest`
-- GitHub Action: `.github/workflows/scan-pr.yml` uses the bundled composite action to scan PRs and post a risk comment.
-- One-command SARIF + Markdown upload (offline by default; pair with `--online --with-cves` when you want CVEs):
-  ```yaml
-  name: AI-BOM Inspector
-  on: [pull_request]
-  jobs:
-    scan:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        - name: Install AI-BOM Inspector
-          run: pip install aibom-inspector
-        - name: Scan AI stack and emit SARIF + Markdown
-          run: >-
-            aibom scan --format sarif --output aibom-report.sarif --markdown-output aibom-report.md
-            --fail-on-score 75 --require-input
-        - name: Upload SARIF to GitHub Security
-          uses: github/codeql-action/upload-sarif@v3
-          with:
-            sarif_file: aibom-report.sarif
-        - name: Upload Markdown artifact
-          uses: actions/upload-artifact@v4
-          with:
-            name: aibom-report
-            path: aibom-report.md
-  ```
-- CI guardrails: keep `--offline` unless you need enrichments; when allowed, add `--online --with-cves` to the scan step and adjust allowlists accordingly.
+Fail CI below a health threshold:
 
-## Releases and distribution
-- **Tagged releases**: we cut signed Git tags for CLI milestones; package metadata lives in `pyproject.toml` and tracks the changelog.
-- **PyPI**: publishing is planned under the `aibom-inspector` name; until then, install from source (`pip install -e .[dev]`) or lock to a tag tarball.
-- **Versioning**: semantic-ish—patch releases for heuristics/docs, minor bumps when report schemas or exit codes change.
+```bash
+aibom scan --fail-on-score 70 --format json
+```
 
-## Security, governance, and contributions
-- See `SECURITY.md` for how to report vulnerabilities.
-- See `CODE_OF_CONDUCT.md` for community standards.
-- See `CONTRIBUTING.md` for development conventions and how to propose changes.
-- `CHANGELOG.md` tracks notable updates.
+Compare reports:
 
-## Recent enterprise upgrades
+```bash
+aibom diff aibom-report-old.json aibom-report-new.json
+```
 
-The following capabilities were recently added to support enterprise-grade AI supply-chain workflows. Quick enablement notes are included where relevant.
+Run tests:
 
-- CycloneDX 1.7 & SPDX 3.0 exporters: canonical JSON exporters and a CycloneDX 1.7 schema validator. Use `--format cyclonedx` or `--format spdx` and see `schemas/cyclonedx-1.7.schema.json` for validation rules.
+```bash
+pytest
+```
 
-- Policy enforcement to block legacy Pickle formats (.pkl/.pt): enable with a policy that sets `block_legacy_pickles: true` or run the CI check (`scripts/check_for_pickles.py`) which fails PRs and posts remediation guidance.
+Run the focused adversarial suite:
 
-- Read-only Pickle VM & containerized sandbox: a pickle opcode emulator (`src/aibom_inspector/pickle_vm.py`) and a Docker-based sandbox runner (`scripts/pickle_sandbox_runner.py`) produce guarded traces (no deserialization). For hardened runs, the runner accepts `--seccomp` and `--apparmor` options; self-hosted runners are recommended.
+```bash
+pytest tests/test_adversarial_hardening.py -v
+```
 
-- Dynamic findings integration: sandbox traces are parsed and converted into integrity findings and fed into the policy/risk engine (see `src/aibom_inspector/dynamic_analysis.py` and `src/aibom_inspector/pickle_sandbox.py`). Dynamic findings affect `stack_risk_score` and policy evaluations.
+## Repository map
 
-- Attestation helpers (sigstore-friendly): attestation payload builders and a sigstore-friendly signing fallback (`src/aibom_inspector/attestation_sigstore.py`) so CI can emit provenance artifacts. Enable full Sigstore signing by provisioning signing keys / OIDC in CI.
+```text
+src/aibom_inspector/
+  parsers.py              # typed input validation + safe input limits
+  dependency_scanner.py   # dependency discovery and analysis
+  model_inspector.py      # model metadata / artifact analysis
+  pickle_inspector.py     # static pickle inspection
+  dynamic_analysis.py     # guarded dynamic findings
+  graph.py                # relationship / blast-radius context
+  risk_engine.py          # deterministic scoring
+  policy.py               # policy decisions and enforcement
+  reporting.py            # report generation
+  attestation.py          # provenance / evidence artifacts
+  trust_root.py           # trust-root and verification primitives
 
-- CI automation: `.github/workflows/export-validate.yml` runs exporter tests, policy checks, posts remediation PR comments, creates Checks API annotations, and (on self-hosted runners) runs the sandbox and uploads traces.
+crates/
+  core/                   # Rust core
+  licenses/               # license rules
+  advisories/             # advisory ingestion adapters
+  report/                 # reporting and diff support
 
-See the linked docs for detailed configuration and operational guidance (Enterprise Control Plane, Enterprise Trust Baseline, and POLICY_COOKBOOK).
+demo/golden-vulnerable-ai/
+  # reproducible vulnerable AI project used as the proof path
+
+tests/
+  # functional, golden-demo, policy, parser, security, and regression tests
+
+docs/
+  ARCHITECTURE.md
+  SECURITY_VALIDATION.md
+  POLICY.md
+  SCORING.md
+  ENTERPRISE_TRUST_BASELINE.md
+  POLICY_COOKBOOK.md
+  AI_SUPPLY_CHAIN_THREAT_MODEL.md
+```
+
+## What makes the project different
+
+**AI assets are first-class.** Models and artifacts are analyzed alongside ordinary dependencies instead of being treated as opaque files.
+
+**The decision is deterministic.** The core security result does not depend on hosted LLM inference.
+
+**Relationships matter.** The graph/context layer can explain impact and blast radius across dependencies, models, applications, and owners.
+
+**Evidence matters.** Findings are intended to remain traceable to the observations and relationships that produced them.
+
+**The scanner is attacked too.** Security failures are turned into regression tests and hardened rather than simply documented.
+
+## Technical conversation: the graph problem
+
+A useful graph question is not simply "can this data live in a graph database?"
+
+It is:
+
+> **Where does a graph materially improve AI supply-chain reasoning over a local representation?**
+
+For example:
+
+```text
+CVE
+  -> package
+  -> framework
+  -> model
+  -> application
+  -> owner
+```
+
+That relationship chain turns an isolated vulnerability into an explainable blast-radius problem.
+
+The architecture is intentionally backend-neutral so a graph database can be introduced where it provides measurable value without making the deterministic core dependent on it.
+
+## Further reading
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Security validation](docs/SECURITY_VALIDATION.md)
+- [Policy](docs/POLICY.md)
+- [Scoring](docs/SCORING.md)
+- [Enterprise Trust Baseline](docs/ENTERPRISE_TRUST_BASELINE.md)
+- [AI supply-chain threat model](docs/AI_SUPPLY_CHAIN_THREAT_MODEL.md)
+- [Policy cookbook](docs/POLICY_COOKBOOK.md)
+- [Quickstart](docs/QUICKSTART.md)
+- [Security reporting](SECURITY.md)
+
+## Project status
+
+AI-BOM Inspector is an actively evolving security-engineering project. The repository contains working core capabilities, experimental components, and roadmap material; the status table above is the authoritative distinction.
+
+The project is intended to make AI supply-chain decisions **traceable, reproducible, testable, and enforceable**.
