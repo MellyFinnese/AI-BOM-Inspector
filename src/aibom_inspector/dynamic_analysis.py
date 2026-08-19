@@ -2,17 +2,40 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple
 
+from .pickle_inspector import is_dangerous_global
 from .types_report import IntegrityFinding
+
+
+def _split_global_ref(g_text: str) -> Tuple[Optional[str], Optional[str]]:
+    """Best-effort split of a pickle-VM global reference into (module, name).
+
+    The VM trace records the raw opcode argument, which may look like
+    'posix system' (protocol 0 GLOBAL, space-separated) or 'os.system'
+    (dotted form). Falls back to (None, g_text) if it can't be split.
+    """
+    if " " in g_text:
+        module, _, name = g_text.partition(" ")
+        return module, name
+    if "." in g_text:
+        module, _, name = g_text.rpartition(".")
+        return module, name
+    return None, g_text
 
 
 def parse_pickle_vm_trace(trace_path: Path) -> List[IntegrityFinding]:
     """Convert a Pickle VM trace JSON into IntegrityFinding items.
 
     Heuristics:
-    - Any GLOBAL or STACK_GLOBAL referencing suspicious modules/names becomes a high-severity finding.
-    - If many globals referenced (>10), emit a warning-level finding about broad surface.
+    - A GLOBAL/STACK_GLOBAL reference to a known-dangerous module/name
+      (subprocess, os.system, eval, etc.) becomes a high-severity finding.
+    - A GLOBAL/STACK_GLOBAL reference to anything else (e.g. collections.
+      OrderedDict, numpy.ndarray) is still recorded as evidence, but at low
+      severity, since referencing *some* global is normal for legitimate
+      pickles and is not itself a sign of malicious intent.
+    - If many globals referenced (>10), emit a warning-level finding about
+      broad surface.
     """
     if not trace_path.exists():
         return []
@@ -21,15 +44,37 @@ def parse_pickle_vm_trace(trace_path: Path) -> List[IntegrityFinding]:
     globals_refs = data.get("globals_referenced", []) or []
     findings: List[IntegrityFinding] = []
 
-    # per-global findings
+    # per-global findings: preserve evidence for every reference, but only
+    # classify actually-dangerous ones as high severity.
+    dangerous_count = 0
     for g in globals_refs:
         # g may be like 'posix system' or 'os.system'
         g_text = str(g)
-        message = f"Pickle VM referenced global: {g_text}"
-        findings.append(IntegrityFinding(kind="pickle-global", path=data.get("path"), message=message, severity="high", code="DYN_PICKLE_GLOBAL"))
+        module, name = _split_global_ref(g_text)
+        if is_dangerous_global(module, name):
+            dangerous_count += 1
+            findings.append(
+                IntegrityFinding(
+                    kind="pickle-global",
+                    path=data.get("path"),
+                    message=f"Pickle VM referenced dangerous global: {g_text}",
+                    severity="high",
+                    code="DYN_PICKLE_GLOBAL",
+                )
+            )
+        else:
+            findings.append(
+                IntegrityFinding(
+                    kind="pickle-global",
+                    path=data.get("path"),
+                    message=f"Pickle VM referenced global: {g_text}",
+                    severity="low",
+                    code="DYN_PICKLE_GLOBAL_REFERENCED",
+                )
+            )
 
     if len(globals_refs) > 10:
-        findings.append(IntegrityFinding(kind="pickle-global-summary", path=data.get("path"), message=f"Many globals referenced ({len(globals_refs)}). Possible malicious/complex pickle.", severity="medium", code="DYN_PICKLE_SURFACE"))
+        findings.append(IntegrityFinding(kind="pickle-global-summary", path=data.get("path"), message=f"Many globals referenced ({len(globals_refs)}, {dangerous_count} dangerous). Possible malicious/complex pickle.", severity="medium", code="DYN_PICKLE_SURFACE"))
 
     # also include simple event pattern checks
     suspicious_ops = [e for e in events if e.get("opcode") in {"GLOBAL", "STACK_GLOBAL"}]

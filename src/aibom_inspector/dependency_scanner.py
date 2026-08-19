@@ -22,7 +22,7 @@ from .types import (
     apply_license_category_dependency,
 )
 from .network import RetryConfig, request_with_retry
-from .parsers import ParserError, parse_sbom_file, read_text, model_to_dict
+from .parsers import SAFE_MAX_BYTES, ParserError, parse_sbom_file, read_text, model_to_dict
 
 
 KNOWN_BAD_VERSIONS = {
@@ -247,7 +247,7 @@ def parse_requirement_line(line: str, source: str = "requirements.txt") -> Depen
     return dep
 
 
-def scan_requirements(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
+def scan_requirements(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
@@ -259,7 +259,7 @@ def scan_requirements(path: Path, *, max_bytes: int | None = None) -> List[Depen
     return dependencies
 
 
-def scan_pyproject(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
+def scan_pyproject(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
@@ -373,7 +373,7 @@ def fetch_shadow_uefi_intel_dependency(
     return dep
 
 
-def scan_package_json(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
+def scan_package_json(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
@@ -408,7 +408,7 @@ def scan_package_json(path: Path, *, max_bytes: int | None = None) -> List[Depen
     return dependencies
 
 
-def scan_package_lock(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
+def scan_package_lock(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
@@ -478,7 +478,7 @@ def _scan_go_mod_with_cli(path: Path) -> tuple[List[DependencyInfo], str | None]
         return [], "go_list_parse_error"
 
 
-def scan_go_mod(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
+def scan_go_mod(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
@@ -516,7 +516,7 @@ def scan_go_mod(path: Path, *, max_bytes: int | None = None) -> List[DependencyI
     return dependencies
 
 
-def scan_pom(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
+def scan_pom(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> List[DependencyInfo]:
     if not path.exists():
         return []
 
@@ -674,7 +674,7 @@ def enrich_with_osv(
     return dependencies
 
 
-def parse_sbom(path: Path, *, max_bytes: int | None = None) -> List[DependencyInfo]:
+def parse_sbom(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES) -> List[DependencyInfo]:
     if not path.exists():
         return []
 

@@ -231,21 +231,25 @@ class ReportPayloadSchema(BaseModel):
     model_config = ConfigDict(extra="allow", strict=True)
 
 
-def read_text(path: Path, max_bytes: int | None = None) -> str:
+def read_text(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> str:
+    if max_bytes is not None:
+        # Check the size via stat() first so an oversized file is never fully
+        # read into memory just to be rejected.
+        size = path.stat().st_size
+        if size > max_bytes:
+            raise ParserError(f"{path} exceeds safe size limit of {max_bytes} bytes")
     raw = path.read_bytes()
-    if max_bytes is not None and len(raw) > max_bytes:
-        raise ParserError(f"{path} exceeds safe size limit of {max_bytes} bytes")
     return raw.decode("utf-8", errors="replace")
 
 
-def load_json_payload(path: Path, max_bytes: int | None = None) -> Any:
+def load_json_payload(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> Any:
     try:
         return json.loads(read_text(path, max_bytes=max_bytes))
     except json.JSONDecodeError as exc:
         raise ParserError(f"Invalid JSON in {path}: {exc}") from exc
 
 
-def load_yaml_payload(path: Path, max_bytes: int | None = None) -> Any:
+def load_yaml_payload(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> Any:
     try:
         return yaml.safe_load(read_text(path, max_bytes=max_bytes)) or {}
     except yaml.YAMLError as exc:
@@ -271,24 +275,24 @@ def _validate_payload(schema: type[SchemaT], payload: Any, path: Path) -> Schema
         raise ParserError(f"Invalid payload in {path}: {details}") from exc
 
 
-def parse_policy_file(path: Path, max_bytes: int | None = None) -> PolicySchema:
+def parse_policy_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> PolicySchema:
     payload = load_yaml_payload(path, max_bytes=max_bytes)
     return _validate_payload(PolicySchema, payload, path)
 
 
-def parse_runtime_trace_file(path: Path, max_bytes: int | None = None) -> RuntimeTraceSchema:
+def parse_runtime_trace_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> RuntimeTraceSchema:
     payload = load_json_payload(path, max_bytes=max_bytes)
     return _validate_payload(RuntimeTraceSchema, payload, path)
 
 
-def parse_models_file(path: Path, max_bytes: int | None = None) -> ModelFileSchema:
+def parse_models_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> ModelFileSchema:
     payload = load_json_payload(path, max_bytes=max_bytes)
     if isinstance(payload, list):
         payload = {"models": payload}
     return _validate_payload(ModelFileSchema, payload, path)
 
 
-def parse_sbom_file(path: Path, max_bytes: int | None = None) -> SbomPayload:
+def parse_sbom_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> SbomPayload:
     payload = load_json_payload(path, max_bytes=max_bytes)
     if isinstance(payload, dict) and str(payload.get("bomFormat", "")).lower() == "cyclonedx":
         return SbomPayload(
