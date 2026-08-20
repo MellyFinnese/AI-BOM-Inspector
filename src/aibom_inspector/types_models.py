@@ -70,12 +70,12 @@ class ModelInfo:
         contexts = self.evidence_contexts
         priority: tuple[EvidenceContext, ...] = (
             "production",
+            "unknown",
             "test",
             "benchmark",
             "example",
             "documentation",
             "implementation",
-            "unknown",
         )
         for context in priority:
             if context in contexts:
@@ -84,7 +84,11 @@ class ModelInfo:
 
     @property
     def production_relevant(self) -> bool:
-        return any(production_relevance(context) for context in self.evidence_contexts)
+        """False only when every known evidence source is explicitly non-production."""
+        contexts = self.evidence_contexts
+        if "production" in contexts or "unknown" in contexts:
+            return True
+        return any(production_relevance(context) for context in contexts)
 
     @property
     def risk_score(self) -> int:
