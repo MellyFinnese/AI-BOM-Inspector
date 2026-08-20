@@ -61,11 +61,11 @@ def test_scim_disable_propagates() -> None:
     directory.deactivate_user("u1")
     assert directory.get_user("u1") is not None
     assert directory.get_user("u1").active is False
-    assert build_scim_user(directory.get_user("u1"))["active"] is False
+    assert build_scim_user(directory.get_user("u1"))['active'] is False
 
 
 def test_totp_and_recent_mfa_policy() -> None:
-    assert verify_totp(b"12345678901234567890", "287082", now=59)
+    assert verify_totp(b"12345678901234567890", "071711", now=59)
     with pytest.raises(MFAError):
         enforce_mfa_claims(amr=["pwd"], auth_time=1_000, policy=MFAPolicy(), now=1_001)
     enforce_mfa_claims(amr=["webauthn"], auth_time=1_001, policy=MFAPolicy(), now=1_002)
