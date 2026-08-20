@@ -42,10 +42,14 @@ _SCORE_MODELS: Dict[str, ScoreModel] = {}
 
 
 def register_score_model(model: ScoreModel) -> None:
+    """Register a named score model for explicit, deterministic selection."""
+    if not model.name or not model.name.strip():
+        raise ValueError("Score model name must be non-empty.")
     _SCORE_MODELS[model.name] = model
 
 
 def get_score_model(name: str) -> ScoreModel:
+    """Return a registered score model or fail closed with a useful error."""
     if name not in _SCORE_MODELS:
         raise ValueError(f"Scoring model '{name}' is not registered.")
     return _SCORE_MODELS[name]
@@ -76,9 +80,7 @@ class DefaultScoreModel:
                         "metadata": issue.metadata,
                     }
                 )
-                issue_contributions.append(
-                    contribution
-                )
+                issue_contributions.append(contribution)
 
         missing_intel: list[dict] = []
         for model in report.models:
@@ -94,9 +96,7 @@ class DefaultScoreModel:
                         "metadata": issue.metadata,
                     }
                 )
-                issue_contributions.append(
-                    contribution
-                )
+                issue_contributions.append(contribution)
             if not (model.base_models or model.fine_tuned_from):
                 missing_intel.append({"model": model.identifier, "signal": "lineage"})
             if not model.training_sources:
@@ -124,11 +124,12 @@ class DefaultScoreModel:
         total_penalty = int(total_penalty * org_multiplier)
 
         final_score = max(0, min(settings.max_score, settings.max_score - total_penalty))
+        _validate_score_bounds(final_score, total_penalty, settings.max_score)
 
         explanation = {
             "kind": "score_explainability",
             "version": "v1",
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": report.generated_at.isoformat(),
             "scoring_model": self.name,
             "scoring_model_version": settings.scoring_model_version,
             "final_score": final_score,
@@ -141,11 +142,11 @@ class DefaultScoreModel:
             "missing_intel_penalty": settings.missing_intel_penalty,
             "category_weights": [
                 {"category": key, "weight": value, "count": breakdown.get(key, 0)}
-                for key, value in settings.category_weights.items()
+                for key, value in sorted(settings.category_weights.items())
             ],
             "org_weights": [
                 {"category": key, "weight": value, "count": breakdown.get(key, 0)}
-                for key, value in settings.org_weights.items()
+                for key, value in sorted(settings.org_weights.items())
             ],
             "weight_scale": settings.weight_scale,
             "governance_penalty": governance_penalty,
@@ -159,6 +160,13 @@ class DefaultScoreModel:
         }
 
         return ScoreOutcome(final_score=final_score, total_penalty=total_penalty, explanation=explanation)
+
+
+def _validate_score_bounds(final_score: int, total_penalty: int, max_score: int) -> None:
+    if not 0 <= final_score <= max_score:
+        raise ValueError("Score model produced a final score outside configured bounds.")
+    if total_penalty < 0:
+        raise ValueError("Score model produced a negative penalty.")
 
 
 def _org_multiplier(settings, context: OrgContext) -> float:
@@ -198,15 +206,28 @@ def _model_snapshot(report: Report) -> dict:
         }
         for model in report.models
     ]
-    digest = hashlib.sha256(json.dumps(models, sort_keys=True).encode()).hexdigest()
+    models.sort(key=lambda item: (item["id"], item["source"], item["hashes"]))
+    digest = hashlib.sha256(json.dumps(models, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return {"count": len(models), "sha256": digest, "models": models}
+
+
+def _stable_node_id(contribution: dict) -> str:
+    """Build a collision-resistant ID from the full contribution payload."""
+    payload = json.dumps(contribution, sort_keys=True, separators=(",", ":"), default=str).encode()
+    digest = hashlib.sha256(payload).hexdigest()[:16]
+    return f"{contribution['type']}:{contribution['subject']}:{contribution.get('code')}:{digest}"
 
 
 def _build_graph(contributions: list[dict], missing_intel: list[dict], missing_penalty: int, score: int) -> dict:
     nodes = [{"id": "score", "label": "stack_risk_score", "value": score}]
     edges = []
+    seen_nodes: set[str] = {"score"}
+
     for contribution in contributions:
-        node_id = f"{contribution['type']}:{contribution['subject']}:{contribution.get('code')}"
+        node_id = _stable_node_id(contribution)
+        if node_id in seen_nodes:
+            continue
+        seen_nodes.add(node_id)
         nodes.append(
             {
                 "id": node_id,
@@ -220,6 +241,9 @@ def _build_graph(contributions: list[dict], missing_intel: list[dict], missing_p
 
     for item in missing_intel:
         node_id = f"missing:{item['model']}:{item['signal']}"
+        if node_id in seen_nodes:
+            continue
+        seen_nodes.add(node_id)
         nodes.append({"id": node_id, "label": item["model"], "type": "missing_intel"})
         edges.append({"from": node_id, "to": "score", "penalty": missing_penalty})
 
