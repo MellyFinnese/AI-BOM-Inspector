@@ -24,9 +24,15 @@ class ModelIssue:
             return
         path = self.message.split(prefix, 1)[1].strip()
         context = classify_evidence_context(path)
+        relevance = production_relevance(context)
         self.metadata["evidence_context"] = context
-        self.metadata["production_relevance"] = production_relevance(context)
+        self.metadata["production_relevance"] = relevance
         self.metadata["evidence_path"] = path
+        self.message = (
+            f"{self.message} "
+            f"[evidence_context={context}] "
+            f"[production_relevance={str(relevance).lower()}]"
+        )
 
 
 @dataclass
