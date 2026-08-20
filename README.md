@@ -31,6 +31,16 @@ The project has evolved from AI supply-chain inventory and deterministic risk an
 
 The repository is the source of truth for the architecture, implementation, benchmarks, security validation, and release history described here.
 
+## Stabilization milestone
+
+**0.2.0 — Graph + Application Security Stabilization**
+
+The current milestone consolidates the project around one product thesis:
+
+> **Discover the AI stack, establish evidence and provenance, reason about relationships and reachable impact, and enforce deterministic policy decisions in CI.**
+
+See [`docs/MILESTONE_2026_08.md`](docs/MILESTONE_2026_08.md) and [`CHANGELOG.md`](CHANGELOG.md) for the stabilized scope.
+
 ## Production hardening
 
 The core/runtime hardening work now includes:
@@ -75,7 +85,7 @@ aibom runtime-profile path/to/model.safetensors --workers 8
 
 ## Enterprise security
 
-The repository also contains reusable enterprise-security primitives. The current implementation is being reviewed in [PR #132](https://github.com/MellyFinnese/AI-BOM-Inspector/pull/132):
+The repository now contains reusable enterprise-security primitives. The stabilized implementation includes:
 
 ```text
 OIDC / SAML SSO
@@ -337,6 +347,8 @@ Recall:    95.38%
 F1:        94.66%
 ```
 
+Independent external repository validation is documented in [`docs/EXTERNAL_VALIDATION.md`](docs/EXTERNAL_VALIDATION.md). The current external validation target includes `d01ki/AIBOM-Inspector`, scanned offline and in safe mode to evaluate evidence-context and production-relevance classification.
+
 For production capacity claims, benchmark on representative hardware and record:
 
 ```text
@@ -405,12 +417,14 @@ These distinctions matter because the scanner itself is a security boundary.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security validation](docs/SECURITY_VALIDATION.md)
 - [Production readiness](docs/PRODUCTION_READINESS.md)
+- [2026-08 stabilization milestone](docs/MILESTONE_2026_08.md)
+- [Independent external validation](docs/EXTERNAL_VALIDATION.md)
 - [Policy](docs/POLICY.md)
 - [Scoring](docs/SCORING.md)
 - [Enterprise Trust Baseline](docs/ENTERPRISE_TRUST_BASELINE.md)
 - [Policy Cookbook](docs/POLICY_COOKBOOK.md)
 - [AI Supply Chain Threat Model](docs/AI_SUPPLY_CHAIN_THREAT_MODEL.md)
 
-## Enterprise hardening PR
+## Enterprise hardening
 
-[PR #132 — complete enterprise identity, secrets, network and audit controls](https://github.com/MellyFinnese/AI-BOM-Inspector/pull/132)
+Enterprise identity, secrets, network, MFA, and audit controls are included in the stabilized implementation from [PR #132](https://github.com/MellyFinnese/AI-BOM-Inspector/pull/132). Deployment-specific provider configuration and infrastructure remain external concerns.
