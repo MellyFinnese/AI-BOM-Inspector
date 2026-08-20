@@ -8,14 +8,18 @@ from pathlib import Path
 
 import click
 
+from .attack_paths import discover_impact_paths
 from .behavioral_drift import compare_analyses, load_analysis
 from .benchmarking import run_benchmark
+from .graph_payload import build_graph_payload
 from .js_semantics import semantic_scan_javascript
 
 
 def register_commands(main) -> None:
     main.add_command(js_scan)
+    main.add_command(attack_paths)
     main.add_command(behavior_diff)
+    main.add_command(graph_export)
     main.add_command(benchmark)
     main.add_command(serve)
 
@@ -38,6 +42,26 @@ def js_scan(path: Path, output_path: Path | None, min_confidence: float) -> None
         click.echo(text)
 
 
+@click.command("attack-paths")
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+@click.option("--max-depth", type=int, default=8, show_default=True)
+@click.option("--max-paths", type=int, default=100, show_default=True)
+@click.option("--output", "output_path", type=click.Path(dir_okay=False, writable=True, path_type=Path))
+def attack_paths(path: Path, max_depth: int, max_paths: int, output_path: Path | None) -> None:
+    """Enumerate evidence-backed input-to-side-effect impact paths."""
+    result = semantic_scan_javascript(path)
+    payload = {
+        "schema_version": "attack-paths.v1",
+        "paths": [item.to_dict() for item in discover_impact_paths(result, max_depth=max_depth, max_paths=max_paths)],
+    }
+    text = json.dumps(payload, indent=2, sort_keys=True)
+    if output_path:
+        output_path.write_text(text + "\n", encoding="utf-8")
+    click.echo(text)
+    if payload["paths"]:
+        raise click.exceptions.Exit(2)
+
+
 @click.command("behavior-diff")
 @click.argument("baseline", type=click.Path(exists=True, path_type=Path))
 @click.argument("candidate", type=click.Path(exists=True, path_type=Path))
@@ -53,6 +77,16 @@ def behavior_diff(baseline: Path, candidate: Path, output_path: Path | None) -> 
     click.echo(text)
     if payload["impact_path_added"]:
         raise click.exceptions.Exit(2)
+
+
+@click.command("graph-export")
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+@click.argument("output", type=click.Path(dir_okay=False, writable=True, path_type=Path))
+def graph_export(path: Path, output: Path) -> None:
+    """Export the semantic JS/TS evidence graph as backend-neutral JSON."""
+    result = semantic_scan_javascript(path)
+    output.write_text(json.dumps(build_graph_payload(result), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    click.echo(f"wrote {output}")
 
 
 @click.command("benchmark")
