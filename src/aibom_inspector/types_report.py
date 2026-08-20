@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, List
 
+from .ai_assets import AIBOMDocument
 from .policy_graph import GraphPolicyViolation, GraphSnapshot
 from .types_dependencies import DependencyInfo
 from .types_models import ModelInfo
@@ -55,6 +56,8 @@ class Report:
     intel_versions: dict | None = None
     score_explanation: dict | None = None
     score: int | None = None
+    ai_bom: AIBOMDocument | None = None
+    evaluation_evidence: list[dict] = field(default_factory=list)
 
     @property
     def total_risk(self) -> int:
