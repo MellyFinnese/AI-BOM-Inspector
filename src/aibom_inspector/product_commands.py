@@ -116,7 +116,18 @@ def benchmark(manifest: Path, root: Path | None, output_path: Path | None, fail_
 @click.option("--max-bytes", type=int, default=16 * 1024**3, show_default=True)
 @click.option("--max-items", type=int, default=2_000_000, show_default=True)
 @click.option("--checkpoint-dir", type=click.Path(file_okay=False, path_type=Path))
-def artifact_scan(paths: tuple[Path, ...], workers: int, timeout_seconds: float, max_bytes: int, max_items: int, checkpoint_dir: Path | None) -> None:
+@click.option("--incremental/--no-incremental", default=False, show_default=True)
+@click.option("--rehash-cached", is_flag=True, help="Rehash unchanged inputs before reusing checkpoints.")
+def artifact_scan(
+    paths: tuple[Path, ...],
+    workers: int,
+    timeout_seconds: float,
+    max_bytes: int,
+    max_items: int,
+    checkpoint_dir: Path | None,
+    incremental: bool,
+    rehash_cached: bool,
+) -> None:
     """Scan model artifacts concurrently with resource limits and resumable checkpoints."""
     if not paths:
         raise click.UsageError("provide at least one artifact path")
@@ -125,6 +136,8 @@ def artifact_scan(paths: tuple[Path, ...], workers: int, timeout_seconds: float,
         max_items=max_items,
         timeout_seconds=timeout_seconds,
         max_workers=workers,
+        incremental=incremental,
+        rehash_cached=rehash_cached,
     )
     results = scan_many(paths, inspect_model_artifact, limits=limits, checkpoint_dir=checkpoint_dir)
     payload = {
@@ -134,6 +147,8 @@ def artifact_scan(paths: tuple[Path, ...], workers: int, timeout_seconds: float,
             "max_items": limits.max_items,
             "timeout_seconds": limits.timeout_seconds,
             "max_workers": limits.max_workers,
+            "incremental": limits.incremental,
+            "rehash_cached": limits.rehash_cached,
         },
         "artifacts": [
             {
