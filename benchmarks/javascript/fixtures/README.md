@@ -1,0 +1,1 @@
+Benchmark fixtures are intentionally small and deterministic. Positive cases are labeled by detector ID in `../manifest.json`; clean and adversarial negatives are expected to produce no findings.
