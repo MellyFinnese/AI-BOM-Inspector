@@ -54,15 +54,15 @@ def test_blast_radius_and_lineage_are_deterministic():
     assert "api:predict" in affected
 
 
-def test_attack_paths_reach_agent_through_deployment_api():
+def test_attack_paths_follow_declared_direction():
     doc = make_doc()
     paths = attack_paths(
         doc,
-        "deployment:prod",
-        {"agent:risk"},
-        relationship_types={"DEPLOYED_AS", "EXPOSES", "CALLS"},
+        "agent:risk",
+        {"api:predict"},
+        relationship_types={"CALLS"},
     )
-    assert ["deployment:prod", "api:predict", "agent:risk"] in paths
+    assert ["agent:risk", "api:predict"] in paths
 
 
 def test_diff_detects_artifact_replacement_without_fake_model_addition():
