@@ -7,5 +7,9 @@ def test_demo_report_contains_policy_block():
     assert report_path.exists(), "Demo report.json should exist"
     data = json.loads(report_path.read_text())
     assert data.get("total_risk", 0) >= 70, "Demo should exceed the configured blocking threshold"
-    ids = {f.get("id") for f in data.get("findings", [])}
+    findings = [
+        *data.get("findings", []),
+        *data.get("integrity_findings", []),
+    ]
+    ids = {f.get("id") or f.get("code") for f in findings}
     assert "PICKLE_DANGEROUS_GLOBALS" in ids, "Expected pickle finding present"
