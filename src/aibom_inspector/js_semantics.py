@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Iterable
 
-from .js_analysis import JSEvidence, JSAnalysis
+from .js_analysis import JSEvidence, JSAnalysis, scan_javascript
 
 
 AI_MODULES = {"openai", "@anthropic-ai/sdk", "ai"}
@@ -72,8 +72,6 @@ def index_javascript(text: str, *, file: str) -> SemanticIndex:
     ):
         exports.append((match.group(2), match.group(1)))
 
-    # Local aliases are intentionally narrow: they capture explicit symbol renames,
-    # which is safer than pretending to perform full JavaScript name resolution.
     for match in re.finditer(
         r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\s*;",
         text,
@@ -107,34 +105,32 @@ def augment_with_alias_findings(text: str, *, file: str, base: JSAnalysis) -> JS
         if key in seen:
             return
         seen.add(key)
-        evidence = JSEvidence(
-            detector_id=detector_id,
-            kind=kind,
-            file=file,
-            line=line,
-            symbol=symbol,
-            evidence=_snippet(text, match.start()),
-            confidence=confidence,
-            role=role,
+        findings.append(
+            JSEvidence(
+                detector_id=detector_id,
+                kind=kind,
+                file=file,
+                line=line,
+                symbol=symbol,
+                evidence=_snippet(text, match.start()),
+                confidence=confidence,
+                role=role,
+            )
         )
-        findings.append(evidence)
         node_id = f"{file}:{line}:{kind}:{symbol}"
         nodes[node_id] = {"id": node_id, "kind": kind, "symbol": symbol, "file": file}
 
     for alias in sorted(agent_aliases):
-        pattern = re.compile(rf"\bnew\s+{re.escape(alias)}\s*\(\s*\{{")
-        for match in pattern.finditer(text):
+        for match in re.finditer(rf"\bnew\s+{re.escape(alias)}\s*\(\s*\{{", text):
             add_finding("JS-AI-004", "agent", match, alias, 0.97, "ai-agent")
 
-    # Alias-aware model calls catch renamed provider clients that the lexical rules
-    # cannot identify by the literal names `openai`, `anthropic`, or `client`.
     for alias in sorted(provider_aliases):
-        pattern = re.compile(rf"\b{re.escape(alias)}\.(?:responses|chat\.completions|messages)\.(?:create|stream)\s*\(")
-        for match in pattern.finditer(text):
+        for match in re.finditer(
+            rf"\b{re.escape(alias)}\.(?:responses|chat\.completions|messages)\.(?:create|stream)\s*\(",
+            text,
+        ):
             add_finding("JS-AI-002", "model_call", match, f"{alias}.model-call", 0.96, "provider-client")
 
-    # A simple same-file variable-flow edge: an untrusted source assigned to a
-    # variable which is later consumed as a prompt/instructions value.
     assignments = re.findall(
         r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([^;\n]+)",
         text,
@@ -157,7 +153,12 @@ def augment_with_alias_findings(text: str, *, file: str, base: JSAnalysis) -> JS
                 nodes.setdefault(prompt_id, {"id": prompt_id, "kind": "variable", "symbol": prompt_var, "file": file})
                 edges.add((source_id, "FLOWS_TO", prompt_id))
 
-    return JSAnalysis(base.files_scanned, tuple(findings), tuple(nodes.values()), tuple({"source": s, "relationship": r, "target": t} for s, r, t in sorted(edges)))
+    return JSAnalysis(
+        base.files_scanned,
+        tuple(findings),
+        tuple(nodes.values()),
+        tuple({"source": s, "relationship": r, "target": t} for s, r, t in sorted(edges)),
+    )
 
 
 def build_cross_file_edges(indexes: Iterable[SemanticIndex]) -> tuple[dict[str, str], ...]:
@@ -173,13 +174,65 @@ def build_cross_file_edges(indexes: Iterable[SemanticIndex]) -> tuple[dict[str, 
             if not module.startswith("."):
                 continue
             source_file = str(PurePosixPath(consumer.file).parent.joinpath(module))
-            source_candidates = (source_file, source_file + ".ts", source_file + ".tsx", source_file + ".js", source_file + ".jsx", str(PurePosixPath(source_file) / "index.ts"), str(PurePosixPath(source_file) / "index.js"))
-            for candidate in source_candidates:
+            candidates = (
+                source_file,
+                source_file + ".ts",
+                source_file + ".tsx",
+                source_file + ".js",
+                source_file + ".jsx",
+                str(PurePosixPath(source_file) / "index.ts"),
+                str(PurePosixPath(source_file) / "index.js"),
+            )
+            for candidate in candidates:
                 key = (candidate, local if symbol == "default" else symbol)
                 target = export_index.get(key)
                 if target:
-                    source_id = f"{candidate}:export:{target[1]}"
-                    target_id = f"{consumer.file}:import:{local}"
-                    edges.add((source_id, "IMPORTED_AS", target_id))
+                    edges.add(
+                        (
+                            f"{candidate}:export:{target[1]}",
+                            "IMPORTED_AS",
+                            f"{consumer.file}:import:{local}",
+                        )
+                    )
                     break
     return tuple({"source": s, "relationship": r, "target": t} for s, r, t in sorted(edges))
+
+
+def semantic_scan_javascript(root: str | Path, *, max_files: int = 5000, max_bytes: int = 1_000_000) -> JSAnalysis:
+    base = scan_javascript(root, max_files=max_files, max_bytes=max_bytes)
+    path = Path(root).resolve()
+    if path.is_file():
+        text = path.read_text(encoding="utf-8", errors="replace")
+        return augment_with_alias_findings(text, file=path.name, base=base)
+
+    findings = list(base.findings)
+    nodes = list(base.nodes)
+    edge_set = {(edge["source"], edge["relationship"], edge["target"]) for edge in base.edges}
+    indexes: list[SemanticIndex] = []
+
+    for current in sorted(path.rglob("*")):
+        if not current.is_file() or current.suffix.lower() not in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"}:
+            continue
+        if any(part in {"node_modules", ".git", "dist", "build", ".next", "coverage"} for part in current.parts):
+            continue
+        try:
+            if current.stat().st_size > max_bytes:
+                continue
+            text = current.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        relative = str(current.relative_to(path))
+        indexes.append(index_javascript(text, file=relative))
+        result = augment_with_alias_findings(
+            text,
+            file=relative,
+            base=JSAnalysis(1, tuple(f for f in base.findings if f.file == relative), tuple(n for n in base.nodes if n.get("file") == relative), tuple(e for e in base.edges if e.get("source", "").startswith(f"{relative}:"))),
+        )
+        findings.extend(f for f in result.findings if (f.detector_id, f.file, f.line, f.symbol) not in {(x.detector_id, x.file, x.line, x.symbol) for x in base.findings})
+        nodes.extend(result.nodes)
+        edge_set.update((e["source"], e["relationship"], e["target"]) for e in result.edges)
+
+    edge_set.update((e["source"], e["relationship"], e["target"]) for e in build_cross_file_edges(indexes))
+    dedup_findings = {(f.detector_id, f.file, f.line, f.symbol): f for f in findings}
+    dedup_nodes = {n["id"]: n for n in nodes}
+    return JSAnalysis(base.files_scanned, tuple(dedup_findings.values()), tuple(dedup_nodes.values()), tuple({"source": s, "relationship": r, "target": t} for s, r, t in sorted(edge_set)))
