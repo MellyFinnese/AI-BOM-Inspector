@@ -1,0 +1,23 @@
+name: Fuzzing
+
+on:
+  schedule:
+    - cron: "17 3 * * 6"
+  workflow_dispatch:
+
+jobs:
+  parser-fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install fuzz target
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .[dev,fuzz]
+      - name: Run bounded fuzz campaign
+        run: python -m fuzz.fuzz_models_parser -runs=20000
