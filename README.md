@@ -6,17 +6,11 @@
 
 AI-BOM Inspector analyzes dependencies, SBOMs, AI models, metadata, artifacts, and source code, then turns the resulting evidence into deterministic risk, relationship context, behavioral drift, impact paths, policy decisions, and CI-friendly reports.
 
-The core design is **offline-first, deterministic, explainable, evidence-backed, and enforceable**.
+The core design is **offline-first, deterministic, explainable, evidence-backed, resource-bounded, and enforceable**.
 
 ## Validation snapshot
 
-The current regression suite passes:
-
-```text
-152 tests passed
-1 skipped
-0 failed
-```
+The project maintains a regression suite, labeled detector benchmarks, adversarial coverage, cross-platform CI, fuzzing infrastructure, and scale-runtime checks. Published benchmark numbers are measured from the repository's benchmark corpus; capacity claims for large artifacts should be measured on target production hardware before being presented as guarantees.
 
 The labeled JavaScript/TypeScript benchmark currently reports:
 
@@ -33,9 +27,89 @@ The benchmark contains positive, clean-negative, and adversarial-negative cases.
 
 This repository is the **canonical home for the AI-BOM Inspector implementation maintained by MellyFinnese**.
 
-The project has evolved from AI supply-chain inventory and deterministic risk analysis into a broader impact-analysis workflow covering AI asset identity, provenance, JavaScript/TypeScript semantics, behavioral drift, attack-path reasoning, blast radius, and graph-backed investigation.
+The project has evolved from AI supply-chain inventory and deterministic risk analysis into a broader impact-analysis workflow covering AI asset identity, provenance, JavaScript/TypeScript semantics, behavioral drift, attack-path reasoning, blast radius, graph-backed investigation, and production hardening.
 
 The repository is the source of truth for the architecture, implementation, benchmarks, security validation, and release history described here.
+
+## Production hardening
+
+The core/runtime hardening work now includes:
+
+- streaming SHA-256 hashing for multi-gigabyte artifacts
+- bounded artifact-size, item-count, worker-count, chunk-size, and timeout limits
+- concurrent artifact scanning with deterministic output ordering
+- crash-safe, `fsync`-backed checkpoints with atomic replacement
+- incremental checkpoint reuse for unchanged artifacts
+- optional full rehash verification of cached artifacts
+- CPU / wall-time / RSS profiling where supported by the host
+- disk-backed relationship storage for large relationship sets
+- deterministic risk explanations and collision-resistant evidence graph IDs
+- cryptographic provenance signing / verification primitives
+- hash-chained audit logs and tamper verification
+- cross-platform Python/Rust CI
+- optional fuzzing and reproducible scale-benchmark infrastructure
+
+Example bounded artifact scan:
+
+```bash
+aibom artifact-scan path/to/model.safetensors --workers 8 --max-bytes 17179869184 --checkpoint-dir .aibom-checkpoints
+```
+
+Incremental mode:
+
+```bash
+aibom artifact-scan path/to/model.safetensors --checkpoint-dir .aibom-checkpoints --incremental
+```
+
+High-assurance cached verification:
+
+```bash
+aibom artifact-scan path/to/model.safetensors --checkpoint-dir .aibom-checkpoints --incremental --rehash-cached
+```
+
+Runtime profiling:
+
+```bash
+aibom runtime-profile path/to/model.safetensors --workers 8
+```
+
+## Enterprise security
+
+The repository also contains reusable enterprise-security primitives. The current implementation is being reviewed in [PR #132](https://github.com/MellyFinnese/AI-BOM-Inspector/pull/132):
+
+```text
+OIDC / SAML SSO
+        ↓
+SCIM lifecycle
+        ↓
+MFA enforcement
+        ↓
+RBAC + tenant isolation
+        ↓
+Short-lived credential policy
+        ↓
+Vault / KMS adapters
+        ↓
+Network ingress / egress controls
+        ↓
+Audit export + retention
+```
+
+The enterprise work covers:
+
+- OIDC discovery, PKCE helpers, JWKS-backed JWT verification, issuer/audience/expiry/`nbf` and scope enforcement
+- SAML signed assertion/message validation and HTTPS ACS requirements
+- SCIM provisioning, disable/delete lifecycle, tenant association, and serialization
+- TOTP MFA and recent-authentication enforcement, with optional phishing-resistant admin MFA policy
+- RBAC roles and explicit permission checks
+- tenant/workspace isolation primitives
+- Vault KV read/rotation and AWS KMS data-key adapters
+- credential TTL/rotation policy
+- ingress CIDR and egress host/port policy
+- blocking of loopback, link-local, private and reserved destinations
+- bounded audit export, gzip support, and time-based retention/purge
+
+Provider accounts, certificates, client credentials, IdP configuration, Vault/KMS permissions, and deployment infrastructure remain external configuration. The project intentionally does not pretend that a library primitive is equivalent to a deployed enterprise control plane.
 
 ## The core flow
 
@@ -65,7 +139,7 @@ Evidence + relationship context
 Deterministic risk engine
    |
    v
-Policy engine
+Policy + enterprise controls
    |
    v
 Report / CI decision / evidence pack / graph export
@@ -80,9 +154,9 @@ SBOM / Models / Code -> Evidence Graph -> Impact Paths
                          |              |
                          v              v
                   Deterministic Risk -> Policy -> Enforcement
-                         ^
-                         |
-                  scoring source of truth
+                         ^                    |
+                         |                    v
+                  scoring source of truth   audit
 ```
 
 The graph/context layer provides identity, traversal, impact, behavioral change, and explanation. **The deterministic risk engine remains the scoring source of truth.** Memgraph and other graph databases are optional backends rather than requirements of the core engine.
@@ -115,39 +189,11 @@ A behavioral diff can therefore answer:
 
 > **Did this change create a new reachable impact path?**
 
-That result can feed CLI output, CI policy, graph export, AI-BOM context, and graph backends.
+That result can feed CLI output, CI policy, graph export, AI-BOM context, and optional graph backends.
 
-## AI-BOM identity and provenance
+## AI supply-chain analysis
 
-AI assets are first-class objects, including:
-
-```text
-Dataset
-  ↓
-Training Run
-  ↓
-Fine-Tuned Model
-  ↓
-Model Version
-  ↓
-Artifact
-  ↓
-Deployment
-  ↓
-API
-  ↓
-Agent
-  ↓
-Prompt
-  ↓
-Tool
-```
-
-The AI-BOM layer carries identity, provenance, lineage, evidence, deployment context, and evaluations. Code-analysis evidence is bridged into the AI-BOM only where it is AI-relevant, keeping the core schema strict.
-
-## What the core engine covers
-
-### AI supply-chain analysis
+The core engine covers:
 
 - Python, JavaScript/TypeScript, Go, and Java manifests
 - CycloneDX and SPDX SBOM ingestion
@@ -156,17 +202,12 @@ The AI-BOM layer carries identity, provenance, lineage, evidence, deployment con
 - model freshness and provenance signals
 - license and governance analysis
 - local and optional remote advisory enrichment
-
-### Model and artifact security
-
-- model artifact hashing
+- model artifact hashing and integrity checks
 - Safetensors inspection
 - pickle/global analysis
-- guarded dynamic inspection groundwork
-- legacy pickle policy enforcement
-- integrity findings and evidence output
+- policy and trust enforcement
 
-### JavaScript / TypeScript analysis
+## JavaScript / TypeScript analysis
 
 - offline static AI-usage discovery
 - provider and model-call detection
@@ -181,7 +222,7 @@ The AI-BOM layer carries identity, provenance, lineage, evidence, deployment con
 
 The JS/TS layer is intentionally conservative. It does not claim complete JavaScript data-flow, framework semantics, or exploitability.
 
-### Risk and governance
+## Risk, governance, and evidence
 
 - deterministic risk scoring
 - score explanations and risk breakdowns
@@ -189,9 +230,12 @@ The JS/TS layer is intentionally conservative. It does not claim complete JavaSc
 - policy-as-code controls
 - CI blocking / warning decisions
 - report diffing
-- evidence packs and audit-oriented outputs
+- evidence packs and attestations
+- provenance verification
+- hash-chained audit records
+- enterprise access and network-policy primitives
 
-### Graph and impact reasoning
+## Graph and impact reasoning
 
 The graph/context model supports:
 
@@ -241,6 +285,18 @@ Run the benchmark:
 aibom benchmark benchmarks/javascript/manifest.json
 ```
 
+Run a bounded artifact scan:
+
+```bash
+aibom artifact-scan path/to/model.safetensors --workers 8 --max-bytes 17179869184
+```
+
+Profile the runtime:
+
+```bash
+aibom runtime-profile path/to/model.safetensors --workers 8
+```
+
 Run the full test suite:
 
 ```bash
@@ -270,9 +326,9 @@ The benchmark reports:
 - per-detector metrics
 - per-category metrics
 - per-case false positives and false negatives
-- regression coverage for corpus breadth
+- adversarial regression coverage
 
-Current result:
+Current detector-corpus result:
 
 ```text
 Cases:     30
@@ -281,36 +337,22 @@ Recall:    95.38%
 F1:        94.66%
 ```
 
-The adversarial regression loop is:
+For production capacity claims, benchmark on representative hardware and record:
 
 ```text
-Build
-  -> attack assumptions
-  -> reproduce failures safely
-  -> add regression coverage
-  -> fix the underlying issue
-  -> rerun the suite
+artifact / component / relationship counts
+CPU + cores
+RAM
+storage class
+Python + Rust versions
+concurrency
+incremental / full-scan mode
+elapsed time
+peak RSS
+success / failure rate
 ```
 
-The benchmark specifically includes clean negatives and adversarial lookalikes so detector improvements are measured against false positives as well as missed findings.
-
-## Proof paths
-
-Reproducible vulnerable-AI demo:
-
-```bash
-PYTHONPATH=src bash demo/golden-vulnerable-ai/run_demo.sh
-```
-
-End-to-end impact-analysis demo:
-
-```text
-examples/impact-demo/
-  baseline/
-  candidate/
-```
-
-The goal is **claim -> proof**, not a feature list.
+The repository deliberately avoids publishing synthetic throughput claims as if they were measured production results.
 
 ## Security invariants
 
@@ -322,10 +364,11 @@ The project explicitly distinguishes:
 - **canonical identity** from **name-only matching**
 - **controlled policy failure** from **silent exceptions**
 - **changed relationships** from **newly reachable impact paths**
+- **security primitives** from **deployed enterprise infrastructure**
 
 These distinctions matter because the scanner itself is a security boundary.
 
-## Core vs experimental
+## Core vs enterprise
 
 | Capability | Status |
 | --- | --- |
@@ -338,76 +381,36 @@ These distinctions matter because the scanner itself is a security boundary.
 | JavaScript/TypeScript semantic analysis | **Core capability; conservative semantics** |
 | Behavioral drift | **Core capability** |
 | Formal impact / attack paths | **Core capability** |
-| Adversarial regression coverage | **Core security practice** |
+| Production artifact runtime controls | **Core** |
+| Incremental + crash-safe scanning | **Core** |
+| Provenance signing / verification primitives | **Core capability** |
+| Hash-chained audit log | **Core capability** |
+| RBAC / tenant isolation primitives | **Enterprise capability** |
+| OIDC / SAML SSO primitives | **Enterprise capability** |
+| SCIM provisioning | **Enterprise capability** |
+| MFA policy / verification | **Enterprise capability** |
+| Vault / KMS adapters | **Enterprise capability** |
+| Credential rotation / TTL policy | **Enterprise capability** |
+| Network ingress / egress policy | **Enterprise capability** |
+| Audit export / retention | **Enterprise capability** |
 | CycloneDX / SPDX reporting | **Core** |
 | GitHub / CI integration | **Core integration** |
 | Backend-neutral graph export | **Core integration** |
 | Memgraph adapter | **Optional / experimental** |
-| Enterprise control plane | **Roadmap / deployment architecture** |
-
-## Repository map
-
-```text
-src/aibom_inspector/
-  ai_assets.py            # AI-BOM schema and relationship index
-  ai_bom_reasoning.py     # identity, lineage, blast radius, attack paths
-  js_analysis.py          # JS/TS evidence analysis
-  js_semantics.py         # aliases, imports/exports, variable flow
-  behavioral_drift.py     # evidence-graph change and impact-path diffing
-  benchmarking.py         # reproducible detector benchmarks
-  graph.py                # relationship / blast-radius context
-  risk_engine.py          # deterministic scoring
-  policy.py               # policy decisions and enforcement
-  reporting.py            # report generation
-  attestation.py          # evidence artifacts
-  trust_root.py           # trust primitives
-
-crates/
-  core/                   # Rust core
-  licenses/               # license rules
-  advisories/             # advisory adapters
-  report/                 # reporting and diff support
-
-demo/golden-vulnerable-ai/
-examples/impact-demo/
-benchmarks/javascript/
-tests/
-docs/
-```
-
-## What makes it different
-
-**AI assets are first-class.** Models, datasets, deployments, agents, prompts, tools, and artifacts can be represented explicitly.
-
-**The decision is deterministic.** The core security result does not require hosted LLM inference.
-
-**Relationships matter.** The graph/context layer explains lineage, blast radius, and behavioral change.
-
-**Impact paths are explicit.** A newly reachable input-to-side-effect path becomes a first-class, evidence-backed object.
-
-**Evidence matters.** Findings and relationships remain traceable to the observations that produced them.
-
-**The scanner is attacked too.** Analyzer weaknesses become regression tests and hardened behavior.
-
-## Development milestones
-
-- **AI-BOM identity, lineage, and blast-radius foundations**
-- **JavaScript/TypeScript analysis and behavioral drift**
-- **Benchmark v2 with per-detector and per-category metrics**
-- **Adversarial benchmark corpus and negative-case coverage**
-- **Semantic JS/TS aliases and cross-file relationships**
-- **Graph-aware behavioral drift and impact-path reasoning**
-- **End-to-end AI impact-path analysis and graph export**
-- **Benchmark hardening to >0.90 precision/recall/F1**
-
-The implementation is deliberately evolving through evidence-backed milestones rather than a single monolithic scanner release.
+| Kubernetes / HA service plane | **Deployment roadmap** |
+| Third-party penetration testing / certification | **External validation** |
 
 ## Further reading
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security validation](docs/SECURITY_VALIDATION.md)
+- [Production readiness](docs/PRODUCTION_READINESS.md)
 - [Policy](docs/POLICY.md)
 - [Scoring](docs/SCORING.md)
 - [Enterprise Trust Baseline](docs/ENTERPRISE_TRUST_BASELINE.md)
 - [Policy Cookbook](docs/POLICY_COOKBOOK.md)
 - [AI Supply Chain Threat Model](docs/AI_SUPPLY_CHAIN_THREAT_MODEL.md)
+
+## Enterprise hardening PR
+
+[PR #132 — complete enterprise identity, secrets, network and audit controls](https://github.com/MellyFinnese/AI-BOM-Inspector/pull/132)
