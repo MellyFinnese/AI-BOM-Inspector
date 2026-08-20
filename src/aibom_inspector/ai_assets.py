@@ -207,6 +207,49 @@ class AIBOMIndex:
     def __init__(self, document: AIBOMDocument) -> None:
         self.document = document
         self.edges = list(document.relationships)
+        seen = {(edge.from_id, edge.to_id, edge.type) for edge in self.edges}
+
+        def add_derived(from_id: str, to_id: str, relationship_type: RelationshipType) -> None:
+            key = (from_id, to_id, relationship_type)
+            if from_id in self._object_ids and to_id in self._object_ids and key not in seen:
+                self.edges.append(AIRelationship(from_id=from_id, to_id=to_id, type=relationship_type))
+                seen.add(key)
+
+        self._object_ids = {
+            obj.id for obj in [
+                *document.assets,
+                *document.model_versions,
+                *document.artifact_identities,
+                *document.training_provenance,
+                *document.deployments,
+                *document.evaluations,
+            ]
+        }
+
+        for version in document.model_versions:
+            add_derived(version.id, version.model_id, "VERSION_OF")
+            for artifact_id in version.artifact_ids:
+                add_derived(version.id, artifact_id, "PACKAGED_AS")
+
+        for provenance in document.training_provenance:
+            add_derived(provenance.id, provenance.model_version_id, "PRODUCES")
+            for base_id in provenance.base_model_version_ids:
+                add_derived(provenance.id, base_id, "FINE_TUNED_FROM")
+            for lineage in provenance.dataset_lineage:
+                add_derived(provenance.id, lineage.dataset_id, "TRAINED_ON")
+
+        for deployment in document.deployments:
+            add_derived(deployment.id, deployment.model_version_id, "DEPLOYED_AS")
+            for runtime_id in deployment.runtime_ids:
+                add_derived(deployment.id, runtime_id, "RUNS_ON")
+            for endpoint_id in deployment.endpoint_ids:
+                add_derived(deployment.id, endpoint_id, "EXPOSES")
+
+        for evaluation in document.evaluations:
+            add_derived(evaluation.id, evaluation.model_version_id, "EVALUATED_BY")
+            if evaluation.dataset_id:
+                add_derived(evaluation.id, evaluation.dataset_id, "TRAINED_ON")
+
         self._out: dict[str, list[AIRelationship]] = defaultdict(list)
         self._in: dict[str, list[AIRelationship]] = defaultdict(list)
         for edge in self.edges:
