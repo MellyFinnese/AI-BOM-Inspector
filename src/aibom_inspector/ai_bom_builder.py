@@ -34,11 +34,10 @@ def build_ai_bom(report: Report) -> AIBOMDocument:
             relationships.append(AIRelationship(from_id=a, to_id=b, type=rel)); edge_ids.add(key)
 
     applications = {a.name: asset("deployment", a.name, provider=a.owner, source="application inventory", metadata={"environment": a.environment, "criticality": a.criticality, "data_sensitivity": a.data_sensitivity, "owner": a.owner}) for a in report.applications}
-    model_versions: dict[str, str] = {}
 
     for model in report.models:
         mid = asset("model", model.identifier, provider=model.source, source="model inventory", metadata={"risk": model.risk_score, "trust_score": model.trust_score})
-        mids = []
+        mids: list[str] = []
         for digest in model.hashes:
             d = str(digest).strip()
             if len(d) == 64 and all(c in "0123456789abcdefABCDEF" for c in d):
@@ -47,7 +46,7 @@ def build_ai_bom(report: Report) -> AIBOMDocument:
                     artifacts.append(ArtifactIdentity(id=aid, digest=d.lower(), media_type="application/octet-stream")); artifact_ids.add(aid)
                 mids.append(aid); edge(mid, aid, "PACKAGED_AS")
         vv = model.last_updated.isoformat() if model.last_updated else "unknown"
-        vid = stable_asset_id("model_version", model.identifier, vv, model.source); model_versions[model.identifier] = vid
+        vid = stable_asset_id("model_version", model.identifier, vv, model.source)
         if vid not in version_ids:
             versions.append(ModelVersion(id=vid, model_id=mid, version=vv, provider=model.source, artifact_ids=mids)); version_ids.add(vid)
         edge(vid, mid, "VERSION_OF")
