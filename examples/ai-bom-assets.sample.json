@@ -1,0 +1,78 @@
+{
+  "schema_version": "0.2",
+  "assets": [
+    {"id": "model:fraud-detector", "kind": "model", "name": "fraud-detector", "provider": "acme"},
+    {"id": "model:base", "kind": "model", "name": "base-model"},
+    {"id": "dataset:transactions", "kind": "dataset", "name": "transactions"},
+    {"id": "runtime:prod", "kind": "runtime", "name": "prod-runtime"},
+    {"id": "api:predict", "kind": "api", "name": "predict-api"},
+    {"id": "agent:risk", "kind": "agent", "name": "risk-agent"},
+    {"id": "prompt:risk", "kind": "prompt", "name": "risk-prompt"},
+    {"id": "tool:ledger", "kind": "tool", "name": "ledger-tool"},
+    {"id": "app:fraud", "kind": "deployment", "name": "fraud-prod"}
+  ],
+  "model_versions": [
+    {
+      "id": "model-version:fraud:v2",
+      "model_id": "model:fraud-detector",
+      "version": "2",
+      "artifact_ids": ["artifact:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+    }
+  ],
+  "artifact_identities": [
+    {
+      "id": "artifact:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "digest_algorithm": "sha256",
+      "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "media_type": "application/octet-stream"
+    }
+  ],
+  "training_provenance": [
+    {
+      "id": "training:fraud:v2",
+      "model_version_id": "model-version:fraud:v2",
+      "run_type": "fine_tuning",
+      "dataset_lineage": [
+        {"dataset_id": "dataset:transactions", "role": "fine_tuning", "version": "2026-08-19"}
+      ],
+      "code_commit": "abcdef1234567",
+      "framework": "pytorch"
+    }
+  ],
+  "deployments": [
+    {
+      "id": "deployment-context:prod",
+      "application_id": "app:fraud",
+      "model_version_id": "model-version:fraud:v2",
+      "environment": "prod",
+      "criticality": "high",
+      "data_sensitivity": "confidential",
+      "endpoint_ids": ["api:predict"],
+      "runtime_ids": ["runtime:prod"]
+    }
+  ],
+  "evaluations": [
+    {
+      "id": "evaluation:fraud:baseline",
+      "model_version_id": "model-version:fraud:v2",
+      "suite": "fraud-regression",
+      "passed": true,
+      "metrics": {"f1": 0.91},
+      "dataset_id": "dataset:transactions"
+    }
+  ],
+  "relationships": [
+    {"from_id": "model-version:fraud:v2", "to_id": "model:fraud-detector", "type": "VERSION_OF"},
+    {"from_id": "model-version:fraud:v2", "to_id": "model:base", "type": "FINE_TUNED_FROM"},
+    {"from_id": "training:fraud:v2", "to_id": "dataset:transactions", "type": "TRAINED_ON"},
+    {"from_id": "training:fraud:v2", "to_id": "model-version:fraud:v2", "type": "PRODUCES"},
+    {"from_id": "model-version:fraud:v2", "to_id": "artifact:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "type": "PACKAGED_AS"},
+    {"from_id": "deployment-context:prod", "to_id": "model-version:fraud:v2", "type": "DEPLOYED_AS"},
+    {"from_id": "deployment-context:prod", "to_id": "runtime:prod", "type": "RUNS_ON"},
+    {"from_id": "deployment-context:prod", "to_id": "api:predict", "type": "EXPOSES"},
+    {"from_id": "agent:risk", "to_id": "api:predict", "type": "CALLS"},
+    {"from_id": "agent:risk", "to_id": "tool:ledger", "type": "INVOKES"},
+    {"from_id": "agent:risk", "to_id": "prompt:risk", "type": "CONFIGURES"},
+    {"from_id": "evaluation:fraud:baseline", "to_id": "model-version:fraud:v2", "type": "EVALUATED_BY"}
+  ]
+}
