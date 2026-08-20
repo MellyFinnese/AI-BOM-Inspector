@@ -66,6 +66,22 @@ jobs:
       - name: Run tests
         run: pytest -q
 
+  enterprise-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install enterprise extra
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e '.[dev,enterprise]'
+      - name: Run enterprise security regression tests
+        run: pytest -q tests/test_enterprise_controls.py
+
   scale-runtime:
     runs-on: ubuntu-latest
     steps:
