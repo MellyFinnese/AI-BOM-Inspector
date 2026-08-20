@@ -4,7 +4,6 @@ import hashlib
 import json
 import os
 import platform
-import resource
 import tempfile
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
@@ -12,6 +11,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from threading import Lock
 from typing import Callable, Iterable, TypeVar
+
+try:  # resource is unavailable on Windows
+    import resource  # type: ignore
+except ImportError:  # pragma: no cover - platform dependent
+    resource = None  # type: ignore[assignment]
 
 T = TypeVar("T")
 
@@ -141,13 +145,15 @@ class CheckpointStore:
 
 
 def run_with_timeout(fn: Callable[[], T], timeout_seconds: float) -> T:
-    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="aibom-timeout") as pool:
-        future: Future[T] = pool.submit(fn)
-        try:
-            return future.result(timeout=timeout_seconds)
-        except TimeoutError as exc:
-            future.cancel()
-            raise ScanTimeout(f"scan exceeded {timeout_seconds:.2f}s") from exc
+    pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="aibom-timeout")
+    future: Future[T] = pool.submit(fn)
+    try:
+        return future.result(timeout=timeout_seconds)
+    except TimeoutError as exc:
+        future.cancel()
+        raise ScanTimeout(f"scan exceeded {timeout_seconds:.2f}s") from exc
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
 
 
 def scan_many(
@@ -195,15 +201,17 @@ def scan_many(
 
 def profile(fn: Callable[[], T]) -> tuple[T, RuntimeProfile]:
     started = time.perf_counter()
-    start_usage = resource.getrusage(resource.RUSAGE_SELF)
+    start_usage = resource.getrusage(resource.RUSAGE_SELF) if resource else None
     result = fn()
     elapsed = time.perf_counter() - started
-    end_usage = resource.getrusage(resource.RUSAGE_SELF)
+    end_usage = resource.getrusage(resource.RUSAGE_SELF) if resource else None
     peak_rss_bytes: int | None = None
-    if hasattr(end_usage, "ru_maxrss"):
+    cpu_seconds: float | None = None
+    if end_usage is not None:
         factor = 1024 if platform.system() != "Darwin" else 1
         peak_rss_bytes = int(end_usage.ru_maxrss * factor)
-    cpu_seconds = (end_usage.ru_user + end_usage.ru_system) - (start_usage.ru_user + start_usage.ru_system)
+        if start_usage is not None:
+            cpu_seconds = (end_usage.ru_user + end_usage.ru_system) - (start_usage.ru_user + start_usage.ru_system)
     return result, RuntimeProfile(
         elapsed_seconds=elapsed,
         peak_rss_bytes=peak_rss_bytes,
