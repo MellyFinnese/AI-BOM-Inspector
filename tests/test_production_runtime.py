@@ -52,6 +52,25 @@ def test_concurrent_scan_is_deterministic_and_resumable(tmp_path: Path) -> None:
     assert len(calls) == 3
 
 
+def test_incremental_mode_skips_rehash_for_unchanged_artifact(tmp_path: Path) -> None:
+    path = tmp_path / "artifact.bin"
+    path.write_bytes(b"stable" * 2048)
+    checkpoint = tmp_path / "checkpoints"
+    calls = 0
+
+    def scanner(_: Path) -> str:
+        nonlocal calls
+        calls += 1
+        return "scanned"
+
+    limits = ResourceLimits(max_workers=1, incremental=True)
+    first = scan_many([path], scanner, checkpoint_dir=checkpoint, limits=limits)
+    second = scan_many([path], scanner, checkpoint_dir=checkpoint, limits=limits)
+    assert not first[0].cached
+    assert second[0].cached
+    assert calls == 1
+
+
 def test_timeout_is_fail_closed(tmp_path: Path) -> None:
     path = tmp_path / "slow.bin"
     path.write_bytes(b"slow")
