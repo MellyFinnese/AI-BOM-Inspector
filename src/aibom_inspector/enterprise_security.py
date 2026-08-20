@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 
 
-class Role(StrEnum):
+class Role(str, Enum):
     ADMIN = "admin"
     SECURITY_ANALYST = "security_analyst"
     DEVELOPER = "developer"
@@ -14,7 +14,7 @@ class Role(StrEnum):
     READ_ONLY = "read_only"
 
 
-class Permission(StrEnum):
+class Permission(str, Enum):
     READ = "read"
     SCAN = "scan"
     EXPORT = "export"
@@ -27,9 +27,15 @@ class Permission(StrEnum):
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.ADMIN: frozenset(Permission),
-    Role.SECURITY_ANALYST: frozenset({Permission.READ, Permission.SCAN, Permission.EXPORT, Permission.POLICY_READ, Permission.GRAPH_QUERY, Permission.AUDIT_READ}),
-    Role.DEVELOPER: frozenset({Permission.READ, Permission.SCAN, Permission.EXPORT, Permission.POLICY_READ, Permission.GRAPH_QUERY}),
-    Role.AUDITOR: frozenset({Permission.READ, Permission.EXPORT, Permission.POLICY_READ, Permission.GRAPH_QUERY, Permission.AUDIT_READ}),
+    Role.SECURITY_ANALYST: frozenset(
+        {Permission.READ, Permission.SCAN, Permission.EXPORT, Permission.POLICY_READ, Permission.GRAPH_QUERY, Permission.AUDIT_READ}
+    ),
+    Role.DEVELOPER: frozenset(
+        {Permission.READ, Permission.SCAN, Permission.EXPORT, Permission.POLICY_READ, Permission.GRAPH_QUERY}
+    ),
+    Role.AUDITOR: frozenset(
+        {Permission.READ, Permission.EXPORT, Permission.POLICY_READ, Permission.GRAPH_QUERY, Permission.AUDIT_READ}
+    ),
     Role.READ_ONLY: frozenset({Permission.READ}),
 }
 
@@ -60,7 +66,13 @@ class SecretReference:
     env_var: str | None = None
 
     def validate(self) -> None:
-        if self.provider not in {"env", "vault", "aws-secrets-manager", "gcp-secret-manager", "azure-key-vault"}:
+        if self.provider not in {
+            "env",
+            "vault",
+            "aws-secrets-manager",
+            "gcp-secret-manager",
+            "azure-key-vault",
+        }:
             raise ValueError(f"unsupported secret provider: {self.provider}")
         if self.provider == "env":
             if not self.env_var or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,127}", self.env_var):
