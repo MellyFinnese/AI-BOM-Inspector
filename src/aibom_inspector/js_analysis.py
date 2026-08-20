@@ -59,10 +59,101 @@ def _stable_id(*parts: str) -> str:
     return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:16]
 
 
+def _mask_non_code(text: str) -> str:
+    """Replace comments and string contents with spaces while preserving offsets/newlines."""
+    chars = list(text)
+    i = 0
+    n = len(chars)
+    state = "code"
+    quote = ""
+    while i < n:
+        if state == "code":
+            if text.startswith("//", i):
+                chars[i] = chars[i + 1] = " "
+                i += 2
+                state = "line-comment"
+                continue
+            if text.startswith("/*", i):
+                chars[i] = chars[i + 1] = " "
+                i += 2
+                state = "block-comment"
+                continue
+            if text[i] in {"'", '"', "`"}:
+                quote = text[i]
+                chars[i] = " "
+                i += 1
+                state = "string"
+                continue
+            i += 1
+            continue
+
+        if state == "line-comment":
+            if text[i] == "\n":
+                state = "code"
+            else:
+                chars[i] = " "
+            i += 1
+            continue
+
+        if state == "block-comment":
+            if text.startswith("*/", i):
+                chars[i] = chars[i + 1] = " "
+                i += 2
+                state = "code"
+            else:
+                if text[i] != "\n":
+                    chars[i] = " "
+                i += 1
+            continue
+
+        # string / template literal. This deliberately treats the literal body as non-code;
+        # template interpolation is therefore conservative rather than attempting full parsing.
+        if text[i] == "\\" and i + 1 < n:
+            if text[i] != "\n":
+                chars[i] = " "
+            if text[i + 1] != "\n":
+                chars[i + 1] = " "
+            i += 2
+            continue
+        if text[i] == quote:
+            chars[i] = " "
+            i += 1
+            state = "code"
+            continue
+        if text[i] != "\n":
+            chars[i] = " "
+        i += 1
+    return "".join(chars)
+
+
+def _mask_static_dead_if_false(code: str) -> str:
+    """Blank statically unreachable `if (false) { ... }` blocks, preserving offsets."""
+    chars = list(code)
+    for match in re.finditer(r"\bif\s*\(\s*false\s*\)\s*\{", code, re.IGNORECASE):
+        depth = 0
+        in_block = False
+        i = match.start()
+        while i < len(code):
+            if code[i] == "{":
+                depth += 1
+                in_block = True
+            elif code[i] == "}" and in_block:
+                depth -= 1
+                if depth == 0:
+                    for j in range(match.start(), i + 1):
+                        if chars[j] != "\n":
+                            chars[j] = " "
+                    break
+            i += 1
+    return "".join(chars)
+
+
 def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
     findings: list[JSEvidence] = []
     nodes: dict[str, dict[str, str]] = {}
     edges: set[tuple[str, str, str]] = set()
+    code_mask = _mask_non_code(text)
+    code = _mask_static_dead_if_false(code_mask)
 
     def add(detector_id: str, kind: str, match: re.Match[str], symbol: str, confidence: float, role: str | None = None) -> None:
         line = _line_of(text, match.start())
@@ -81,21 +172,37 @@ def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
         node_key = f"{file}:{line}:{kind}:{symbol}"
         nodes[node_key] = {"id": node_key, "kind": kind, "symbol": symbol, "file": file}
 
-    # Provider imports and SDK usage.
-    provider_patterns = [
-        ("JS-AI-001", "provider", r"(?:from\s+[\"'](openai|@anthropic-ai/sdk|ai)[\"']|require\(\s*[\"'](openai|@anthropic-ai/sdk|ai)[\"']\s*\))", "ai-sdk"),
-        ("JS-AI-002", "model_call", r"\b(?:openai|anthropic|client)\.(?:chat\.completions|responses|messages|generateText|streamText|generateObject)\s*\(", "model-call"),
-        ("JS-AI-003", "model_call", r"\b(?:generateText|streamText|generateObject)\s*\(", "vercel-ai-call"),
-        ("JS-AI-004", "agent", r"\bnew\s+Agent\s*\(\s*\{", "agent"),
-        ("JS-AI-005", "mcp", r"\b(?:McpServer|MCPServer|Server)\s*\(", "mcp-server"),
+    # Provider imports are matched against source text, but the match must begin in executable code.
+    import_patterns = [
+        ("JS-AI-001", r"(?:from\s+[\"'](openai|@anthropic-ai/sdk|ai)[\"']|require\(\s*[\"'](openai|@anthropic-ai/sdk|ai)[\"']\s*\))", "ai-sdk")
     ]
-    for detector_id, kind, pattern, symbol in provider_patterns:
+    for detector_id, pattern, symbol in import_patterns:
         for match in re.finditer(pattern, text, re.IGNORECASE):
-            add(detector_id, kind, match, symbol, 0.92 if kind != "provider" else 0.98)
+            if code_mask[match.start()] != " ":
+                add(detector_id, "provider", match, symbol, 0.98)
+
+    # Provider/model calls. The call receiver is intentionally identifier-agnostic; semantic analysis
+    # later adds higher-confidence provider-specific aliases. This catches SDK clients such as
+    # `client.messages.create`, `client.responses.create`, and `client.chat.completions.create`.
+    for match in re.finditer(
+        r"\b[A-Za-z_$][\w$]*\.(?:chat\.completions|responses|messages|generateText|streamText|generateObject)\s*\(",
+        code,
+        re.IGNORECASE,
+    ):
+        add("JS-AI-002", "model_call", match, "model-call", 0.92, role="provider-client")
+
+    for match in re.finditer(r"\b(?:generateText|streamText|generateObject)\s*\(", code, re.IGNORECASE):
+        add("JS-AI-003", "model_call", match, "vercel-ai-call", 0.92, role="model-call")
+
+    for match in re.finditer(r"\bnew\s+Agent\s*\(\s*\{", code):
+        add("JS-AI-004", "agent", match, "agent", 0.92, role="ai-agent")
+
+    for match in re.finditer(r"\b(?:McpServer|MCPServer|Server)\s*\(", code):
+        add("JS-AI-005", "mcp", match, "mcp-server", 0.92, role="mcp")
 
     # Common agent/tool declarations.
     tool_pattern = re.compile(r"\b(?:tools|tool|server\.tool|registerTool)\s*\(?\s*[\"'`]?([A-Za-z0-9_.:/-]+)?", re.IGNORECASE)
-    for match in tool_pattern.finditer(text):
+    for match in tool_pattern.finditer(code):
         symbol = match.group(1) or "tool-binding"
         add("JS-AGENT-001", "tool", match, symbol, 0.86, role="bound-tool")
 
@@ -108,7 +215,7 @@ def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
     ]
     source_nodes: list[str] = []
     for detector_id, kind, pattern in source_patterns:
-        for match in re.finditer(pattern, text, re.IGNORECASE):
+        for match in re.finditer(pattern, code, re.IGNORECASE):
             add(detector_id, "input", match, kind, 0.88, role="untrusted-source")
             source_nodes.append(f"{file}:{_line_of(text, match.start())}:input:{kind}")
 
@@ -118,14 +225,14 @@ def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
         re.IGNORECASE,
     )
     prompt_nodes: list[str] = []
-    for match in prompt_pattern.finditer(text):
+    for match in prompt_pattern.finditer(code):
         add("JS-PROMPT-001", "prompt-sink", match, "prompt", 0.91, role="privileged-instructions")
         prompt_nodes.append(f"{file}:{_line_of(text, match.start())}:prompt-sink:prompt")
 
     # Tool-capable sinks.
     op_pattern = re.compile(r"\b(?:child_process\.(?:exec|execFile|spawn)|fs\.(?:writeFile|rm|unlink)|fetch|axios\.(?:get|post|put|delete))\s*\(", re.IGNORECASE)
     op_nodes: list[str] = []
-    for match in op_pattern.finditer(text):
+    for match in op_pattern.finditer(code):
         op = re.search(r"(?:child_process\.(?:exec|execFile|spawn)|fs\.(?:writeFile|rm|unlink)|fetch|axios\.(?:get|post|put|delete))", match.group(0), re.IGNORECASE)
         symbol = op.group(0) if op else "privileged-operation"
         add("JS-TOOL-001", "privileged-operation", match, symbol, 0.9, role="side-effect")
