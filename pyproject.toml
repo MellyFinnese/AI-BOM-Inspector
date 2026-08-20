@@ -48,6 +48,7 @@ dev = [
     "types-requests>=2.32.0.20240622",
 ]
 fuzz = ["atheris>=2.3.0"]
+enterprise = ["cryptography>=42.0.0"]
 
 [project.scripts]
 aibom = "aibom_inspector.cli:main"
