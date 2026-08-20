@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Iterable
 
-from .ai_assets import AIBOMDocument, AIAsset, AIBOMIndex, AIRelationship, ModelVersion
+from .ai_assets import AIBOMDocument, AIAsset, AIBOMIndex, AIRelationship
 
 
 @dataclass(frozen=True)
@@ -20,8 +20,6 @@ class AssetIdentity:
 
     @property
     def key(self) -> str:
-        # Digest is the strongest identity signal. Names remain normalized for
-        # human-friendly matching when an immutable digest is unavailable.
         if self.digest:
             return f"{self.kind}:digest:{self.digest.lower()}"
         parts = [self.kind.lower(), normalize_name(self.name)]
@@ -36,6 +34,31 @@ def normalize_name(value: str) -> str:
     return " ".join(value.strip().lower().replace("/", " ").replace("_", "-").split())
 
 
+def index_canonical_identities(document: AIBOMDocument) -> dict[str, str]:
+    """Map every AI-BOM object id to a stable identity key."""
+    identities: dict[str, str] = {}
+    for asset in document.assets:
+        identities[asset.id] = asset_identity(asset, document).key
+
+    model_assets = {asset.id: asset for asset in document.assets if asset.kind == "model"}
+    for artifact in document.artifact_identities:
+        identities[artifact.id] = AssetIdentity(
+            kind="artifact",
+            name=artifact.media_type or "artifact",
+            digest=artifact.digest,
+        ).key
+
+    for version in document.model_versions:
+        model = model_assets.get(version.model_id)
+        identities[version.id] = AssetIdentity(
+            kind="model_version",
+            name=model.name if model else version.model_id,
+            provider=version.provider or (model.provider if model else None),
+            version=version.version,
+        ).key
+    return identities
+
+
 def asset_identity(asset: AIAsset, document: AIBOMDocument) -> AssetIdentity:
     digest = None
     if asset.artifact_ids:
@@ -45,41 +68,13 @@ def asset_identity(asset: AIAsset, document: AIBOMDocument) -> AssetIdentity:
             if artifact and artifact.digest:
                 digest = artifact.digest
                 break
-    version = asset.version
     return AssetIdentity(
         kind=asset.kind,
         name=asset.name,
         provider=asset.provider,
-        version=version,
+        version=asset.version,
         digest=digest,
     )
-
-
-def index_canonical_identities(document: AIBOMDocument) -> dict[str, str]:
-    """Map each asset id to a stable identity key for cross-scan comparison."""
-    identities: dict[str, str] = {}
-    for asset in document.assets:
-        identities[asset.id] = asset_identity(asset, document).key
-
-    model_assets = {asset.id: asset for asset in document.assets if asset.kind == "model"}
-    for version in document.model_versions:
-        model = model_assets.get(version.model_id)
-        if not model:
-            continue
-        digest = None
-        for artifact_id in version.artifact_ids:
-            artifact = next((a for a in document.artifact_identities if a.id == artifact_id), None)
-            if artifact and artifact.digest:
-                digest = artifact.digest
-                break
-        identities[version.id] = AssetIdentity(
-            kind="model_version",
-            name=model.name,
-            provider=version.provider or model.provider,
-            version=version.version,
-            digest=digest,
-        ).key
-    return identities
 
 
 @dataclass(frozen=True)
@@ -115,9 +110,8 @@ def diff_ai_bom(previous: AIBOMDocument, current: AIBOMDocument) -> AIBOMDiff:
     """Compare two AI-BOM snapshots using canonical identities, not raw IDs."""
     prev_keys = index_canonical_identities(previous)
     curr_keys = index_canonical_identities(current)
-
-    prev_by_key = {key: asset_id for asset_id, key in prev_keys.items()}
-    curr_by_key = {key: asset_id for asset_id, key in curr_keys.items()}
+    prev_by_key = {key: object_id for object_id, key in prev_keys.items()}
+    curr_by_key = {key: object_id for object_id, key in curr_keys.items()}
 
     diff = AIBOMDiff()
     diff.added_assets = sorted(key for key in curr_by_key if key not in prev_by_key)
@@ -133,9 +127,7 @@ def diff_ai_bom(previous: AIBOMDocument, current: AIBOMDocument) -> AIBOMDiff:
         new = curr_objs.get(new_id)
         if old is None or new is None:
             continue
-        old_sig = _object_signature(old)
-        new_sig = _object_signature(new)
-        if old_sig != new_sig:
+        if _object_signature(old) != _object_signature(new):
             diff.changed_assets.append({"identity": key, "previous": old_id, "current": new_id})
 
     prev_edges = {_edge_signature(edge, prev_keys) for edge in previous.relationships}
@@ -152,7 +144,7 @@ def blast_radius(document: AIBOMDocument, start_id: str, *, max_depth: int = 32)
 
 
 def lineage(document: AIBOMDocument, model_version_id: str, *, max_depth: int = 32) -> set[str]:
-    return AIBOMIndex(document).lineage(model_version_id)
+    return AIBOMIndex(document).upstream(model_version_id, max_depth=max_depth)
 
 
 def attack_paths(
@@ -226,8 +218,6 @@ def _objects(document: AIBOMDocument) -> list[object]:
 
 
 def _object_signature(obj: object) -> str:
-    # Exclude the object ID so immutable/renamed IDs don't appear as changes
-    # when canonical identity remains stable.
     data = obj.model_dump(exclude={"id"})
     return sha256(repr(sorted(data.items())).encode("utf-8")).hexdigest()
 
