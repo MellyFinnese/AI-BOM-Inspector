@@ -11,7 +11,6 @@ import click
 from .attack_paths import discover_impact_paths
 from .behavioral_drift import compare_analyses, load_analysis
 from .benchmarking import run_benchmark
-from .enterprise_security import Permission, Principal, Role, authorize
 from .graph_payload import build_graph_payload
 from .js_semantics import semantic_scan_javascript
 from .production_runtime import ResourceLimits, profile, scan_many
@@ -155,13 +154,13 @@ def artifact_scan(paths: tuple[Path, ...], workers: int, timeout_seconds: float,
 @click.argument("paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
 @click.option("--workers", type=int, default=8, show_default=True)
 def runtime_profile(paths: tuple[Path, ...], workers: int) -> None:
-    """Profile scalable artifact fingerprinting for performance and memory baselines."""
+    """Profile scalable artifact inspection for performance and memory baselines."""
     if not paths:
         raise click.UsageError("provide at least one artifact path")
 
     def run() -> tuple:
         limits = ResourceLimits(max_workers=workers)
-        return scan_many(paths, lambda path: inspect_model_artifact(path), limits=limits)
+        return scan_many(paths, inspect_model_artifact, limits=limits)
 
     result, metrics = profile(run)
     click.echo(
