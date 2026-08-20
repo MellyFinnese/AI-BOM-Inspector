@@ -1,26 +1,35 @@
 {
-  "schema_version": "aibom-benchmark.v1",
+  "schema_version": "aibom-benchmark.v2",
   "language": "javascript-typescript",
   "cases": [
-    {
-      "name": "basic-agent",
-      "path": "fixtures/basic-agent.ts",
-      "expected_detectors": ["JS-AI-001", "JS-AI-003", "JS-PROMPT-001"]
-    },
-    {
-      "name": "agent-tool",
-      "path": "fixtures/agent-tool.ts",
-      "expected_detectors": ["JS-AI-004", "JS-AGENT-001"]
-    },
-    {
-      "name": "reachable-path",
-      "path": "fixtures/reachable-path.ts",
-      "expected_detectors": ["JS-AI-004", "JS-AGENT-001", "JS-TAINT-001", "JS-PROMPT-001"]
-    },
-    {
-      "name": "clean-typescript",
-      "path": "fixtures/clean.ts",
-      "expected_detectors": []
-    }
+    {"name":"basic-agent","path":"fixtures/basic-agent.ts","category":"agent","expected_detectors":["JS-AI-001","JS-AI-003","JS-PROMPT-001"]},
+    {"name":"agent-tool","path":"fixtures/agent-tool.ts","category":"tool","expected_detectors":["JS-AI-004","JS-AGENT-001"]},
+    {"name":"reachable-path","path":"fixtures/reachable-path.ts","category":"taint","expected_detectors":["JS-AI-004","JS-AGENT-001","JS-TAINT-001","JS-PROMPT-001"]},
+    {"name":"anthropic-call","path":"fixtures/anthropic-call.ts","category":"provider","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
+    {"name":"mcp","path":"fixtures/mcp.ts","category":"mcp","expected_detectors":["JS-AI-005","JS-AGENT-001"]},
+    {"name":"http-prompt","path":"fixtures/http-prompt.ts","category":"taint","expected_detectors":["JS-TAINT-001","JS-PROMPT-001","JS-AGENT-001"]},
+    {"name":"vercel-ai","path":"fixtures/vercel-ai.ts","category":"provider","expected_detectors":["JS-AI-001","JS-AI-003","JS-PROMPT-001"]},
+    {"name":"cli-prompt","path":"fixtures/cli-prompt.ts","category":"taint","expected_detectors":["JS-AI-004","JS-TAINT-002","JS-PROMPT-001"]},
+    {"name":"env-prompt","path":"fixtures/env-prompt.ts","category":"taint","expected_detectors":["JS-AI-004","JS-TAINT-003","JS-PROMPT-001"]},
+    {"name":"retrieval-prompt","path":"fixtures/retrieval-prompt.ts","category":"taint","expected_detectors":["JS-AI-004","JS-TAINT-004","JS-PROMPT-001"]},
+    {"name":"privileged-operation","path":"fixtures/privileged-operation.ts","category":"privileged-operation","expected_detectors":["JS-AI-004","JS-AGENT-001","JS-TOOL-001"]},
+    {"name":"mixed-agent","path":"fixtures/mixed-agent.ts","category":"mixed","expected_detectors":["JS-AI-001","JS-AI-002","JS-AI-003","JS-AI-004","JS-AGENT-001","JS-TAINT-001","JS-PROMPT-001"]},
+    {"name":"anthropic-provider-variant","path":"fixtures/anthropic-provider-variant.ts","category":"provider","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
+    {"name":"openai-responses","path":"fixtures/openai-responses.ts","category":"provider","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
+    {"name":"cjs-openai","path":"fixtures/cjs-openai.js","category":"provider","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
+    {"name":"mcp-tool","path":"fixtures/mcp-tool.ts","category":"mcp","expected_detectors":["JS-AI-005","JS-AGENT-001"]},
+    {"name":"mcp-client","path":"fixtures/mcp-client.ts","category":"mcp","expected_detectors":["JS-AI-005"]},
+    {"name":"filesystem-tool","path":"fixtures/filesystem-tool.ts","category":"privileged-operation","expected_detectors":["JS-AI-004","JS-AGENT-001","JS-TOOL-001"]},
+    {"name":"network-tool","path":"fixtures/network-tool.ts","category":"privileged-operation","expected_detectors":["JS-AI-004","JS-AGENT-001","JS-TOOL-001"]},
+    {"name":"express-prompt","path":"fixtures/express-prompt.ts","category":"taint","expected_detectors":["JS-AI-001","JS-AI-002","JS-TAINT-001"]},
+    {"name":"fetch-prompt","path":"fixtures/fetch-prompt.ts","category":"taint","expected_detectors":["JS-AI-001","JS-AI-002"]},
+    {"name":"clean-typescript","path":"fixtures/clean.ts","category":"clean-negative","expected_detectors":[]},
+    {"name":"clean-comments","path":"fixtures/clean-comments.ts","category":"clean-negative","expected_detectors":[]},
+    {"name":"clean-business-code","path":"fixtures/clean-business-code.ts","category":"clean-negative","expected_detectors":[]},
+    {"name":"non-ai-business","path":"fixtures/non-ai-business.ts","category":"clean-negative","expected_detectors":[]},
+    {"name":"comments-only","path":"fixtures/comments-only.ts","category":"adversarial-negative","expected_detectors":[]},
+    {"name":"lookalike-strings","path":"fixtures/lookalike-strings.ts","category":"adversarial-negative","expected_detectors":[]},
+    {"name":"string-and-comment-noise","path":"fixtures/string-and-comment-noise.ts","category":"adversarial-negative","expected_detectors":[]},
+    {"name":"dead-code","path":"fixtures/dead-code.ts","category":"adversarial-negative","expected_detectors":[]}
   ]
 }
