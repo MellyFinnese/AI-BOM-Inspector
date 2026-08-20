@@ -35,6 +35,8 @@ class ResourceLimits:
     timeout_seconds: float = 900.0
     max_workers: int = min(32, (os.cpu_count() or 2) + 4)
     chunk_bytes: int = 1024 * 1024
+    incremental: bool = False
+    rehash_cached: bool = False
 
     def validate(self) -> None:
         if self.max_artifact_bytes <= 0:
@@ -107,16 +109,25 @@ def fingerprint(path: Path, *, limits: ResourceLimits | None = None) -> Artifact
 
 
 class CheckpointStore:
-    """Crash-safe JSON checkpoint store using fsync + atomic replace."""
+    """Crash-safe JSON checkpoints plus a path/mtime index for incremental scans."""
 
     def __init__(self, directory: Path) -> None:
         self.directory = directory
         self.directory.mkdir(parents=True, exist_ok=True)
         self._lock = Lock()
+        self._index_path = self.directory / "index.json"
 
     def _path(self, key: str) -> Path:
         digest = hashlib.sha256(key.encode()).hexdigest()
         return self.directory / f"{digest}.json"
+
+    def _load_index(self) -> dict[str, dict]:
+        if not self._index_path.exists():
+            return {}
+        try:
+            return json.loads(self._index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {}
 
     def load(self, key: str) -> dict | None:
         path = self._path(key)
@@ -126,6 +137,19 @@ class CheckpointStore:
             return json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return None
+
+    def load_incremental(self, path: Path, *, size: int, mtime_ns: int) -> tuple[str, dict] | None:
+        index = self._load_index()
+        entry = index.get(str(path.resolve()))
+        if not entry or entry.get("size") != size or entry.get("mtime_ns") != mtime_ns:
+            return None
+        key = entry.get("key")
+        if not isinstance(key, str):
+            return None
+        payload = self.load(key)
+        if payload and payload.get("status") == "complete":
+            return key, payload
+        return None
 
     def save(self, key: str, payload: dict) -> None:
         path = self._path(key)
@@ -137,6 +161,26 @@ class CheckpointStore:
                     handle.flush()
                     os.fsync(handle.fileno())
                 os.replace(tmp_name, path)
+                fp = payload.get("fingerprint") or {}
+                index = self._load_index()
+                index[str(fp.get("path"))] = {
+                    "size": fp.get("size"),
+                    "mtime_ns": fp.get("mtime_ns"),
+                    "sha256": fp.get("sha256"),
+                    "key": key,
+                }
+                fd2, index_tmp = tempfile.mkstemp(prefix=".index-", dir=self.directory, text=True)
+                try:
+                    with os.fdopen(fd2, "w", encoding="utf-8") as handle:
+                        json.dump(index, handle, sort_keys=True, separators=(",", ":"))
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                    os.replace(index_tmp, self._index_path)
+                finally:
+                    try:
+                        os.unlink(index_tmp)
+                    except FileNotFoundError:
+                        pass
             finally:
                 try:
                     os.unlink(tmp_name)
@@ -173,12 +217,23 @@ def scan_many(
 
     def worker(path: Path) -> ArtifactScanResult:
         started = time.monotonic()
+        stat = path.stat()
+        if stat.st_size > limits.max_artifact_bytes:
+            raise ResourceLimitExceeded(f"{path} is {stat.st_size} bytes; limit is {limits.max_artifact_bytes}")
+        if checkpoints and limits.incremental and not limits.rehash_cached:
+            cached = checkpoints.load_incremental(path, size=stat.st_size, mtime_ns=stat.st_mtime_ns)
+            if cached:
+                _, payload = cached
+                fp = ArtifactFingerprint(**payload["fingerprint"])
+                return ArtifactScanResult(fp, payload.get("result"), True, float(payload.get("elapsed_seconds", 0.0)))
+
         fp = fingerprint(path, limits=limits)
         key = f"{fp.path}:{fp.size}:{fp.mtime_ns}:{fp.sha256}"
         if checkpoints:
             cached = checkpoints.load(key)
             if cached and cached.get("status") == "complete":
                 return ArtifactScanResult(fp, cached.get("result"), True, float(cached.get("elapsed_seconds", 0.0)))
+
         result = run_with_timeout(lambda: scanner(path), limits.timeout_seconds)
         elapsed = time.monotonic() - started
         if checkpoints:
