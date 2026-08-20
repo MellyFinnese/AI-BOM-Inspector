@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .js_analysis import scan_javascript
+from .js_semantics import semantic_scan_javascript
 
 
 @dataclass(frozen=True)
@@ -103,7 +103,7 @@ def run_benchmark(manifest: str | Path, *, root: str | Path | None = None) -> Be
 
     for case in cases:
         path = (base / case.path).resolve()
-        result = scan_javascript(path)
+        result = semantic_scan_javascript(path)
         predicted = frozenset(item.detector_id for item in result.findings)
         hit = predicted & case.expected_detectors
         false_pos = predicted - case.expected_detectors
