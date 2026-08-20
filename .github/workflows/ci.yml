@@ -46,10 +46,12 @@ jobs:
         run: python -m aibom_inspector.bidi_guard
 
   tests:
-    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -62,7 +64,25 @@ jobs:
           pip install -r requirements.txt
           pip install -e .[dev]
       - name: Run tests
-        run: pytest
+        run: pytest -q
+
+  scale-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .[dev]
+      - name: Run production runtime regression tests
+        run: pytest -q tests/test_production_runtime.py tests/test_relationship_store.py
+      - name: Run scale benchmark smoke test
+        run: python benchmarks/scale_benchmark.py --artifacts 250 --bytes-per-artifact 65536 --workers 4
 
   rust:
     runs-on: ubuntu-latest
