@@ -19,7 +19,7 @@ dependencies = [
     "requests>=2.31.0",
     "packaging>=23.0",
     "PyYAML>=6.0.0",
-    "tomli>=2.0.1; python_version < '3.11'",
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 keywords = ["ai", "security", "supply-chain", "bom", "risk"]
 classifiers = [
@@ -33,10 +33,11 @@ classifiers = [
     "Topic :: Security",
     "Topic :: Software Development :: Build Tools",
 ]
+
 [project.urls]
-Homepage = "https://github.com/aibom-inspector/AI-BOM-Inspector"
-Repository = "https://github.com/aibom-inspector/AI-BOM-Inspector"
-"Bug Tracker" = "https://github.com/aibom-inspector/AI-BOM-Inspector/issues"
+Homepage = "https://github.com/MellyFinnese/AI-BOM-Inspector"
+Repository = "https://github.com/MellyFinnese/AI-BOM-Inspector"
+"Bug Tracker" = "https://github.com/MellyFinnese/AI-BOM-Inspector/issues"
 
 [project.optional-dependencies]
 huggingface = ["huggingface_hub>=0.26.0"]
