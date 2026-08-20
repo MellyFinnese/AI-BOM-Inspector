@@ -4,10 +4,28 @@
       "name": "vulnerable-model",
       "id": "vulnerable-model",
       "path": "models/vulnerable_model.pkl",
+      "source": "demo",
+      "version": "4",
       "deployed_to": "demo-app",
+      "base_models": ["base-model-v2"],
+      "fine_tuned_from": ["base-model-v2"],
+      "training_sources": ["dataset://transactions/v3"],
+      "hashes": ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+      "artifacts": ["models/vulnerable_model.pkl"],
       "license": "GPL-3.0-or-later",
-      "provenance": null,
-      "notes": "Deliberately legacy .pkl to trigger policy checks and demonstrate app/owner mapping"
+      "provenance": "training-run-demo-2026-08-20",
+      "notes": "Deliberately legacy .pkl to trigger policy checks while demonstrating model lineage, dataset provenance, artifact identity, deployment mapping, and blast-radius reasoning"
+    },
+    {
+      "name": "base-model-v2",
+      "id": "base-model-v2",
+      "path": "models/base_model.bin",
+      "source": "demo",
+      "version": "2",
+      "license": "Apache-2.0",
+      "training_sources": ["dataset://transactions/v2"],
+      "hashes": ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+      "notes": "Benign upstream base model used to demonstrate fine-tuning lineage"
     }
   ]
 }
