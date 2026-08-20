@@ -207,14 +207,6 @@ class AIBOMIndex:
     def __init__(self, document: AIBOMDocument) -> None:
         self.document = document
         self.edges = list(document.relationships)
-        seen = {(edge.from_id, edge.to_id, edge.type) for edge in self.edges}
-
-        def add_derived(from_id: str, to_id: str, relationship_type: RelationshipType) -> None:
-            key = (from_id, to_id, relationship_type)
-            if from_id in self._object_ids and to_id in self._object_ids and key not in seen:
-                self.edges.append(AIRelationship(from_id=from_id, to_id=to_id, type=relationship_type))
-                seen.add(key)
-
         self._object_ids = {
             obj.id for obj in [
                 *document.assets,
@@ -225,6 +217,13 @@ class AIBOMIndex:
                 *document.evaluations,
             ]
         }
+        seen = {(edge.from_id, edge.to_id, edge.type) for edge in self.edges}
+
+        def add_derived(from_id: str, to_id: str, relationship_type: RelationshipType) -> None:
+            key = (from_id, to_id, relationship_type)
+            if from_id in self._object_ids and to_id in self._object_ids and key not in seen:
+                self.edges.append(AIRelationship(from_id=from_id, to_id=to_id, type=relationship_type))
+                seen.add(key)
 
         for version in document.model_versions:
             add_derived(version.id, version.model_id, "VERSION_OF")
