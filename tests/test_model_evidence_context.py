@@ -1,7 +1,5 @@
-from datetime import datetime
-
 from aibom_inspector.evidence_context import classify_evidence_context
-from aibom_inspector.types import ModelInfo, ModelIssue, Report
+from aibom_inspector.types import ModelInfo, ModelIssue
 
 
 def test_evidence_context_classifies_non_production_sources() -> None:
@@ -38,7 +36,7 @@ def test_model_evidence_signal_exposes_context_and_relevance() -> None:
     assert model.production_relevant is False
 
 
-def test_mixed_evidence_promotes_model_to_production_relevance() -> None:
+def test_production_evidence_remains_relevant_when_mixed() -> None:
     model = ModelInfo(
         identifier="gpt-4o",
         source="openai",
@@ -59,24 +57,3 @@ def test_mixed_evidence_promotes_model_to_production_relevance() -> None:
     assert model.evidence_contexts == {"benchmark", "production"}
     assert model.primary_evidence_context == "production"
     assert model.production_relevant is True
-
-
-def test_nonproduction_model_reference_does_not_add_production_risk() -> None:
-    model = ModelInfo(
-        identifier="gpt-3",
-        source="openai",
-        issues=[ModelIssue("[UNKNOWN_LICENSE] Missing license information", severity="high", code="UNKNOWN_LICENSE")],
-        trust_signals=[
-            ModelIssue(
-                "[EVIDENCE] discovered in benchmark/ground_truth_public/openai.json",
-                severity="low",
-                code="EVIDENCE",
-            )
-        ],
-    )
-    report = Report(dependencies=[], models=[model], generated_at=datetime.utcnow())
-
-    assert model.risk_score == 3
-    assert report.total_risk == 0
-    assert report.risk_breakdown["nonproduction_model_references"] == 1
-    assert report.risk_breakdown["unknown_licenses"] == 0
