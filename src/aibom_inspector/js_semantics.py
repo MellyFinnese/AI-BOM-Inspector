@@ -99,6 +99,17 @@ def augment_with_alias_findings(text: str, *, file: str, base: JSAnalysis) -> JS
             agent_aliases.add(local)
 
     alias_map = {local: target for local, target in index.aliases}
+
+    # Capture SDK client instances such as `const client = new Anthropic()` or
+    # `const openaiClient = new OpenAI()`. The declaration creates a semantic
+    # provider alias even though it is not a plain identifier assignment.
+    for alias in tuple(sorted(provider_aliases)):
+        for match in re.finditer(
+            rf"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+{re.escape(alias)}\s*\(",
+            text,
+        ):
+            provider_aliases.add(match.group(1))
+
     changed = True
     while changed:
         changed = False
