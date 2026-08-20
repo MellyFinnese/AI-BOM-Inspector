@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -23,7 +24,7 @@ class AuditLogEntry:
 def _hash_payload(payload: dict, previous_hash: str | None) -> str:
     digest = hashlib.sha256()
     digest.update((previous_hash or "").encode())
-    digest.update(json.dumps(payload, sort_keys=True).encode())
+    digest.update(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
     return digest.hexdigest()
 
 
@@ -46,6 +47,9 @@ def _load_last_hash(path: Path) -> str | None:
 
 def append_audit_log(path: Path, entry: AuditLogEntry) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        os.close(fd)
     previous_hash = _load_last_hash(path)
     payload = {
         "action": entry.action,
@@ -62,7 +66,9 @@ def append_audit_log(path: Path, entry: AuditLogEntry) -> None:
     payload["previous_hash"] = previous_hash
     payload["entry_hash"] = entry_hash
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, sort_keys=True) + "\n")
+        handle.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
 
 
 def verify_audit_log(path: Path) -> list[str]:
@@ -94,6 +100,8 @@ def verify_audit_log(path: Path) -> list[str]:
                 },
                 previous_hash,
             )
+            if payload.get("previous_hash") != previous_hash:
+                errors.append(f"Line {idx}: previous_hash mismatch")
             if entry_hash != expected:
                 errors.append(f"Line {idx}: hash mismatch")
             previous_hash = entry_hash
@@ -114,7 +122,7 @@ def build_audit_entry(
     return AuditLogEntry(
         action=action,
         actor=actor,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         report_path=str(report_path) if report_path else None,
         report_sha256=report_sha256,
         attestation_path=str(attestation_path) if attestation_path else None,
