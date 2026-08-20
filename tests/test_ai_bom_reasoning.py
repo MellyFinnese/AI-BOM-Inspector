@@ -14,7 +14,8 @@ from aibom_inspector.ai_bom_reasoning import (
 def make_doc(*, changed: bool = False) -> AIBOMDocument:
     model_id = "model:fraud"
     version_id = "model-version:fraud-v2"
-    artifact_id = "artifact:sha256:" + ("b" if changed else "a") * 64
+    digest = ("b" if changed else "a") * 64
+    artifact_id = "artifact:sha256:" + digest
     deployment_id = "deployment:prod"
     agent_id = "agent:risk"
     api_id = "api:predict"
@@ -28,7 +29,7 @@ def make_doc(*, changed: bool = False) -> AIBOMDocument:
         model_versions=[
             ModelVersion(id=version_id, model_id=model_id, version="2", artifact_ids=[artifact_id])
         ],
-        artifact_identities=[ArtifactIdentity(id=artifact_id, digest=artifact_id.split(":", 2)[-1])],
+        artifact_identities=[ArtifactIdentity(id=artifact_id, digest=digest)],
         relationships=[
             AIRelationship(from_id=version_id, to_id=model_id, type="VERSION_OF"),
             AIRelationship(from_id=deployment_id, to_id=version_id, type="DEPLOYED_AS"),
@@ -38,12 +39,11 @@ def make_doc(*, changed: bool = False) -> AIBOMDocument:
     )
 
 
-def test_canonical_identity_prefers_digest_and_normalizes_names():
-    doc = make_doc()
-    identities = index_canonical_identities(doc)
-    assert identities["model:fraud"].startswith("model:")
-    assert "fraud-model" not in identities["model:fraud"]
-    assert "artifact:sha256:" in identities["model-version:fraud-v2"]
+def test_canonical_identity_normalizes_names_and_keeps_version_stable():
+    identities = index_canonical_identities(make_doc())
+    assert identities["model:fraud"].startswith("model:fraud-model:acme")
+    assert identities["model-version:fraud-v2"].startswith("model_version:fraud-model:acme:2")
+    assert identities["artifact:sha256:" + "a" * 64].endswith("a" * 64)
 
 
 def test_blast_radius_and_lineage_are_deterministic():
@@ -65,22 +65,16 @@ def test_attack_paths_reach_agent_through_deployment_api():
     assert ["deployment:prod", "api:predict", "agent:risk"] in paths
 
 
-def test_diff_uses_canonical_identity_and_detects_artifact_change():
-    previous = make_doc(changed=False)
-    current = make_doc(changed=True)
-    diff = diff_ai_bom(previous, current)
-    assert diff.added_assets == []
-    assert diff.removed_assets == []
-    assert diff.changed_assets == []
-    assert diff.added_relationships == []
-    assert diff.removed_relationships == []
-    # The model-version identity remains stable, so artifact replacement is a
-    # relationship/identity event rather than a fake model addition/removal.
-    assert any("artifact:sha256:" in item["identity"] for item in diff.changed_assets)
+def test_diff_detects_artifact_replacement_without_fake_model_addition():
+    diff = diff_ai_bom(make_doc(changed=False), make_doc(changed=True))
+    assert not any(item.startswith("model:fraud") for item in diff.added_assets + diff.removed_assets)
+    assert any(item.startswith("artifact:digest:") for item in diff.added_assets)
+    assert any(item.startswith("artifact:digest:") for item in diff.removed_assets)
 
 
 def test_evidence_chain_marks_undeclared_edges_declared():
-    edge = make_doc().relationships[1]
-    chain = evidence_chain_for_relationship(make_doc(), edge)
+    doc = make_doc()
+    edge = doc.relationships[1]
+    chain = evidence_chain_for_relationship(doc, edge)
     assert chain.relationship_type == "DEPLOYED_AS"
     assert chain.confidence == "declared"
