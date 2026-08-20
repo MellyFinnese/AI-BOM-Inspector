@@ -1,0 +1,15 @@
+{
+  "schema_version": "aibom-benchmark.v1",
+  "language": "javascript-typescript",
+  "cases": [
+    {"name":"basic-agent","path":"fixtures/basic-agent.ts","expected_detectors":["JS-AI-001","JS-AI-003","JS-PROMPT-001"]},
+    {"name":"agent-tool","path":"fixtures/agent-tool.ts","expected_detectors":["JS-AI-004","JS-AGENT-001"]},
+    {"name":"reachable-path","path":"fixtures/reachable-path.ts","expected_detectors":["JS-AI-004","JS-AGENT-001","JS-TAINT-001","JS-PROMPT-001","JS-TOOL-001"]},
+    {"name":"anthropic-call","path":"fixtures/anthropic-call.ts","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
+    {"name":"mcp","path":"fixtures/mcp.ts","expected_detectors":["JS-AI-005","JS-AGENT-001"]},
+    {"name":"http-prompt","path":"fixtures/http-prompt.ts","expected_detectors":["JS-TAINT-001","JS-PROMPT-001","JS-AGENT-001"]},
+    {"name":"clean-typescript","path":"fixtures/clean.ts","expected_detectors":[]},
+    {"name":"clean-comments","path":"fixtures/clean-comments.ts","expected_detectors":[]},
+    {"name":"clean-business-code","path":"fixtures/clean-business-code.ts","expected_detectors":[]}
+  ]
+}
