@@ -1,6 +1,6 @@
 # Production-readiness hardening
 
-This document defines the production hardening baseline for AI-BOM Inspector and distinguishes implemented controls from controls that require an external platform or enterprise identity provider.
+This document distinguishes implemented core controls from controls that still require deployment operations or a third-party provider account.
 
 ## Implemented in the core runtime
 
@@ -12,11 +12,33 @@ This document defines the production hardening baseline for AI-BOM Inspector and
 - Runtime profiling with elapsed time, CPU time, peak RSS where the host exposes it, Python version, and platform.
 - Disk-backed SQLite relationship storage with WAL, indexed source/target traversal, batched inserts, and bounded shortest-path queries.
 - Deterministic score explanations and collision-resistant evidence graph node IDs.
-- Optional Ed25519 signing/verification of canonical provenance payloads.
+- Ed25519 signing/verification of canonical provenance payloads.
 - Hash-chained audit logs with verification support.
 - Cross-platform Python CI on 3.10, 3.11, and 3.12 across Ubuntu, macOS, and Windows.
 - Optional Atheris fuzz target for model-manifest parsing.
 - Reproducible scale benchmark harness and CI smoke benchmark.
+
+## Enterprise identity and access
+
+The enterprise security layer now includes concrete primitives for:
+
+- RBAC roles: admin, security analyst, developer, auditor, read-only;
+- tenant/workspace-aware authorization;
+- OIDC discovery and cryptographic JWT verification through issuer JWKS;
+- issuer, audience, expiry, not-before, required-scope, and MFA claim enforcement;
+- SAML response validation through `python3-saml`, including signed-message/assertion validation and HTTPS ACS requirements;
+- SCIM user provisioning, disable/deactivate, delete, and SCIM response serialization;
+- TOTP verification plus recent-MFA and phishing-resistant admin MFA policy controls;
+- Vault KV secret reads and rotations;
+- AWS KMS data-key generation through the optional boto3 adapter;
+- explicit short-lived credential TTL enforcement and rotation scheduling;
+- ingress CIDR allow/deny controls and egress host/port/private-destination policy;
+- audit export with size limits and optional gzip compression;
+- audit retention/purge controls.
+
+Install the enterprise dependencies with `pip install -e '.[enterprise]'`.
+
+External provider credentials remain outside the codebase. Vault/KMS calls require the corresponding provider account and permissions. OIDC/SAML still require a configured identity provider, signing keys/certificates, and an HTTPS deployment endpoint.
 
 ## CLI controls
 
@@ -55,21 +77,9 @@ For a multi-gigabyte single-artifact test, use `aibom artifact-scan` against a r
 - peak RSS;
 - success/failure rate.
 
-## Enterprise identity and access
-
-`enterprise_security.py` provides the stable authorization boundary used by an eventual service layer:
-
-- roles: admin, security analyst, developer, auditor, read-only;
-- explicit permissions;
-- tenant isolation checks;
-- workspace identifiers;
-- secret references that reject embedded raw credentials.
-
-OIDC/SAML authentication, SCIM provisioning, MFA, Vault/KMS adapters, and network policy enforcement belong in the service/deployment layer. The core library deliberately fails closed when an external secret provider is referenced without an adapter instead of pretending a local implementation is equivalent to an enterprise identity system.
-
 ## Enterprise operations still requiring deployment infrastructure
 
-The repository does not claim that a CLI alone provides these controls. They require an actual service architecture and operational environment:
+The repository does not claim that a CLI/library alone provides these controls. A production service still needs:
 
 - Kubernetes/Helm deployment;
 - HA API and worker topology;
@@ -82,17 +92,20 @@ The repository does not claim that a CLI alone provides these controls. They req
 - measured SLO/SLA, RPO and RTO targets;
 - third-party penetration testing and independent audit.
 
-Those should be added only when the corresponding service interfaces exist, rather than creating deployment manifests that cannot execute real production workflows.
-
 ## Security verification expectations
 
 Before treating this as an enterprise release:
 
 1. run the full Python/Rust CI matrix;
-2. run fuzzing with a time budget and retain crash artifacts;
-3. execute scale benchmarks on representative hardware;
-4. test checkpoint recovery by terminating scans mid-run;
-5. verify attestation signatures and tamper detection;
-6. verify the audit chain after mutation attempts;
-7. run an external penetration test against the deployed service layer;
-8. publish measured capacity and operational limits.
+2. install and test the enterprise extra;
+3. run fuzzing with a time budget and retain crash artifacts;
+4. execute scale benchmarks on representative hardware;
+5. test checkpoint recovery by terminating scans mid-run;
+6. verify OIDC signatures against a real IdP JWKS endpoint;
+7. verify SAML assertions against a real IdP certificate;
+8. test SCIM lifecycle events for every tenant;
+9. test Vault/KMS access and rotation permissions;
+10. verify network policies from an external deployment environment;
+11. verify the audit chain after mutation attempts and exercise retention/export;
+12. run an external penetration test against the deployed service layer;
+13. publish measured capacity and operational limits.
