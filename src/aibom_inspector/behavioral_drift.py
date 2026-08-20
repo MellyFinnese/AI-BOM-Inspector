@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from .attack_paths import discover_impact_paths
 from .js_analysis import JSEvidence, JSAnalysis
@@ -34,6 +35,75 @@ class DriftChange:
 
 def _edge_key(edge: dict[str, str]) -> tuple[str, str, str]:
     return edge["source"], edge["relationship"], edge["target"]
+
+
+def _node_kind(node_id: str, nodes: dict[str, dict[str, str]]) -> str:
+    node = nodes.get(node_id)
+    if node:
+        return node.get("kind", "")
+    parts = node_id.split(":")
+    return parts[-2] if len(parts) >= 2 else ""
+
+
+def _is_source(node_id: str, nodes: dict[str, dict[str, str]]) -> bool:
+    kind = _node_kind(node_id, nodes)
+    return kind in {"input", "variable"} and (":input:" in node_id or ":variable:" in node_id)
+
+
+def _is_risk_sink(node_id: str, nodes: dict[str, dict[str, str]]) -> bool:
+    kind = _node_kind(node_id, nodes)
+    return kind in {"privileged-operation", "tool"}
+
+
+def _risk_for_path(path_nodes: tuple[str, ...], nodes: dict[str, dict[str, str]]) -> str:
+    kinds = {_node_kind(node_id, nodes) for node_id in path_nodes}
+    if "privileged-operation" in kinds and "input" in kinds:
+        return "critical"
+    if "privileged-operation" in kinds or "tool" in kinds:
+        return "high"
+    return "medium"
+
+
+def _impact_paths(analysis: JSAnalysis, *, max_depth: int = 8, max_paths: int = 200) -> tuple[dict[str, Any], ...]:
+    nodes = {node["id"]: node for node in analysis.nodes if "id" in node}
+    adjacency: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for edge in analysis.edges:
+        source, relationship, target = _edge_key(edge)
+        adjacency[source].append((relationship, target))
+
+    sources = sorted(node_id for node_id in nodes if _is_source(node_id, nodes))
+    paths: list[dict[str, Any]] = []
+    seen_signatures: set[tuple[str, ...]] = set()
+
+    for source in sources:
+        queue: deque[tuple[str, tuple[str, ...], tuple[str, ...]]] = deque([(source, (source,), ())])
+        while queue and len(paths) < max_paths:
+            current, node_path, relationships = queue.popleft()
+            if len(node_path) > max_depth:
+                continue
+            if current != source and _is_risk_sink(current, nodes):
+                signature = node_path + relationships
+                if signature not in seen_signatures:
+                    seen_signatures.add(signature)
+                    paths.append(
+                        {
+                            "nodes": list(node_path),
+                            "relationships": list(relationships),
+                            "severity": _risk_for_path(node_path, nodes),
+                            "length": len(relationships),
+                        }
+                    )
+                continue
+            for relationship, target in sorted(adjacency.get(current, []), key=lambda item: (item[0], item[1])):
+                if target in node_path:
+                    continue
+                queue.append((target, node_path + (target,), relationships + (relationship,)))
+
+    return tuple(paths)
+
+
+def _path_signature(path: dict[str, Any]) -> tuple[Any, ...]:
+    return tuple(path["nodes"]) + tuple(path["relationships"])
 
 
 def compare_analyses(baseline: JSAnalysis, candidate: JSAnalysis) -> dict[str, Any]:
