@@ -144,7 +144,33 @@ def blast_radius(document: AIBOMDocument, start_id: str, *, max_depth: int = 32)
 
 
 def lineage(document: AIBOMDocument, model_version_id: str, *, max_depth: int = 32) -> set[str]:
-    return AIBOMIndex(document).upstream(model_version_id, max_depth=max_depth)
+    """Return upstream provenance plus the structured model-version context."""
+    index = AIBOMIndex(document)
+    result = index.upstream(model_version_id, max_depth=max_depth)
+    version = next((item for item in document.model_versions if item.id == model_version_id), None)
+    if version is None:
+        return result
+
+    result.add(version.model_id)
+    result.update(version.artifact_ids)
+
+    for provenance in document.training_provenance:
+        if provenance.model_version_id == model_version_id:
+            result.add(provenance.id)
+            result.update(provenance.base_model_version_ids)
+            result.update(item.dataset_id for item in provenance.dataset_lineage)
+
+    for evaluation in document.evaluations:
+        if evaluation.model_version_id == model_version_id:
+            result.add(evaluation.id)
+            if evaluation.dataset_id:
+                result.add(evaluation.dataset_id)
+
+    for deployment in document.deployments:
+        if deployment.model_version_id == model_version_id:
+            result.add(deployment.id)
+
+    return result
 
 
 def attack_paths(
