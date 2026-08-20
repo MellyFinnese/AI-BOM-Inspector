@@ -61,9 +61,8 @@ class Report:
 
     @property
     def total_risk(self) -> int:
-        return sum(dep.risk_score for dep in self.dependencies) + sum(
-            model.risk_score for model in self.models
-        )
+        model_penalty = sum(model.risk_score for model in self.models if model.production_relevant)
+        return sum(dep.risk_score for dep in self.dependencies) + model_penalty
 
     @property
     def stack_risk_score(self) -> int:
@@ -88,6 +87,7 @@ class Report:
             "training_data_missing": 0,
             "license_ambiguity": 0,
             "model_risk_profiles": 0,
+            "nonproduction_model_references": 0,
         }
 
         for dep in self.dependencies:
@@ -103,6 +103,9 @@ class Report:
                 buckets["unknown_licenses"] += 1
 
         for model in self.models:
+            if not model.production_relevant:
+                buckets["nonproduction_model_references"] += 1
+                continue
             for model_issue in model.issues:
                 code = model_issue.code or model_issue.message
                 if code and "UNVERIFIED_SOURCE" in str(code):
