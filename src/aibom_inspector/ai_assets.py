@@ -246,6 +246,8 @@ class AIBOMIndex:
 
         for evaluation in document.evaluations:
             add_derived(evaluation.id, evaluation.model_version_id, "EVALUATED_BY")
+            if evaluation.dataset_id:
+                add_derived(evaluation.id, evaluation.dataset_id, "TRAINED_ON")
 
         self._out: dict[str, list[AIRelationship]] = defaultdict(list)
         self._in: dict[str, list[AIRelationship]] = defaultdict(list)
@@ -259,8 +261,34 @@ class AIBOMIndex:
     def upstream(self, start_id: str, *, max_depth: int = 32) -> set[str]:
         return self._walk(start_id, outgoing=False, max_depth=max_depth)
 
-    def lineage(self, model_version_id: str) -> set[str]:
-        return self.upstream(model_version_id)
+    def lineage(self, model_version_id: str, *, max_depth: int = 32) -> set[str]:
+        """Return structured provenance, model identity, artifacts, evaluations, and deployment context."""
+        lineage: set[str] = set()
+        version = next((item for item in self.document.model_versions if item.id == model_version_id), None)
+        if version is None:
+            return lineage
+
+        lineage.add(version.model_id)
+        lineage.update(version.artifact_ids)
+
+        related_provenance = [p for p in self.document.training_provenance if p.model_version_id == model_version_id]
+        related_evaluations = [e for e in self.document.evaluations if e.model_version_id == model_version_id]
+        related_deployments = [d for d in self.document.deployments if d.model_version_id == model_version_id]
+
+        for provenance in related_provenance:
+            lineage.add(provenance.id)
+            lineage.update(item.dataset_id for item in provenance.dataset_lineage)
+            lineage.update(provenance.base_model_version_ids)
+
+        for evaluation in related_evaluations:
+            lineage.add(evaluation.id)
+            if evaluation.dataset_id:
+                lineage.add(evaluation.dataset_id)
+
+        for deployment in related_deployments:
+            lineage.add(deployment.id)
+
+        return lineage
 
     def _walk(self, start_id: str, *, outgoing: bool, max_depth: int) -> set[str]:
         adjacency = self._out if outgoing else self._in
