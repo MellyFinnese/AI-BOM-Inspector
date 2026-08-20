@@ -17,6 +17,7 @@
     {"name":"anthropic-provider-variant","path":"fixtures/anthropic-provider-variant.ts","category":"provider","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
     {"name":"openai-responses","path":"fixtures/openai-responses.ts","category":"provider","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
     {"name":"cjs-openai","path":"fixtures/cjs-openai.js","category":"provider","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
+    {"name":"typescript-import-alias","path":"fixtures/typescript-import-alias.ts","category":"provider","expected_detectors":["JS-AI-001","JS-AI-002","JS-PROMPT-001"]},
     {"name":"mcp-tool","path":"fixtures/mcp-tool.ts","category":"mcp","expected_detectors":["JS-AI-005","JS-AGENT-001"]},
     {"name":"mcp-client","path":"fixtures/mcp-client.ts","category":"mcp","expected_detectors":["JS-AI-005"]},
     {"name":"filesystem-tool","path":"fixtures/filesystem-tool.ts","category":"privileged-operation","expected_detectors":["JS-AI-004","JS-AGENT-001","JS-TOOL-001"]},
