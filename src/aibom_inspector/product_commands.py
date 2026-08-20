@@ -11,8 +11,11 @@ import click
 from .attack_paths import discover_impact_paths
 from .behavioral_drift import compare_analyses, load_analysis
 from .benchmarking import run_benchmark
+from .enterprise_security import Permission, Principal, Role, authorize
 from .graph_payload import build_graph_payload
 from .js_semantics import semantic_scan_javascript
+from .production_runtime import ResourceLimits, profile, scan_many
+from .production_scan import inspect_model_artifact
 
 
 def register_commands(main) -> None:
@@ -21,6 +24,8 @@ def register_commands(main) -> None:
     main.add_command(behavior_diff)
     main.add_command(graph_export)
     main.add_command(benchmark)
+    main.add_command(artifact_scan)
+    main.add_command(runtime_profile)
     main.add_command(serve)
 
 
@@ -103,6 +108,77 @@ def benchmark(manifest: Path, root: Path | None, output_path: Path | None, fail_
     click.echo(text)
     if result.f1 < fail_below_f1:
         raise click.exceptions.Exit(3)
+
+
+@click.command("artifact-scan")
+@click.argument("paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
+@click.option("--workers", type=int, default=8, show_default=True)
+@click.option("--timeout", "timeout_seconds", type=float, default=900.0, show_default=True)
+@click.option("--max-bytes", type=int, default=16 * 1024**3, show_default=True)
+@click.option("--max-items", type=int, default=2_000_000, show_default=True)
+@click.option("--checkpoint-dir", type=click.Path(file_okay=False, path_type=Path))
+def artifact_scan(paths: tuple[Path, ...], workers: int, timeout_seconds: float, max_bytes: int, max_items: int, checkpoint_dir: Path | None) -> None:
+    """Scan model artifacts concurrently with resource limits and resumable checkpoints."""
+    if not paths:
+        raise click.UsageError("provide at least one artifact path")
+    limits = ResourceLimits(
+        max_artifact_bytes=max_bytes,
+        max_items=max_items,
+        timeout_seconds=timeout_seconds,
+        max_workers=workers,
+    )
+    results = scan_many(paths, inspect_model_artifact, limits=limits, checkpoint_dir=checkpoint_dir)
+    payload = {
+        "schema_version": "artifact-scan.v1",
+        "limits": {
+            "max_artifact_bytes": limits.max_artifact_bytes,
+            "max_items": limits.max_items,
+            "timeout_seconds": limits.timeout_seconds,
+            "max_workers": limits.max_workers,
+        },
+        "artifacts": [
+            {
+                "path": item.fingerprint.path,
+                "size": item.fingerprint.size,
+                "sha256": item.fingerprint.sha256,
+                "cached": item.cached,
+                "elapsed_seconds": item.elapsed_seconds,
+                "result": item.result,
+            }
+            for item in results
+        ],
+    }
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@click.command("runtime-profile")
+@click.argument("paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
+@click.option("--workers", type=int, default=8, show_default=True)
+def runtime_profile(paths: tuple[Path, ...], workers: int) -> None:
+    """Profile scalable artifact fingerprinting for performance and memory baselines."""
+    if not paths:
+        raise click.UsageError("provide at least one artifact path")
+
+    def run() -> tuple:
+        limits = ResourceLimits(max_workers=workers)
+        return scan_many(paths, lambda path: inspect_model_artifact(path), limits=limits)
+
+    result, metrics = profile(run)
+    click.echo(
+        json.dumps(
+            {
+                "schema_version": "runtime-profile.v1",
+                "artifacts": len(result),
+                "elapsed_seconds": metrics.elapsed_seconds,
+                "cpu_seconds": metrics.cpu_seconds,
+                "peak_rss_bytes": metrics.peak_rss_bytes,
+                "platform": metrics.platform,
+                "python": metrics.python,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 @click.command("serve")
