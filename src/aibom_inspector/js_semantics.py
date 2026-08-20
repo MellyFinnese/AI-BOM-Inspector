@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Iterable
 
@@ -96,6 +97,18 @@ def augment_with_alias_findings(text: str, *, file: str, base: JSAnalysis) -> JS
                 agent_aliases.add(local)
         if symbol == "Agent":
             agent_aliases.add(local)
+
+    alias_map = {local: target for local, target in index.aliases}
+    changed = True
+    while changed:
+        changed = False
+        for local, target in alias_map.items():
+            if target in provider_aliases and local not in provider_aliases:
+                provider_aliases.add(local)
+                changed = True
+            if target in agent_aliases and local not in agent_aliases:
+                agent_aliases.add(local)
+                changed = True
 
     seen = {(f.detector_id, f.file, f.line, f.symbol) for f in findings}
 
