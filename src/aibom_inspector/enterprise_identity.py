@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import time
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Mapping
@@ -156,13 +157,16 @@ def identity_from_claims(claims: Mapping[str, Any], *, tenant_claim: str = "tena
 class SAMLConfig:
     entity_id: str
     acs_url: str
-    idp_metadata_xml: str
+    idp_entity_id: str
+    idp_x509_cert: str
     require_mfa: bool = True
 
 
 def validate_saml_settings(config: SAMLConfig) -> None:
-    if not config.entity_id or not config.acs_url or not config.idp_metadata_xml.strip():
+    if not config.entity_id or not config.acs_url or not config.idp_entity_id or not config.idp_x509_cert.strip():
         raise IdentityError("SAML configuration is incomplete")
+    if not config.acs_url.startswith("https://"):
+        raise IdentityError("SAML ACS URL must use HTTPS")
 
 
 def validate_saml_response(config: SAMLConfig, saml_response_b64: str, *, request_data: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -173,12 +177,10 @@ def validate_saml_response(config: SAMLConfig, saml_response_b64: str, *, reques
     except ImportError as exc:
         raise OIDCConfigurationError("python3-saml is required for SAML assertion validation") from exc
     try:
-        import base64 as _base64
-        decoded = _base64.b64decode(saml_response_b64)
         auth_request = {
-            "https": "on" if config.acs_url.startswith("https://") else "off",
+            "https": "on",
             "http_host": urllib.parse.urlparse(config.acs_url).netloc,
-            "server_port": "443" if config.acs_url.startswith("https://") else "80",
+            "server_port": "443",
             "script_name": "/",
             "get_data": {},
             "post_data": {"SAMLResponse": saml_response_b64},
@@ -190,7 +192,7 @@ def validate_saml_response(config: SAMLConfig, saml_response_b64: str, *, reques
                 "entityId": config.entity_id,
                 "assertionConsumerService": {"url": config.acs_url, "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"},
             },
-            "idp": {"entityId": "configured-idp", "x509cert": config.idp_metadata_xml},
+            "idp": {"entityId": config.idp_entity_id, "x509cert": config.idp_x509_cert},
             "security": {"wantAssertionsSigned": True, "wantMessagesSigned": True, "rejectUnsolicitedResponsesWithInResponseTo": True},
         }
         auth = OneLogin_Saml2_Auth(auth_request, settings)
@@ -198,9 +200,7 @@ def validate_saml_response(config: SAMLConfig, saml_response_b64: str, *, reques
         errors = auth.get_errors()
         if errors:
             raise IdentityError("SAML response validation failed: " + ", ".join(errors))
-        attrs = auth.get_attributes()
-        name_id = auth.get_nameid()
-        return {"name_id": name_id, "attributes": attrs, "session_index": auth.get_session_index()}
+        return {"name_id": auth.get_nameid(), "attributes": auth.get_attributes(), "session_index": auth.get_session_index()}
     except IdentityError:
         raise
     except Exception as exc:
@@ -232,13 +232,8 @@ class InMemorySCIMDirectory:
         current = self._users.get(user_id)
         if current:
             self._users[user_id] = SCIMUser(
-                id=current.id,
-                user_name=current.user_name,
-                active=False,
-                display_name=current.display_name,
-                emails=current.emails,
-                groups=current.groups,
-                tenant_id=current.tenant_id,
+                id=current.id, user_name=current.user_name, active=False, display_name=current.display_name,
+                emails=current.emails, groups=current.groups, tenant_id=current.tenant_id,
             )
 
     def delete_user(self, user_id: str) -> None:
@@ -249,33 +244,20 @@ class InMemorySCIMDirectory:
 
 
 def scim_user_from_payload(payload: Mapping[str, Any], *, tenant_id: str) -> SCIMUser:
-    emails = tuple(
-        str(item.get("value")) for item in (payload.get("emails") or []) if isinstance(item, Mapping) and item.get("value")
-    )
-    groups = tuple(
-        str(item.get("value") or item.get("display"))
-        for item in (payload.get("groups") or [])
-        if isinstance(item, Mapping) and (item.get("value") or item.get("display"))
-    )
+    emails = tuple(str(item.get("value")) for item in (payload.get("emails") or []) if isinstance(item, Mapping) and item.get("value"))
+    groups = tuple(str(item.get("value") or item.get("display")) for item in (payload.get("groups") or []) if isinstance(item, Mapping) and (item.get("value") or item.get("display")))
     return SCIMUser(
-        id=str(payload.get("id") or ""),
-        user_name=str(payload.get("userName") or ""),
+        id=str(payload.get("id") or ""), user_name=str(payload.get("userName") or ""),
         active=bool(payload.get("active", True)),
         display_name=str(payload.get("displayName")) if payload.get("displayName") else None,
-        emails=emails,
-        groups=groups,
-        tenant_id=tenant_id,
+        emails=emails, groups=groups, tenant_id=tenant_id,
     )
 
 
 def build_scim_user(user: SCIMUser) -> dict[str, Any]:
     return {
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "id": user.id,
-        "userName": user.user_name,
-        "active": user.active,
-        "displayName": user.display_name,
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"], "id": user.id,
+        "userName": user.user_name, "active": user.active, "displayName": user.display_name,
         "emails": [{"value": email, "primary": index == 0} for index, email in enumerate(user.emails)],
-        "groups": [{"value": group} for group in user.groups],
-        "meta": {"resourceType": "User"},
+        "groups": [{"value": group} for group in user.groups], "meta": {"resourceType": "User"},
     }
