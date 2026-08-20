@@ -246,8 +246,6 @@ class AIBOMIndex:
 
         for evaluation in document.evaluations:
             add_derived(evaluation.id, evaluation.model_version_id, "EVALUATED_BY")
-            if evaluation.dataset_id:
-                add_derived(evaluation.id, evaluation.dataset_id, "TRAINED_ON")
 
         self._out: dict[str, list[AIRelationship]] = defaultdict(list)
         self._in: dict[str, list[AIRelationship]] = defaultdict(list)
