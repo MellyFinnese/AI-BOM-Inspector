@@ -60,7 +60,7 @@ def _stable_id(*parts: str) -> str:
 
 
 def _mask_non_code(text: str) -> str:
-    """Replace comments and string contents with spaces while preserving offsets/newlines."""
+    """Replace comments and string contents with spaces while preserving offsets and quote tokens."""
     chars = list(text)
     i = 0
     n = len(chars)
@@ -80,7 +80,6 @@ def _mask_non_code(text: str) -> str:
                 continue
             if text[i] in {"'", '"', "`"}:
                 quote = text[i]
-                chars[i] = " "
                 i += 1
                 state = "string"
                 continue
@@ -106,8 +105,6 @@ def _mask_non_code(text: str) -> str:
                 i += 1
             continue
 
-        # string / template literal. This deliberately treats the literal body as non-code;
-        # template interpolation is therefore conservative rather than attempting full parsing.
         if text[i] == "\\" and i + 1 < n:
             if text[i] != "\n":
                 chars[i] = " "
@@ -116,7 +113,6 @@ def _mask_non_code(text: str) -> str:
             i += 2
             continue
         if text[i] == quote:
-            chars[i] = " "
             i += 1
             state = "code"
             continue
@@ -172,18 +168,28 @@ def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
         node_key = f"{file}:{line}:{kind}:{symbol}"
         nodes[node_key] = {"id": node_key, "kind": kind, "symbol": symbol, "file": file}
 
-    # Provider imports are matched against source text, but the match must begin in executable code.
-    import_patterns = [
-        ("JS-AI-001", r"(?:from\s+[\"'](openai|@anthropic-ai/sdk|ai)[\"']|require\(\s*[\"'](openai|@anthropic-ai/sdk|ai)[\"']\s*\))", "ai-sdk")
-    ]
-    for detector_id, pattern, symbol in import_patterns:
-        for match in re.finditer(pattern, text, re.IGNORECASE):
-            if code_mask[match.start()] != " ":
-                add(detector_id, "provider", match, symbol, 0.98)
+    # Provider imports: report the SDK itself, but not agent-only named imports such as
+    # `import { Agent } from \"openai\"`; that is an agent primitive, not evidence of a model client.
+    for match in re.finditer(
+        r"(?m)^\s*import\s+([^;\n]+?)\s+from\s+[\"'](openai|@anthropic-ai/sdk|ai)[\"']",
+        text,
+        re.IGNORECASE,
+    ):
+        imported = match.group(1).strip()
+        if imported.startswith("{") and re.search(r"\bAgent\b", imported, re.IGNORECASE):
+            continue
+        add("JS-AI-001", "provider", match, "ai-sdk", 0.98)
+
+    # CommonJS/provider imports.
+    for match in re.finditer(
+        r"\brequire\(\s*[\"'](openai|@anthropic-ai/sdk|ai)[\"']\s*\)",
+        code,
+        re.IGNORECASE,
+    ):
+        add("JS-AI-001", "provider", match, "ai-sdk", 0.98)
 
     # Provider/model calls. The call receiver is intentionally identifier-agnostic; semantic analysis
-    # later adds higher-confidence provider-specific aliases. This catches SDK clients such as
-    # `client.messages.create`, `client.responses.create`, and `client.chat.completions.create`.
+    # later adds higher-confidence provider-specific aliases.
     for match in re.finditer(
         r"\b[A-Za-z_$][\w$]*\.(?:chat\.completions|responses|messages|generateText|streamText|generateObject)\s*\(",
         code,
@@ -200,11 +206,23 @@ def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
     for match in re.finditer(r"\b(?:McpServer|MCPServer|Server)\s*\(", code):
         add("JS-AI-005", "mcp", match, "mcp-server", 0.92, role="mcp")
 
-    # Common agent/tool declarations.
+    # MCP client construction/call path.
+    if re.search(r"@modelcontextprotocol/sdk", text, re.IGNORECASE):
+        for match in re.finditer(r"\bnew\s+Client\s*\(\s*\{", code):
+            add("JS-AI-005", "mcp", match, "mcp-client", 0.92, role="mcp-client")
+
     tool_pattern = re.compile(r"\b(?:tools|tool|server\.tool|registerTool)\s*\(?\s*[\"'`]?([A-Za-z0-9_.:/-]+)?", re.IGNORECASE)
     for match in tool_pattern.finditer(code):
         symbol = match.group(1) or "tool-binding"
         add("JS-AGENT-001", "tool", match, symbol, 0.86, role="bound-tool")
+
+    # Imported filesystem primitives should count as tool-capable side effects when invoked through aliases.
+    imported_fs_aliases: set[str] = set()
+    for match in re.finditer(r"(?m)^\s*import\s*\{([^}]+)\}\s*from\s*[\"']fs[\"']", text):
+        for item in match.group(1).split(","):
+            parts = re.split(r"\s+as\s+", item.strip())
+            if parts[0].strip() in {"writeFile", "rm", "unlink"}:
+                imported_fs_aliases.add(parts[-1].strip())
 
     # Trust-boundary sources.
     source_patterns = [
@@ -219,9 +237,9 @@ def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
             add(detector_id, "input", match, kind, 0.88, role="untrusted-source")
             source_nodes.append(f"{file}:{_line_of(text, match.start())}:input:{kind}")
 
-    # Prompt sinks. Capture likely argument identifiers/literals for stable graphing, not raw prompt content.
+    # Prompt sinks: only object properties / call options, never `const prompt = ...` variable assignments.
     prompt_pattern = re.compile(
-        r"\b(?:instructions|system|systemPrompt|prompt|messages)\s*[:=]\s*(?:[\"'`]|\{|\[|[A-Za-z_$][\w$]*)",
+        r"\b(?:instructions|system|systemPrompt|prompt|messages)\s*:\s*(?:[\"'`]|\{|\[|[A-Za-z_$][\w$]*)",
         re.IGNORECASE,
     )
     prompt_nodes: list[str] = []
@@ -230,7 +248,10 @@ def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
         prompt_nodes.append(f"{file}:{_line_of(text, match.start())}:prompt-sink:prompt")
 
     # Tool-capable sinks.
-    op_pattern = re.compile(r"\b(?:child_process\.(?:exec|execFile|spawn)|fs\.(?:writeFile|rm|unlink)|fetch|axios\.(?:get|post|put|delete))\s*\(", re.IGNORECASE)
+    op_pattern = re.compile(
+        r"\b(?:child_process\.(?:exec|execFile|spawn)|fs\.(?:writeFile|rm|unlink)|fetch|axios\.(?:get|post|put|delete))\s*\(",
+        re.IGNORECASE,
+    )
     op_nodes: list[str] = []
     for match in op_pattern.finditer(code):
         op = re.search(r"(?:child_process\.(?:exec|execFile|spawn)|fs\.(?:writeFile|rm|unlink)|fetch|axios\.(?:get|post|put|delete))", match.group(0), re.IGNORECASE)
@@ -238,7 +259,11 @@ def analyze_javascript(text: str, *, file: str = "<memory>") -> JSAnalysis:
         add("JS-TOOL-001", "privileged-operation", match, symbol, 0.9, role="side-effect")
         op_nodes.append(f"{file}:{_line_of(text, match.start())}:privileged-operation:{symbol}")
 
-    # Conservative same-file relationships: sources -> prompt sinks, prompt sinks -> tools.
+    for alias in sorted(imported_fs_aliases):
+        for match in re.finditer(rf"\b{re.escape(alias)}\s*\(", code):
+            add("JS-TOOL-001", "privileged-operation", match, alias, 0.9, role="side-effect")
+            op_nodes.append(f"{file}:{_line_of(text, match.start())}:privileged-operation:{alias}")
+
     for src in source_nodes:
         for sink in prompt_nodes:
             edges.add((src, "FLOWS_TO", sink))
