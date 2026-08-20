@@ -10,7 +10,7 @@ import click
 
 from .behavioral_drift import compare_analyses, load_analysis
 from .benchmarking import run_benchmark
-from .js_analysis import scan_javascript
+from .js_semantics import semantic_scan_javascript
 
 
 def register_commands(main) -> None:
@@ -26,7 +26,7 @@ def register_commands(main) -> None:
 @click.option("--min-confidence", type=float, default=0.0, show_default=True)
 def js_scan(path: Path, output_path: Path | None, min_confidence: float) -> None:
     """Statically inspect JavaScript/TypeScript AI usage without executing project code."""
-    result = scan_javascript(path)
+    result = semantic_scan_javascript(path)
     payload = result.to_dict()
     if min_confidence:
         payload["findings"] = [f for f in payload["findings"] if float(f["confidence"]) >= min_confidence]
@@ -44,8 +44,8 @@ def js_scan(path: Path, output_path: Path | None, min_confidence: float) -> None
 @click.option("--output", "output_path", type=click.Path(dir_okay=False, writable=True, path_type=Path))
 def behavior_diff(baseline: Path, candidate: Path, output_path: Path | None) -> None:
     """Compare two JS/TS scans and flag new reachable behavior paths."""
-    old = load_analysis(baseline) if baseline.suffix == ".json" else scan_javascript(baseline)
-    new = load_analysis(candidate) if candidate.suffix == ".json" else scan_javascript(candidate)
+    old = load_analysis(baseline) if baseline.suffix == ".json" else semantic_scan_javascript(baseline)
+    new = load_analysis(candidate) if candidate.suffix == ".json" else semantic_scan_javascript(candidate)
     payload = compare_analyses(old, new)
     text = json.dumps(payload, indent=2, sort_keys=True)
     if output_path:
