@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+import json
+import threading
+import webbrowser
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+import click
+
+from .behavioral_drift import compare_analyses, load_analysis
+from .benchmarking import run_benchmark
+from .js_analysis import scan_javascript
+
+
+def register_commands(main) -> None:
+    main.add_command(js_scan)
+    main.add_command(behavior_diff)
+    main.add_command(benchmark)
+    main.add_command(serve)
+
+
+@click.command("js-scan")
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+@click.option("--output", "output_path", type=click.Path(dir_okay=False, writable=True, path_type=Path))
+@click.option("--min-confidence", type=float, default=0.0, show_default=True)
+def js_scan(path: Path, output_path: Path | None, min_confidence: float) -> None:
+    """Statically inspect JavaScript/TypeScript AI usage without executing project code."""
+    result = scan_javascript(path)
+    payload = result.to_dict()
+    if min_confidence:
+        payload["findings"] = [f for f in payload["findings"] if float(f["confidence"]) >= min_confidence]
+    text = json.dumps(payload, indent=2, sort_keys=True)
+    if output_path:
+        output_path.write_text(text + "\n", encoding="utf-8")
+        click.echo(f"wrote {output_path}")
+    else:
+        click.echo(text)
+
+
+@click.command("behavior-diff")
+@click.argument("baseline", type=click.Path(exists=True, path_type=Path))
+@click.argument("candidate", type=click.Path(exists=True, path_type=Path))
+@click.option("--output", "output_path", type=click.Path(dir_okay=False, writable=True, path_type=Path))
+def behavior_diff(baseline: Path, candidate: Path, output_path: Path | None) -> None:
+    """Compare two JS/TS scans and flag new reachable behavior paths."""
+    old = load_analysis(baseline) if baseline.suffix == ".json" else scan_javascript(baseline)
+    new = load_analysis(candidate) if candidate.suffix == ".json" else scan_javascript(candidate)
+    payload = compare_analyses(old, new)
+    text = json.dumps(payload, indent=2, sort_keys=True)
+    if output_path:
+        output_path.write_text(text + "\n", encoding="utf-8")
+    click.echo(text)
+    if payload["impact_path_added"]:
+        raise click.exceptions.Exit(2)
+
+
+@click.command("benchmark")
+@click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--root", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--output", "output_path", type=click.Path(dir_okay=False, writable=True, path_type=Path))
+@click.option("--fail-below-f1", type=float, default=0.0, show_default=True)
+def benchmark(manifest: Path, root: Path | None, output_path: Path | None, fail_below_f1: float) -> None:
+    """Run a reproducible precision/recall/F1 benchmark over labeled fixtures."""
+    result = run_benchmark(manifest, root=root)
+    text = json.dumps(result.to_dict(), indent=2, sort_keys=True)
+    if output_path:
+        output_path.write_text(text + "\n", encoding="utf-8")
+    click.echo(text)
+    if result.f1 < fail_below_f1:
+        raise click.exceptions.Exit(3)
+
+
+@click.command("serve")
+@click.argument("directory", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--port", type=int, default=8765, show_default=True)
+@click.option("--open-browser/--no-browser", default=False, show_default=True)
+def serve(directory: Path, port: int, open_browser: bool) -> None:
+    """Serve reports and demo artifacts locally with the standard library."""
+    directory = directory.resolve()
+    handler = lambda *args, **kwargs: SimpleHTTPRequestHandler(*args, directory=str(directory), **kwargs)
+    server = ThreadingHTTPServer(("127.0.0.1", port), handler)
+    url = f"http://127.0.0.1:{port}/"
+    click.echo(f"serving {directory}")
+    click.echo(url)
+    if open_browser:
+        threading.Timer(0.2, lambda: webbrowser.open(url)).start()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        click.echo("stopped")
+    finally:
+        server.server_close()
