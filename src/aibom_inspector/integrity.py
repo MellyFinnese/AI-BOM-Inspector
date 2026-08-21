@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping
@@ -27,11 +28,42 @@ class HashExpectation:
     sha256: str
 
 
+def _open_regular_file(path: Path):
+    """Open a regular file without following a final symlink when supported."""
+    flags = os.O_RDONLY
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = os.open(path, flags)
+    stat = os.fstat(fd)
+    if not os.path.isfile(path) or not os.path.isfile(path.resolve()):
+        os.close(fd)
+        raise OSError(f"Not a regular file: {path}")
+    if os.path.islink(path):
+        os.close(fd)
+        raise OSError(f"Symlinked files are not accepted for integrity scanning: {path}")
+    return fd, stat
+
+
 def compute_file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
+    fd, initial_stat = _open_regular_file(path)
+    try:
+        with os.fdopen(fd, "rb", closefd=True) as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        # A concurrent replacement cannot alter the bytes already hashed, but
+        # a size change is useful evidence that a hostile workspace raced the scan.
+        final_stat = path.stat()
+        if final_stat.st_size != initial_stat.st_size:
+            raise OSError(f"File changed during integrity scan: {path}")
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
     return digest.hexdigest()
 
 
@@ -54,7 +86,19 @@ def verify_expected_hashes(
                 )
             )
             continue
-        actual = compute_file_sha256(path)
+        try:
+            actual = compute_file_sha256(path)
+        except OSError as exc:
+            findings.append(
+                IntegrityFinding(
+                    kind=kind,
+                    path=str(path),
+                    message=f"{kind.title()} file could not be safely opened: {exc}",
+                    severity="high",
+                    code=f"{code_prefix}_UNSAFE_FILE",
+                )
+            )
+            continue
         if actual != expected_hash:
             findings.append(
                 IntegrityFinding(
