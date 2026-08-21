@@ -6,11 +6,14 @@ from pathlib import Path
 from typing import Any, Iterable, List, Mapping, TypeVar
 
 import yaml
+from yaml.events import AliasEvent, Event
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
 SAFE_MAX_BYTES = 5_000_000
+SAFE_MAX_YAML_ALIASES = 128
+SAFE_MAX_YAML_EVENTS = 200_000
 
 
 class ParserError(ValueError):
@@ -98,7 +101,6 @@ class ModelEntrySchema(BaseModel):
     training_sources: List[str] = Field(default_factory=list)
     hashes: List[str] = Field(default_factory=list)
     artifacts: List[ModelArtifactSchema] = Field(default_factory=list)
-    # Support legacy single file entries using 'path' or 'artifact'
     path: str | None = None
     artifact: Mapping[str, Any] | None = None
 
@@ -114,22 +116,18 @@ class ModelFileSchema(BaseModel):
 class CycloneDXLicenseSchema(BaseModel):
     license: Mapping[str, Any] = Field(default_factory=dict)
 
-    model_config = ConfigDict(extra="forbid", strict=True)
-
 
 class CycloneDXComponentSchema(BaseModel):
     name: str
     version: str | None = None
     licenses: List[CycloneDXLicenseSchema] = Field(default_factory=list)
     properties: List[Mapping[str, Any]] = Field(default_factory=list)
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
 class CycloneDXSchema(BaseModel):
     bomFormat: str
     components: List[CycloneDXComponentSchema] = Field(default_factory=list)
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
@@ -138,14 +136,12 @@ class SpdxPackageSchema(BaseModel):
     versionInfo: str | None = None
     licenseDeclared: str | None = None
     licenseConcluded: str | None = None
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
 class SpdxSchema(BaseModel):
     spdxVersion: str
     packages: List[SpdxPackageSchema] = Field(default_factory=list)
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
@@ -160,7 +156,6 @@ class IssueSchema(BaseModel):
     severity: str | None = None
     code: str | None = None
     metadata: Mapping[str, Any] = Field(default_factory=dict)
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
@@ -175,7 +170,6 @@ class DependencyPayloadSchema(BaseModel):
     issues: List[IssueSchema | str] = Field(default_factory=list)
     issue_details: List[IssueSchema | str] = Field(default_factory=list)
     trust_signals: List[IssueSchema | str] = Field(default_factory=list)
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
@@ -193,7 +187,6 @@ class ModelPayloadSchema(BaseModel):
     issues: List[IssueSchema | str] = Field(default_factory=list)
     issue_details: List[IssueSchema | str] = Field(default_factory=list)
     trust_signals: List[IssueSchema | str] = Field(default_factory=list)
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
@@ -212,7 +205,6 @@ class RiskSettingsSchema(BaseModel):
     data_sensitivity_multipliers: Mapping[str, float] = Field(default_factory=dict)
     environment_multipliers: Mapping[str, float] = Field(default_factory=dict)
     missing_intel_penalty: int | None = None
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
@@ -227,14 +219,11 @@ class ReportPayloadSchema(BaseModel):
     policy_metadata: Mapping[str, Any] | None = None
     intel_versions: Mapping[str, Any] | None = None
     score_explanation: Mapping[str, Any] | None = None
-
     model_config = ConfigDict(extra="allow", strict=True)
 
 
 def read_text(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> str:
     if max_bytes is not None:
-        # Check the size via stat() first so an oversized file is never fully
-        # read into memory just to be rejected.
         size = path.stat().st_size
         if size > max_bytes:
             raise ParserError(f"{path} exceeds safe size limit of {max_bytes} bytes")
@@ -249,24 +238,43 @@ def load_json_payload(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> Any
         raise ParserError(f"Invalid JSON in {path}: {exc}") from exc
 
 
-def load_yaml_payload(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> Any:
+def _validate_yaml_complexity(text: str) -> None:
+    aliases = 0
+    events = 0
     try:
-        return yaml.safe_load(read_text(path, max_bytes=max_bytes)) or {}
+        for event in yaml.parse(text, Loader=yaml.SafeLoader):
+            events += 1
+            if events > SAFE_MAX_YAML_EVENTS:
+                raise ParserError(
+                    f"YAML document exceeds safe event limit of {SAFE_MAX_YAML_EVENTS}"
+                )
+            if isinstance(event, AliasEvent):
+                aliases += 1
+                if aliases > SAFE_MAX_YAML_ALIASES:
+                    raise ParserError(
+                        f"YAML document exceeds safe alias limit of {SAFE_MAX_YAML_ALIASES}"
+                    )
+    except yaml.YAMLError as exc:
+        raise ParserError(f"Invalid YAML syntax: {exc}") from exc
+
+
+def load_yaml_payload(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> Any:
+    text = read_text(path, max_bytes=max_bytes)
+    _validate_yaml_complexity(text)
+    try:
+        return yaml.safe_load(text) or {}
     except yaml.YAMLError as exc:
         raise ParserError(f"Invalid YAML in {path}: {exc}") from exc
 
 
 def _validate_payload(schema: type[SchemaT], payload: Any, path: Path) -> SchemaT:
     try:
-        # Support both pydantic v2 (model_validate) and v1 (parse_obj)
         if hasattr(schema, "model_validate"):
             return schema.model_validate(payload)
         if hasattr(schema, "parse_obj"):
             return schema.parse_obj(payload)
-        # Fallback: instantiate directly
         return schema(**(payload or {}))
     except ValidationError as exc:
-        # pydantic v2 ValidationError has .errors(); v1 also exposes errors()
         try:
             errs = exc.errors()
         except Exception:
@@ -276,13 +284,11 @@ def _validate_payload(schema: type[SchemaT], payload: Any, path: Path) -> Schema
 
 
 def parse_policy_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> PolicySchema:
-    payload = load_yaml_payload(path, max_bytes=max_bytes)
-    return _validate_payload(PolicySchema, payload, path)
+    return _validate_payload(PolicySchema, load_yaml_payload(path, max_bytes=max_bytes), path)
 
 
 def parse_runtime_trace_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> RuntimeTraceSchema:
-    payload = load_json_payload(path, max_bytes=max_bytes)
-    return _validate_payload(RuntimeTraceSchema, payload, path)
+    return _validate_payload(RuntimeTraceSchema, load_json_payload(path, max_bytes=max_bytes), path)
 
 
 def parse_models_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> ModelFileSchema:
@@ -295,15 +301,9 @@ def parse_models_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> Mod
 def parse_sbom_file(path: Path, max_bytes: int | None = SAFE_MAX_BYTES) -> SbomPayload:
     payload = load_json_payload(path, max_bytes=max_bytes)
     if isinstance(payload, dict) and str(payload.get("bomFormat", "")).lower() == "cyclonedx":
-        return SbomPayload(
-            kind="cyclonedx",
-            payload=_validate_payload(CycloneDXSchema, payload, path),
-        )
+        return SbomPayload(kind="cyclonedx", payload=_validate_payload(CycloneDXSchema, payload, path))
     if isinstance(payload, dict) and payload.get("spdxVersion"):
-        return SbomPayload(
-            kind="spdx",
-            payload=_validate_payload(SpdxSchema, payload, path),
-        )
+        return SbomPayload(kind="spdx", payload=_validate_payload(SpdxSchema, payload, path))
     raise ParserError("Unsupported SBOM payload")
 
 
@@ -322,13 +322,12 @@ def serialize_validation_errors(errors: Iterable[Any]) -> List[str]:
     details = []
     for error in errors:
         message = error.get("msg", "validation error")
-        location = ".".join(str(entry) for entry in error.get("loc", []))
+        location = "."join(str(entry) for entry in error.get("loc", []))
         details.append(f"{location}: {message}" if location else message)
     return details
 
 
 def model_to_dict(obj: Any) -> dict:
-    """Normalize a pydantic model instance to a plain dict in a v1/v2 compatible way."""
     if obj is None:
         return {}
     if hasattr(obj, "model_dump"):
@@ -337,9 +336,7 @@ def model_to_dict(obj: Any) -> dict:
         try:
             return obj.dict()
         except TypeError:
-            # some implementations may require no args
             return obj.dict()
-    # Fallback: try to cast to dict
     try:
         return dict(obj)
     except Exception:
