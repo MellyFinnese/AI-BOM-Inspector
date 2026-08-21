@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -25,8 +26,9 @@ _PICKLE_EXTENSIONS = {".pkl", ".pickle", ".pt", ".pth"}
 
 
 def _cache_path(cache_dir: Path, identifier: str) -> Path:
-    sanitized = identifier.replace("/", "__")
-    return cache_dir / f"{sanitized}.json"
+    """Return a platform-independent cache path derived from the identifier."""
+    digest = hashlib.sha256(identifier.encode("utf-8")).hexdigest()
+    return cache_dir / f"{digest}.json"
 
 
 def _normalize_hash(value: str) -> str:
@@ -80,7 +82,6 @@ def _collect_declared_hashes(entry: dict) -> list[str]:
 
 
 def _coerce_artifacts(entry: dict) -> list[dict]:
-    # Support multiple shapes: 'artifacts' list, single 'artifact' dict, or legacy top-level 'path'
     artifacts = entry.get("artifacts") or entry.get("artifact") or []
     if isinstance(artifacts, dict):
         artifacts = [artifacts]
@@ -91,7 +92,6 @@ def _coerce_artifacts(entry: dict) -> list[dict]:
                 normalized.append({"path": item})
             elif isinstance(item, dict):
                 normalized.append(dict(item))
-    # Fallback: support legacy single 'path' key on the model entry
     if not normalized and isinstance(entry.get("path"), str):
         normalized.append({"path": entry.get("path")})
     return normalized
@@ -136,23 +136,46 @@ def _detect_artifact_kind(path: Path, declared_kind: Optional[str]) -> str:
     return "unknown"
 
 
+def _is_within_root(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
 def _analyze_artifacts(
     artifacts: list[dict],
     declared_hashes: list[str],
+    *,
+    scan_root: Path | None = None,
 ) -> tuple[list[str], list[ModelIssue], list[ModelIssue]]:
     hashes: list[str] = []
     issues: list[ModelIssue] = []
     trust_signals: list[ModelIssue] = []
+    resolved_root = scan_root.resolve() if scan_root is not None else None
 
     for artifact in artifacts:
         path_text = artifact.get("path")
         if not path_text:
             continue
-        path = Path(path_text)
+        raw_path = Path(path_text)
+        path = raw_path.resolve(strict=False)
+
+        if resolved_root is not None and not _is_within_root(path, resolved_root):
+            issues.append(
+                ModelIssue(
+                    f"[MODEL_ARTIFACT_OUTSIDE_ROOT] Artifact path is outside scan root: {raw_path}",
+                    severity="high",
+                    code="MODEL_ARTIFACT_OUTSIDE_ROOT",
+                )
+            )
+            continue
+
         if not path.exists():
             issues.append(
                 ModelIssue(
-                    f"[MODEL_ARTIFACT_MISSING] Artifact not found: {path}",
+                    f"[MODEL_ARTIFACT_MISSING] Artifact not found: {raw_path}",
                     severity="medium",
                     code="MODEL_ARTIFACT_MISSING",
                 )
@@ -315,15 +338,28 @@ def fetch_model_metadata(identifier: str, cache_dir: Path | None = None, offline
     return data
 
 
-def parse_model_entry(entry: dict) -> ModelInfo:
+def parse_model_entry(entry: dict, *, scan_root: Path | None = None) -> ModelInfo:
     identifier = entry.get("id") or entry.get("name") or "unknown-model"
     source = entry.get("source", "local")
     license_name: Optional[str] = entry.get("license")
     last_updated_raw: Optional[str] = entry.get("last_updated")
-    last_updated = datetime.fromisoformat(last_updated_raw) if last_updated_raw else None
+    last_updated: Optional[datetime] = None
 
     issues: List[ModelIssue] = []
     trust_signals: List[ModelIssue] = []
+
+    if last_updated_raw:
+        try:
+            last_updated = datetime.fromisoformat(str(last_updated_raw))
+        except (TypeError, ValueError):
+            issues.append(
+                ModelIssue(
+                    f"[MODEL_METADATA_INVALID] Invalid last_updated timestamp: {last_updated_raw}",
+                    severity="medium",
+                    code="MODEL_METADATA_INVALID",
+                )
+            )
+
     hashes: list[str] = _collect_declared_hashes(entry)
     invalid_hashes = [value for value in hashes if not _is_valid_sha256(value)]
     if invalid_hashes:
@@ -417,9 +453,11 @@ def parse_model_entry(entry: dict) -> ModelInfo:
             )
         )
 
+    artifact_entries = _coerce_artifacts(entry)
     artifact_hashes, artifact_issues, artifact_trust = _analyze_artifacts(
-        _coerce_artifacts(entry),
+        artifact_entries,
         hashes,
+        scan_root=scan_root,
     )
     hashes.extend(artifact_hashes)
     issues.extend(artifact_issues)
@@ -436,7 +474,7 @@ def parse_model_entry(entry: dict) -> ModelInfo:
         fine_tuned_from=fine_tuned_from,
         training_sources=training_sources,
         hashes=sorted({value for value in hashes if value}),
-        artifacts=[artifact.get("path") for artifact in _coerce_artifacts(entry)],
+        artifacts=[artifact.get("path") for artifact in artifact_entries],
         issues=issues,
         trust_signals=trust_signals,
     )
@@ -453,17 +491,17 @@ def scan_models_from_file(path: Path, *, max_bytes: int | None = SAFE_MAX_BYTES)
     except ParserError:
         return []
     entries = data.models
+    scan_root = path.resolve().parent
 
     models: List[ModelInfo] = []
     for entry in entries:
-        # Support pydantic v2 (model_dump) and v1 (dict)
         if hasattr(entry, "model_dump"):
             entry_dict = entry.model_dump()
         elif hasattr(entry, "dict"):
             entry_dict = entry.dict()
         else:
             entry_dict = dict(entry)
-        models.append(parse_model_entry(entry_dict))
+        models.append(parse_model_entry(entry_dict, scan_root=scan_root))
     return models
 
 
@@ -538,11 +576,7 @@ def _apply_model_advisories(models: List[ModelInfo], advisory_db: dict) -> None:
                     metadata["exploit_maturity"] = advisory.get("exploit_maturity")
                 if "active_exploitation" in advisory:
                     metadata["active_exploitation"] = advisory.get("active_exploitation")
-                code_token = (
-                    f"{advisory_id}|MODEL_VULNERABILITY"
-                    if advisory_id
-                    else "MODEL_VULNERABILITY"
-                )
+                code_token = f"{advisory_id}|MODEL_VULNERABILITY" if advisory_id else "MODEL_VULNERABILITY"
                 model.issues.append(
                     ModelIssue(
                         f"[MODEL_VULNERABILITY] {advisory_id}: {summary}{context}",
@@ -623,7 +657,6 @@ def _apply_lineage_risks(models: List[ModelInfo]) -> None:
 
 def enrich_models_with_cves(models: List[ModelInfo]) -> List[ModelInfo]:
     """Cross-check model identifiers and hashes against advisory feeds."""
-
     _apply_model_advisories(models, load_model_advisory_db())
     _apply_hash_reputation(models, load_model_hash_db())
     _apply_lineage_risks(models)
