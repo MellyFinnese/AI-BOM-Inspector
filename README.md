@@ -2,7 +2,7 @@
 
 ![AI-BOM Inspector CI](https://img.shields.io/badge/AI--BOM%20Inspector-Scan%20your%20AI%20stack%20in%20CI-blue)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=github)](https://github.com/sponsors/MellyFinnese)
-[![License](https://img.shields.io/badge/license-open%20source-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://github.com/MellyFinnese/AI-BOM-Inspector/blob/main/LICENSE)
 
 **Open-source AI software supply-chain security for models, datasets, dependencies, provenance, applications, and runtime context.**
 
@@ -35,7 +35,7 @@ The core design is **offline-first, deterministic, explainable, evidence-backed,
 
 The project maintains a regression suite, labeled detector benchmarks, adversarial coverage, cross-platform CI, fuzzing infrastructure, and scale-runtime checks. Published benchmark numbers are measured from the repository's benchmark corpus; capacity claims for large artifacts should be measured on target production hardware before being presented as guarantees.
 
-Current labeled JavaScript/TypeScript benchmark:
+The labeled JavaScript/TypeScript benchmark currently reports:
 
 ```text
 30 benchmark cases
@@ -108,7 +108,7 @@ aibom runtime-profile path/to/model.safetensors --workers 8
 
 ## Enterprise security
 
-The repository contains reusable enterprise-security primitives:
+The repository now contains reusable enterprise-security primitives. The stabilized implementation includes:
 
 ```text
 OIDC / SAML SSO
@@ -194,7 +194,37 @@ SBOM / Models / Code -> Evidence Graph -> Impact Paths
 
 The graph/context layer provides identity, traversal, impact, behavioral change, and explanation. **The deterministic risk engine remains the scoring source of truth.** Memgraph and other graph databases are optional backends rather than requirements of the core engine.
 
-## AI supply-chain coverage
+## Impact analysis
+
+The project treats behavioral change as a graph problem rather than only a line-diff problem.
+
+A semantic JavaScript/TypeScript scan can represent relationships such as:
+
+```text
+HTTP / CLI / env / retrieval input
+              |
+              v
+           prompt
+              |
+              v
+            agent
+              |
+              v
+             tool
+              |
+              v
+       privileged operation
+```
+
+The formal `AttackPath` model records stable path identity, source and target nodes, ordered relationships, severity, and supporting evidence.
+
+A behavioral diff can therefore answer:
+
+> **Did this change create a new reachable impact path?**
+
+That result can feed CLI output, CI policy, graph export, AI-BOM context, and optional graph backends.
+
+## AI supply-chain analysis
 
 The core engine covers:
 
@@ -210,29 +240,11 @@ The core engine covers:
 - pickle/global analysis
 - policy and trust enforcement
 
-The broader AI asset model is designed to represent:
-
-```text
-models
- datasets
- training provenance
- fine-tuning lineage
- runtime infrastructure
- APIs
- agents
- prompts
- tool integrations
- evaluation evidence
- deployment context
- model versions
- artifact identity
-```
-
 ## JavaScript / TypeScript analysis
 
 - offline static AI-usage discovery
 - provider and model-call detection
-- agent and tool relationships
+- Agent and tool relationships
 - prompt and trust-boundary analysis
 - HTTP, CLI, environment, and retrieval sources
 - alias-aware provider and agent resolution
@@ -273,12 +285,6 @@ For code-level reasoning:
 ```text
 source -> prompt -> agent -> tool -> privileged operation
 ```
-
-The formal `AttackPath` model records stable path identity, source and target nodes, ordered relationships, severity, and supporting evidence.
-
-A behavioral diff can therefore answer:
-
-> **Did this change create a new reachable impact path?**
 
 ## CLI
 
@@ -431,62 +437,41 @@ These distinctions matter because the scanner itself is a security boundary.
 
 ## Roadmap
 
-### AI supply chain
+The roadmap focuses on extending AI supply-chain coverage without compromising evidence quality or deterministic decision-making.
 
-- Expand first-class AI asset relationships across models, datasets, training jobs, evaluation evidence, deployments, and runtime infrastructure.
-- Improve lineage and provenance visualization across model versions and derived artifacts.
-- Add more ecosystem-specific parsers and integrations.
+### AI supply-chain lineage
 
-### Security reasoning
+- Model versions and artifact identity
+- Dataset identity and lineage
+- Training provenance
+- Fine-tuning lineage
+- Runtime infrastructure context
+- API and service dependencies
+- Agents, prompts, and tool integrations
+- Evaluation evidence
+- Deployment context
 
-- Expand attack-path and reachable-impact analysis.
-- Increase evidence coverage and confidence separation across findings.
-- Extend behavioral-drift detection for additional languages and frameworks.
-- Strengthen adversarial regression and fuzzing coverage.
+### Security and impact reasoning
 
-### Scale
+- Deeper attack-path analysis
+- Expanded blast-radius modeling
+- Richer evidence correlation
+- Additional language and framework coverage
+- More adversarial regression cases
 
-- Optimize multi-gigabyte artifact handling and high-cardinality relationship sets.
-- Improve concurrent and incremental scanning for large repositories.
-- Continue reproducible runtime benchmarking on representative hardware.
+### Integrations and operations
 
-### Enterprise
+- CI/CD integrations
+- Additional SBOM ecosystems
+- Graph backend integrations
+- Production deployment patterns
+- External security validation
 
-- Harden deployment patterns for long-running service environments.
-- Expand identity, audit, policy, and integration workflows.
-- Provide stronger operational guidance for production control-plane deployments.
+### Sponsorship
 
-### Ecosystem
+AI-BOM Inspector is maintained as an open-source project. Sponsorship helps fund continued security research, testing, documentation, ecosystem integrations, and long-term maintenance.
 
-- Grow backend-neutral graph integrations.
-- Improve CI/CD examples and reference configurations.
-- Make contribution paths easier for new detectors, parsers, policies, and integrations.
-
-## Sponsorship
-
-AI-BOM Inspector is open source and is being developed as a long-term project around AI software supply-chain security.
-
-Sponsorship helps fund:
-
-- security research and vulnerability analysis
-- AI supply-chain and provenance research
-- scale and performance work for large artifacts
-- new parsers, integrations, and graph capabilities
-- documentation, examples, and contributor experience
-- testing, fuzzing, and reliability improvements
-- long-term maintenance of the project
-
-### Support the project
-
-[**♥ Sponsor AI-BOM Inspector on GitHub Sponsors**](https://github.com/sponsors/MellyFinnese)
-
-Sponsorship does not change the project's security or disclosure standards. Contributions are used to keep the project maintained, improve its security capabilities, and move the roadmap forward.
-
-## Contributing
-
-Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development setup, testing expectations, and pull-request guidance.
-
-For security-sensitive reports, use [`SECURITY.md`](SECURITY.md) rather than opening a public issue.
+[♥ Support AI-BOM Inspector with GitHub Sponsors](https://github.com/sponsors/MellyFinnese)
 
 ## Further reading
 
@@ -501,6 +486,6 @@ For security-sensitive reports, use [`SECURITY.md`](SECURITY.md) rather than ope
 - [Policy Cookbook](docs/POLICY_COOKBOOK.md)
 - [AI Supply Chain Threat Model](docs/AI_SUPPLY_CHAIN_THREAT_MODEL.md)
 
-## License
+## Enterprise hardening
 
-See [`LICENSE`](LICENSE) for licensing terms.
+Enterprise identity, secrets, network, MFA, and audit controls are included in the stabilized implementation from [PR #132](https://github.com/MellyFinnese/AI-BOM-Inspector/pull/132). Deployment-specific provider configuration and infrastructure remain external concerns.
