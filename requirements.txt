@@ -4,5 +4,5 @@ requests==2.34.2
 packaging==26.2
 tomli==2.4.0
 PyYAML==6.0.2
-pydantic==2.13.4
+pydantic==2.13.5
 jsonschema==4.26.0
